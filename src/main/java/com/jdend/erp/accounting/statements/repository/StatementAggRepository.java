@@ -62,12 +62,14 @@ public interface StatementAggRepository extends JpaRepository<VoucherLine, Long>
     )
     from VoucherLine l
     join l.voucher v
-    where v.voucherDate <= :referenceDate
+    where (:startDate is null or v.voucherDate >= :startDate)
+      and v.voucherDate <= :referenceDate
       and l.accountName in :accountNames
       and (:status is null or :status = '' or v.status = :status)
     order by v.voucherDate desc, v.id desc, l.sortOrder asc
   """)
   List<BalanceDetailRowResponse> findBalanceDetails(
+      @Param("startDate") LocalDate startDate,
       @Param("referenceDate") LocalDate referenceDate,
       @Param("accountNames") List<String> accountNames,
       @Param("status") String status

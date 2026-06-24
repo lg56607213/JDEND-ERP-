@@ -175,7 +175,7 @@ function loadSidebar() {
                 <ul>
                   <li><a href="${basePath}pages/accounting/balance_sheet.html">재무상태표</a></li>
                   <li><a href="${basePath}pages/accounting/income_statement.html">손익계산서</a></li>
-                   <li><a href="${basePath}pages/management/financial_statement_management.html">재무재표관리</a></li>
+                   <li><a href="${basePath}pages/management/financial_statement_management.html">재무제표관리</a></li>
                 </ul>
               </li>
               <li class="has-sub">
@@ -194,7 +194,6 @@ function loadSidebar() {
               <li class="has-sub">
                 <span class="menu-label">회계계정관리</span>
                 <ul>
-                  <li><a href="${basePath}pages/management/financial_account.html">재무제표계정관리</a></li>
                   <li><a href="${basePath}pages/accounting/account_management.html">기타계정관리</a></li>
                 </ul>
               </li>

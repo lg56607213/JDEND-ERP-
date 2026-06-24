@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -102,7 +102,7 @@
     </div>
 
     <div class="info-notice">
-      ℹ️ 재무상태표는 입력이 불가하며, 전표들의 내용으로 합계잔액이 자동으로 표시됩니다.
+      ℹ️ 재무상태표는 입력이 불가하며, 재무제표관리에 등록된 계정과 전표 내용으로 합계잔액이 자동으로 표시됩니다. 계정명을 클릭하면 상세내역을 볼 수 있습니다.
     </div>
 
     <div class="erp-card">
@@ -120,15 +120,10 @@
             <div class="section-header assets">자산현황</div>
             <div class="section-content">
               <table class="statement-table">
-                <tbody id="assetsTableBody">
-                  <tr class="clickable-row" data-group-key="cash"><td>현금</td><td id="cash">0</td></tr>
-                  <tr><td>렌트자산</td><td id="rentAssets">0</td></tr>
-                  <tr class="clickable-row" data-group-key="rentAssetsStatus"><td class="indent-1">렌트자산현황</td><td id="rentAssetsStatus">0</td></tr>
-                  <tr class="clickable-row" data-group-key="accumulatedDepreciation"><td class="indent-1">감가상각누계액</td><td id="accumulatedDepreciation">0</td></tr>
-                  <tr class="clickable-row" data-group-key="prepaidAssets"><td class="indent-1">선급자산</td><td id="prepaidAssets">0</td></tr>
-                  <tr class="clickable-row" data-group-key="vatReceivable"><td>부가세대급금</td><td id="vatReceivable">0</td></tr>
+                <tbody id="assetsTableBody"></tbody>
+                <tfoot>
                   <tr class="total-row"><td>자산 총계</td><td id="totalAssets">0</td></tr>
-                </tbody>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -137,13 +132,10 @@
             <div class="section-header liabilities">부채현황</div>
             <div class="section-content">
               <table class="statement-table">
-                <tbody id="liabilitiesTableBody">
-                  <tr class="clickable-row" data-group-key="borrowedLiabilities"><td>차입부채</td><td id="borrowedLiabilities">0</td></tr>
-                  <tr class="clickable-row" data-group-key="advanceReceived"><td>선수금</td><td id="advanceReceived">0</td></tr>
-                  <tr class="clickable-row" data-group-key="accountsPayable"><td>미지급금</td><td id="accountsPayable">0</td></tr>
-                  <tr class="clickable-row" data-group-key="deposit"><td>보증금</td><td id="deposit">0</td></tr>
+                <tbody id="liabilitiesTableBody"></tbody>
+                <tfoot>
                   <tr class="total-row"><td>부채 총계</td><td id="totalLiabilities">0</td></tr>
-                </tbody>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -153,11 +145,10 @@
           <div class="section-header equity">자본현황</div>
           <div class="section-content">
             <table class="statement-table">
-              <tbody id="equityTableBody">
-                <tr class="clickable-row" data-group-key="capital"><td>자본금</td><td id="capital">0</td></tr>
-                <tr class="clickable-row" data-group-key="capitalSurplus"><td>자본잉여금</td><td id="capitalSurplus">0</td></tr>
+              <tbody id="equityTableBody"></tbody>
+              <tfoot>
                 <tr class="total-row"><td>자본 총계</td><td id="totalEquity">0</td></tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -222,19 +213,11 @@
     function mustOk(res){ if(!res.ok) throw new Error("HTTP " + res.status); return res; }
     function formatNumber(num) { return Number(num || 0).toLocaleString(); }
 
-    const GROUP_TITLE_MAP = {
-      cash: "현금",
-      rentAssetsStatus: "렌트자산현황",
-      accumulatedDepreciation: "감가상각누계액",
-      prepaidAssets: "선급자산",
-      vatReceivable: "부가세대급금",
-      borrowedLiabilities: "차입부채",
-      advanceReceived: "선수금",
-      accountsPayable: "미지급금",
-      deposit: "보증금",
-      capital: "자본금",
-      capitalSurplus: "자본잉여금"
-    };
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
 
     window.addEventListener('load', function() {
       const today = new Date();
@@ -244,12 +227,37 @@
     });
 
     function bindClickableRows() {
-      document.querySelectorAll('.clickable-row[data-group-key]').forEach(row => {
-        row.addEventListener('click', async function() {
-          const groupKey = row.dataset.groupKey;
-          await openDetailModal(groupKey);
+      document.querySelectorAll('#assetsTableBody, #liabilitiesTableBody, #equityTableBody').forEach(body => {
+        body.addEventListener('click', async function(e) {
+          const row = e.target.closest('.clickable-row');
+          if (!row) return;
+          await openDetailModal(row.dataset.accountCode, row.dataset.accountName);
         });
       });
+    }
+
+    // 재무제표관리에 등록된 대/중/소/소소분류 트리를 그대로 행으로 렌더링한다(대분류 루트 자체는 생략, 자식부터 표시).
+    function renderNodeRows(node, depth) {
+      let rows = `
+        <tr class="clickable-row" data-account-code="${escapeHtml(node.accountCode)}" data-account-name="${escapeHtml(node.accountName)}">
+          <td style="padding-left:${12 + depth * 18}px;">${escapeHtml(node.accountName)}</td>
+          <td>${formatNumber(node.amount)}</td>
+        </tr>
+      `;
+      for (const child of (node.children || [])) {
+        rows += renderNodeRows(child, depth + 1);
+      }
+      return rows;
+    }
+
+    function renderSection(bodyId, rootNode) {
+      const body = document.getElementById(bodyId);
+      const children = rootNode?.children || [];
+      if (children.length === 0) {
+        body.innerHTML = `<tr><td colspan="2" style="text-align:center;color:#9ca3af;">등록된 계정이 없습니다.</td></tr>`;
+        return;
+      }
+      body.innerHTML = children.map(c => renderNodeRows(c, 0)).join('');
     }
 
     async function loadBalanceSheet() {
@@ -266,51 +274,34 @@
     }
 
     function displayBalanceSheet(data) {
-      document.getElementById('cash').textContent = formatNumber(data.cash);
-      document.getElementById('rentAssets').textContent = formatNumber(data.rentAssets);
-      document.getElementById('rentAssetsStatus').textContent = formatNumber(data.rentAssetsStatus);
-      document.getElementById('accumulatedDepreciation').textContent = formatNumber(data.accumulatedDepreciation);
-      document.getElementById('prepaidAssets').textContent = formatNumber(data.prepaidAssets);
-      document.getElementById('vatReceivable').textContent = formatNumber(data.vatReceivable);
+      renderSection('assetsTableBody', data.asset);
+      renderSection('liabilitiesTableBody', data.liability);
+      renderSection('equityTableBody', data.equity);
 
-      const totalAssets = (data.cash||0) + (data.rentAssets||0) + (data.vatReceivable||0);
-      document.getElementById('totalAssets').textContent = formatNumber(totalAssets);
+      document.getElementById('totalAssets').textContent = formatNumber(data.totalAsset);
+      document.getElementById('totalLiabilities').textContent = formatNumber(data.totalLiability);
+      document.getElementById('totalEquity').textContent = formatNumber(data.totalEquity);
 
-      document.getElementById('borrowedLiabilities').textContent = formatNumber(data.borrowedLiabilities);
-      document.getElementById('advanceReceived').textContent = formatNumber(data.advanceReceived);
-      document.getElementById('accountsPayable').textContent = formatNumber(data.accountsPayable);
-      document.getElementById('deposit').textContent = formatNumber(data.deposit);
-
-      const totalLiabilities =
-        (data.borrowedLiabilities||0) + (data.advanceReceived||0) + (data.accountsPayable||0) + (data.deposit||0);
-      document.getElementById('totalLiabilities').textContent = formatNumber(totalLiabilities);
-
-      document.getElementById('capital').textContent = formatNumber(data.capital);
-      document.getElementById('capitalSurplus').textContent = formatNumber(data.capitalSurplus);
-
-      const totalEquity = (data.capital||0) + (data.capitalSurplus||0);
-      document.getElementById('totalEquity').textContent = formatNumber(totalEquity);
-
-      document.getElementById('summaryAssets').textContent = formatNumber(totalAssets) + ' 원';
-      document.getElementById('summaryLiabilities').textContent = formatNumber(totalLiabilities) + ' 원';
-      document.getElementById('summaryEquity').textContent = formatNumber(totalEquity) + ' 원';
+      document.getElementById('summaryAssets').textContent = formatNumber(data.totalAsset) + ' 원';
+      document.getElementById('summaryLiabilities').textContent = formatNumber(data.totalLiability) + ' 원';
+      document.getElementById('summaryEquity').textContent = formatNumber(data.totalEquity) + ' 원';
     }
 
-    async function openDetailModal(groupKey) {
+    async function openDetailModal(accountCode, accountName) {
       const referenceDate = document.getElementById('referenceDate').value;
       if (!referenceDate) {
         alert('기준일을 선택해주세요.');
         return;
       }
 
-      document.getElementById('detailModalTitle').textContent = `${GROUP_TITLE_MAP[groupKey] || groupKey} 상세내역`;
+      document.getElementById('detailModalTitle').textContent = `${accountName} 상세내역`;
       document.getElementById('detailModalSubTitle').textContent = `${referenceDate} 기준 승인 전표 내역`;
       document.getElementById('detailTableBody').innerHTML = `<tr><td colspan="9" style="text-align:center;">조회중...</td></tr>`;
       document.getElementById('detailModal').style.display = 'flex';
 
       try {
         const qs = new URLSearchParams({
-          groupKey,
+          accountCode,
           referenceDate,
           status: '승인'
         });

@@ -37,6 +37,7 @@
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
     .tab-btn {
@@ -55,14 +56,6 @@
       border-color: #2563eb;
     }
 
-    .table-section {
-      display: none;
-    }
-
-    .table-section.active {
-      display: block;
-    }
-
     .table-container {
       overflow: auto;
       border: 1px solid #e5e7eb;
@@ -79,7 +72,7 @@
     .statement-table th,
     .statement-table td {
       border-bottom: 1px solid #edf0f2;
-      padding: 12px 10px;
+      padding: 10px 10px;
       font-size: 14px;
       text-align: center;
       white-space: nowrap;
@@ -95,10 +88,24 @@
       text-align: left;
     }
 
-    .statement-table td.amount {
-      text-align: right;
-      padding-right: 14px;
+    .tree-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+
+    .level-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .level-1 { background: #eef2ff; color: #4338ca; }
+    .level-2 { background: #ecfeff; color: #0e7490; }
+    .level-3 { background: #f0fdf4; color: #15803d; }
+    .level-4 { background: #fff7ed; color: #c2410c; }
 
     .account-link {
       color: #1d4ed8;
@@ -107,15 +114,33 @@
       font-weight: 600;
     }
 
-    .status-use {
-      color: #059669;
-      font-weight: 700;
+    .account-plain {
+      font-weight: 600;
+      color: #374151;
     }
 
-    .status-stop {
-      color: #dc2626;
-      font-weight: 700;
+    .status-use { color: #059669; font-weight: 700; }
+    .status-stop { color: #dc2626; font-weight: 700; }
+
+    .btn-mini {
+      border: 1px solid #d0d7de;
+      background: #fff;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      margin: 0 2px;
     }
+    .btn-mini:hover { background: #f5f5f5; }
+    .btn-mini.danger { color: #dc2626; border-color: #fecaca; }
+    .btn-mini.danger:hover { background: #fef2f2; }
+    .btn-mini:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-add-root {
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 10px; padding: 10px 16px; font-weight: 600; cursor: pointer;
+    }
+    .btn-add-root:hover { filter: brightness(.96); }
 
     .empty-row {
       text-align: center;
@@ -123,8 +148,8 @@
       padding: 28px 0;
     }
 
-    /* 전표조회 모달 */
-    .voucher-modal {
+    /* 하위분류 추가 모달 */
+    .add-modal, .voucher-modal {
       display: none;
       position: fixed;
       inset: 0;
@@ -133,11 +158,15 @@
       align-items: center;
       justify-content: center;
     }
+    .add-modal.show, .voucher-modal.show { display: flex; }
 
-    .voucher-modal.show {
-      display: flex;
+    .add-modal-content {
+      width: min(440px, calc(100vw - 30px));
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      overflow: hidden;
     }
-
     .voucher-modal-content {
       width: min(1450px, calc(100vw - 30px));
       max-height: calc(100vh - 30px);
@@ -149,32 +178,36 @@
       flex-direction: column;
     }
 
-    .voucher-modal-header {
+    .modal-header2 {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 18px 22px;
       border-bottom: 1px solid #e5e7eb;
     }
-
-    .voucher-modal-header h2 {
-      margin: 0;
-      font-size: 20px;
-      color: #111827;
+    .modal-header2 h2 { margin: 0; font-size: 18px; color: #111827; }
+    .modal-close2 {
+      border: none; background: transparent; font-size: 24px; line-height: 1; cursor: pointer;
     }
+    .modal-body2 { padding: 18px 22px; }
 
-    .voucher-modal-close {
-      border: none;
-      background: transparent;
-      font-size: 28px;
-      line-height: 1;
-      cursor: pointer;
+    .form-row2 { margin-bottom: 14px; }
+    .form-row2 label {
+      display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #374151;
     }
-
-    .voucher-modal-body {
-      padding: 20px 22px;
-      overflow: auto;
+    .form-row2 input, .form-row2 select {
+      width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 10px;
+      padding: 0 10px; box-sizing: border-box; font-size: 14px;
     }
+    .form-row2 .hint { font-size: 12px; color: #888; margin-top: 4px; }
+    .form-actions2 {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;
+    }
+    .form-actions2 button {
+      height: 38px; padding: 0 16px; border-radius: 10px; border: 1px solid #d1d5db;
+      background: #fff; cursor: pointer;
+    }
+    .form-actions2 .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
 
     .voucher-search-bar {
       display: grid;
@@ -183,104 +216,33 @@
       align-items: end;
       margin-bottom: 16px;
     }
-
     .voucher-search-bar label {
-      display: block;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: #374151;
+      display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #374151;
     }
-
     .voucher-search-bar input {
-      width: 100%;
-      height: 38px;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      padding: 0 10px;
-      box-sizing: border-box;
+      width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 10px; padding: 0 10px; box-sizing: border-box;
     }
-
-    .voucher-search-actions {
-      display: flex;
-      gap: 8px;
-    }
-
+    .voucher-search-actions { display: flex; gap: 8px; }
     .voucher-search-actions button {
-      height: 38px;
-      padding: 0 16px;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
+      height: 38px; padding: 0 16px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; cursor: pointer;
     }
-
-    .voucher-search-actions .btn-primary {
-      background: #2563eb;
-      color: #fff;
-      border-color: #2563eb;
+    .voucher-search-actions .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .voucher-summary { margin-bottom: 14px; font-size: 14px; font-weight: 600; color: #374151; }
+    .voucher-history-wrap { overflow: auto; border: 1px solid #e5e7eb; border-radius: 12px; }
+    .voucher-history-table { width: 100%; min-width: 1200px; border-collapse: collapse; }
+    .voucher-history-table th, .voucher-history-table td {
+      border-bottom: 1px solid #edf0f2; padding: 10px 8px; font-size: 13px; text-align: center; white-space: nowrap;
     }
-
-    .voucher-summary {
-      margin-bottom: 14px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #374151;
-    }
-
-    .voucher-history-wrap {
-      overflow: auto;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-    }
-
-    .voucher-history-table {
-      width: 100%;
-      min-width: 1200px;
-      border-collapse: collapse;
-    }
-
-    .voucher-history-table th,
-    .voucher-history-table td {
-      border-bottom: 1px solid #edf0f2;
-      padding: 10px 8px;
-      font-size: 13px;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .voucher-history-table th {
-      background: #f8fafc;
-      font-weight: 700;
-    }
-
-    .voucher-history-table td.left {
-      text-align: left;
-    }
-
-    .voucher-history-table td.amount {
-      text-align: right;
-      padding-right: 12px;
-    }
-
+    .voucher-history-table th { background: #f8fafc; font-weight: 700; }
+    .voucher-history-table td.left { text-align: left; }
+    .voucher-history-table td.amount { text-align: right; padding-right: 12px; }
     .badge-debit {
-      display: inline-block;
-      min-width: 56px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-weight: 700;
+      display: inline-block; min-width: 56px; padding: 4px 8px; border-radius: 999px;
+      background: #eff6ff; color: #1d4ed8; font-weight: 700;
     }
-
     .badge-credit {
-      display: inline-block;
-      min-width: 56px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #fef2f2;
-      color: #dc2626;
-      font-weight: 700;
+      display: inline-block; min-width: 56px; padding: 4px 8px; border-radius: 999px;
+      background: #fef2f2; color: #dc2626; font-weight: 700;
     }
   </style>
 </head>
@@ -298,51 +260,74 @@
 
       <div class="top-toolbar">
         <div class="info-text">
-          재무상태표 / 손익계산서 계정을 조회합니다. 계정명을 클릭하면 조회일자 기준으로 전표내역을 확인할 수 있습니다.
+          자산/부채/자본/수익/비용 카테고리별로 대분류&gt;중분류&gt;소분류&gt;소소분류 계정을 등록합니다.
+          여기 등록한 계정만 재무상태표·손익계산서·전표등록 화면에 표시됩니다. 계정명을 클릭하면 전표내역을 확인할 수 있습니다.
         </div>
       </div>
 
-      <div class="tab-container">
-        <button class="tab-btn active" onclick="switchTab('bs')">재무상태표</button>
-        <button class="tab-btn" onclick="switchTab('is')">손익계산서</button>
+      <div class="tab-container" id="categoryTabs">
+        <button class="tab-btn active" data-category="ASSET" onclick="switchCategory('ASSET')">자산</button>
+        <button class="tab-btn" data-category="LIABILITY" onclick="switchCategory('LIABILITY')">부채</button>
+        <button class="tab-btn" data-category="EQUITY" onclick="switchCategory('EQUITY')">자본</button>
+        <button class="tab-btn" data-category="REVENUE" onclick="switchCategory('REVENUE')">수익</button>
+        <button class="tab-btn" data-category="EXPENSE" onclick="switchCategory('EXPENSE')">비용</button>
       </div>
 
-      <div id="bsTable" class="table-section active">
-        <div class="table-container">
-          <table class="statement-table">
-            <thead>
-            <tr>
-              <th style="width: 14%;">계정코드</th>
-              <th style="width: 28%;">계정명</th>
-              <th style="width: 20%;">계정구분</th>
-              <th style="width: 14%;">표시순서</th>
-              <th style="width: 14%;">사용여부</th>
-              <th style="width: 10%;">비고</th>
-            </tr>
-            </thead>
-            <tbody id="bsAccountBody"></tbody>
-          </table>
-        </div>
+      <div class="table-container">
+        <table class="statement-table">
+          <thead>
+          <tr>
+            <th style="width: 14%;">계정코드</th>
+            <th style="width: 28%;">계정명</th>
+            <th style="width: 10%;">레벨</th>
+            <th style="width: 10%;">사용여부</th>
+            <th style="width: 10%;">전기가능</th>
+            <th style="width: 28%;">관리</th>
+          </tr>
+          </thead>
+          <tbody id="treeBody"></tbody>
+        </table>
       </div>
 
-      <div id="isTable" class="table-section">
-        <div class="table-container">
-          <table class="statement-table">
-            <thead>
-            <tr>
-              <th style="width: 14%;">계정코드</th>
-              <th style="width: 28%;">계정명</th>
-              <th style="width: 20%;">계정구분</th>
-              <th style="width: 14%;">표시순서</th>
-              <th style="width: 14%;">사용여부</th>
-              <th style="width: 10%;">비고</th>
-            </tr>
-            </thead>
-            <tbody id="isAccountBody"></tbody>
-          </table>
-        </div>
-      </div>
+    </div>
+  </div>
+</div>
 
+<!-- 하위분류 추가 모달 -->
+<div id="addModal" class="add-modal">
+  <div class="add-modal-content">
+    <div class="modal-header2">
+      <h2 id="addModalTitle">하위 분류 추가</h2>
+      <button type="button" class="modal-close2" onclick="closeAddModal()">&times;</button>
+    </div>
+    <div class="modal-body2">
+      <div class="form-row2">
+        <label>상위 분류</label>
+        <input type="text" id="addParentLabel" readonly />
+      </div>
+      <div class="form-row2">
+        <label for="addAccountName">계정명 *</label>
+        <input type="text" id="addAccountName" placeholder="예: 보통예금" />
+        <div class="hint">계정코드는 자동으로 부여됩니다.</div>
+      </div>
+      <div class="form-row2">
+        <label for="addIsActive">사용여부</label>
+        <select id="addIsActive">
+          <option value="사용">사용</option>
+          <option value="미사용">미사용</option>
+        </select>
+      </div>
+      <div class="form-row2">
+        <label for="addIsPostable">전기가능(전표등록 노출)</label>
+        <select id="addIsPostable">
+          <option value="사용">사용 (전표에서 선택 가능)</option>
+          <option value="미사용">미사용 (분류헤더, 전표에는 안 보임)</option>
+        </select>
+      </div>
+      <div class="form-actions2">
+        <button type="button" onclick="closeAddModal()">취소</button>
+        <button type="button" class="btn-primary" onclick="submitAddNode()">등록</button>
+      </div>
     </div>
   </div>
 </div>
@@ -350,12 +335,12 @@
 <!-- 전표내역 조회 모달 -->
 <div id="voucherHistoryModal" class="voucher-modal">
   <div class="voucher-modal-content">
-    <div class="voucher-modal-header">
+    <div class="modal-header2">
       <h2 id="voucherHistoryTitle">전표내역 조회</h2>
-      <button type="button" class="voucher-modal-close" onclick="closeVoucherHistoryModal()">&times;</button>
+      <button type="button" class="modal-close2" onclick="closeVoucherHistoryModal()">&times;</button>
     </div>
 
-    <div class="voucher-modal-body">
+    <div class="modal-body2">
       <div class="voucher-search-bar">
         <div>
           <label for="voucherStartDate">조회 시작일</label>
@@ -442,9 +427,13 @@
 
   const api = {
     get: (path) => request("GET", path),
+    post: (path, body) => request("POST", path, body),
+    del: (path) => request("DELETE", path),
   };
 
-  let currentTab = "bs";
+  let currentCategory = "ASSET";
+  let nodeIndex = new Map(); // id -> node (현재 트리에서 빠르게 조회)
+  let selectedParentId = null;
   let selectedVoucherAccountId = null;
   let selectedVoucherAccountName = "";
 
@@ -463,64 +452,121 @@
       .replaceAll("'", "\\'");
   }
 
-  async function fetchList(statementType) {
-    return await api.get("/api/financial-statement-accounts?statementType=" + encodeURIComponent(statementType));
+  function levelLabel(level) {
+    return { 1: "대분류", 2: "중분류", 3: "소분류", 4: "소소분류" }[level] || level;
   }
 
-  function rowHtml(item) {
-    const activeClass = item.isActive === "사용" ? "status-use" : "status-stop";
-
-    return `
-      <tr>
-        <td>${escapeHtml(item.accountCode)}</td>
-        <td class="left">
-          <span class="account-link" onclick="openVoucherHistoryModal(${item.id}, '${escapeHtmlJs(item.accountName)}')">
-            ${escapeHtml(item.accountName)}
-          </span>
-        </td>
-        <td>${escapeHtml(item.accountType)}</td>
-        <td>${item.displayOrder ?? ""}</td>
-        <td class="${activeClass}">${escapeHtml(item.isActive)}</td>
-        <td>-</td>
-      </tr>
-    `;
-  }
-
-  async function displayAccounts() {
-    try {
-      const [bsList, isList] = await Promise.all([
-        fetchList("bs"),
-        fetchList("is")
-      ]);
-
-      const bsBody = document.getElementById("bsAccountBody");
-      const isBody = document.getElementById("isAccountBody");
-
-      if (!bsList || bsList.length === 0) {
-        bsBody.innerHTML = `<tr><td colspan="6" class="empty-row">재무상태표 계정이 없습니다.</td></tr>`;
-      } else {
-        bsBody.innerHTML = bsList.map(rowHtml).join("");
-      }
-
-      if (!isList || isList.length === 0) {
-        isBody.innerHTML = `<tr><td colspan="6" class="empty-row">손익계산서 계정이 없습니다.</td></tr>`;
-      } else {
-        isBody.innerHTML = isList.map(rowHtml).join("");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("재무제표 계정 조회 실패: " + e.message);
+  function flattenAndIndex(nodes) {
+    for (const n of nodes) {
+      nodeIndex.set(n.id, n);
+      if (n.children && n.children.length) flattenAndIndex(n.children);
     }
   }
 
-  function switchTab(tab) {
-    currentTab = tab;
+  function renderNode(node, depth) {
+    const indent = depth * 22;
+    const activeClass = node.isActive === "사용" ? "status-use" : "status-stop";
+    const postableClass = node.isPostable === "사용" ? "status-use" : "status-stop";
+    const canHaveChild = node.level < 4;
+    const canDelete = node.leaf && node.level > 1;
+    const nameCell = node.isPostable === "사용"
+      ? `<span class="account-link" onclick="openVoucherHistoryModal(${node.id}, '${escapeHtmlJs(node.accountName)}')">${escapeHtml(node.accountName)}</span>`
+      : `<span class="account-plain">${escapeHtml(node.accountName)}</span>`;
 
+    let rows = `
+      <tr>
+        <td>${escapeHtml(node.accountCode)}</td>
+        <td class="left">
+          <div class="tree-name-cell" style="padding-left:${indent}px;">
+            <span class="level-badge level-${node.level}">${levelLabel(node.level)}</span>
+            ${nameCell}
+          </div>
+        </td>
+        <td>${levelLabel(node.level)}</td>
+        <td class="${activeClass}">${escapeHtml(node.isActive)}</td>
+        <td class="${postableClass}">${escapeHtml(node.isPostable)}</td>
+        <td>
+          ${canHaveChild ? `<button type="button" class="btn-mini" onclick="openAddModal(${node.id}, '${escapeHtmlJs(node.accountName)}')">+ 하위분류추가</button>` : ""}
+          <button type="button" class="btn-mini danger" ${canDelete ? "" : "disabled"} onclick="deleteNode(${node.id}, '${escapeHtmlJs(node.accountName)}')">삭제</button>
+        </td>
+      </tr>
+    `;
+
+    if (node.children && node.children.length) {
+      for (const child of node.children) {
+        rows += renderNode(child, depth + 1);
+      }
+    }
+    return rows;
+  }
+
+  async function loadTree() {
+    try {
+      const roots = await api.get(`/api/financial-statement-accounts/tree?category=${encodeURIComponent(currentCategory)}`);
+      nodeIndex = new Map();
+      flattenAndIndex(roots || []);
+
+      const body = document.getElementById("treeBody");
+      if (!roots || roots.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" class="empty-row">등록된 계정이 없습니다.</td></tr>`;
+        return;
+      }
+      body.innerHTML = roots.map(r => renderNode(r, 0)).join("");
+    } catch (e) {
+      console.error(e);
+      alert("계정 트리 조회 실패: " + e.message);
+    }
+  }
+
+  function switchCategory(category) {
+    currentCategory = category;
     document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-    document.querySelectorAll(".table-section").forEach(section => section.classList.remove("active"));
+    document.querySelector(`.tab-btn[data-category="${category}"]`).classList.add("active");
+    loadTree();
+  }
 
-    document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add("active");
-    document.getElementById(tab === "bs" ? "bsTable" : "isTable").classList.add("active");
+  function openAddModal(parentId, parentName) {
+    selectedParentId = parentId;
+    document.getElementById("addParentLabel").value = parentName;
+    document.getElementById("addAccountName").value = "";
+    document.getElementById("addIsActive").value = "사용";
+    document.getElementById("addIsPostable").value = "사용";
+    document.getElementById("addModal").classList.add("show");
+  }
+
+  function closeAddModal() {
+    document.getElementById("addModal").classList.remove("show");
+    selectedParentId = null;
+  }
+
+  async function submitAddNode() {
+    const accountName = document.getElementById("addAccountName").value.trim();
+    if (!accountName) {
+      alert("계정명을 입력하세요.");
+      return;
+    }
+    try {
+      await api.post("/api/financial-statement-accounts/nodes", {
+        parentId: selectedParentId,
+        accountName,
+        isActive: document.getElementById("addIsActive").value,
+        isPostable: document.getElementById("addIsPostable").value,
+      });
+      closeAddModal();
+      await loadTree();
+    } catch (e) {
+      alert("등록 실패\n\n" + e.message);
+    }
+  }
+
+  async function deleteNode(id, name) {
+    if (!confirm(`'${name}' 계정을 삭제하시겠습니까?`)) return;
+    try {
+      await api.del(`/api/financial-statement-accounts/${id}`);
+      await loadTree();
+    } catch (e) {
+      alert("삭제 실패\n\n" + e.message);
+    }
   }
 
   function ymd(date) {
@@ -622,19 +668,20 @@
   }
 
   window.addEventListener("load", () => {
-    displayAccounts();
+    loadTree();
   });
 
   window.addEventListener("click", (event) => {
     const voucherModal = document.getElementById("voucherHistoryModal");
-    if (event.target === voucherModal) {
-      closeVoucherHistoryModal();
-    }
+    const addModal = document.getElementById("addModal");
+    if (event.target === voucherModal) closeVoucherHistoryModal();
+    if (event.target === addModal) closeAddModal();
   });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeVoucherHistoryModal();
+      closeAddModal();
     }
   });
 </script>

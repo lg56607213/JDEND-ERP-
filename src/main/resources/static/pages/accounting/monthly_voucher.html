@@ -93,42 +93,6 @@
                 <label for="debitAccount" class="required">계정명</label>
                 <select id="debitAccount" name="debitAccount" required>
                   <option value="">계정 선택</option>
-                  <optgroup label="자산">
-                    <option value="현금">현금</option>
-                    <option value="보통예금">보통예금</option>
-                    <option value="정기예금">정기예금</option>
-                    <option value="미수금">미수금</option>
-                    <option value="선급금">선급금</option>
-                    <option value="렌트자산">렌트자산</option>
-                    <option value="감가상각누계액">감가상각누계액</option>
-                    <option value="부가세대급금">부가세대급금</option>
-                  </optgroup>
-                  <optgroup label="부채">
-                    <option value="미지급금">미지급금</option>
-                    <option value="선수금">선수금</option>
-                    <option value="차입금">차입금</option>
-                    <option value="보증금">보증금</option>
-                    <option value="부가세예수금">부가세예수금</option>
-                  </optgroup>
-                  <optgroup label="자본">
-                    <option value="자본금">자본금</option>
-                    <option value="자본잉여금">자본잉여금</option>
-                    <option value="이익잉여금">이익잉여금</option>
-                  </optgroup>
-                  <optgroup label="수익">
-                    <option value="렌트수익">렌트수익</option>
-                    <option value="매각수익">매각수익</option>
-                    <option value="이자수익">이자수익</option>
-                    <option value="기타수익">기타수익</option>
-                  </optgroup>
-                  <optgroup label="비용">
-                    <option value="급여">급여</option>
-                    <option value="감가상각비">감가상각비</option>
-                    <option value="차량유지비">차량유지비</option>
-                    <option value="보험료">보험료</option>
-                    <option value="이자비용">이자비용</option>
-                    <option value="기타비용">기타비용</option>
-                  </optgroup>
                 </select>
               </div>
 
@@ -151,42 +115,6 @@
                 <label for="creditAccount" class="required">계정명</label>
                 <select id="creditAccount" name="creditAccount" required>
                   <option value="">계정 선택</option>
-                  <optgroup label="자산">
-                    <option value="현금">현금</option>
-                    <option value="보통예금">보통예금</option>
-                    <option value="정기예금">정기예금</option>
-                    <option value="미수금">미수금</option>
-                    <option value="선급금">선급금</option>
-                    <option value="렌트자산">렌트자산</option>
-                    <option value="감가상각누계액">감가상각누계액</option>
-                    <option value="부가세대급금">부가세대급금</option>
-                  </optgroup>
-                  <optgroup label="부채">
-                    <option value="미지급금">미지급금</option>
-                    <option value="선수금">선수금</option>
-                    <option value="차입금">차입금</option>
-                    <option value="보증금">보증금</option>
-                    <option value="부가세예수금">부가세예수금</option>
-                  </optgroup>
-                  <optgroup label="자본">
-                    <option value="자본금">자본금</option>
-                    <option value="자본잉여금">자본잉여금</option>
-                    <option value="이익잉여금">이익잉여금</option>
-                  </optgroup>
-                  <optgroup label="수익">
-                    <option value="렌트수익">렌트수익</option>
-                    <option value="매각수익">매각수익</option>
-                    <option value="이자수익">이자수익</option>
-                    <option value="기타수익">기타수익</option>
-                  </optgroup>
-                  <optgroup label="비용">
-                    <option value="급여">급여</option>
-                    <option value="감가상각비">감가상각비</option>
-                    <option value="차량유지비">차량유지비</option>
-                    <option value="보험료">보험료</option>
-                    <option value="이자비용">이자비용</option>
-                    <option value="기타비용">기타비용</option>
-                  </optgroup>
                 </select>
               </div>
 
@@ -228,6 +156,49 @@
       try { msg = await res.text(); } catch (e) {}
       throw new Error('HTTP ' + res.status + (msg ? (' - ' + msg) : ''));
     }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    // 재무제표관리(financial-statement-accounts)에 등록한 계정을 동적으로 불러온다.
+    function buildAccountOptionsHtml(accounts) {
+      if (!accounts || accounts.length === 0) {
+        return `<option value="">계정 선택</option><option value="" disabled>등록된 계정이 없습니다 (재무제표관리에서 추가)</option>`;
+      }
+      const groups = new Map();
+      for (const a of accounts) {
+        const key = a.parentName || "기타";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(a);
+      }
+      let html = `<option value="">계정 선택</option>`;
+      for (const [key, list] of groups) {
+        html += `<optgroup label="${escapeHtml(key)}">`;
+        for (const a of list) {
+          html += `<option value="${escapeHtml(a.accountName)}">${escapeHtml(a.accountName)}</option>`;
+        }
+        html += `</optgroup>`;
+      }
+      return html;
+    }
+
+    async function loadAccountOptions() {
+      let html = `<option value="">계정 선택</option><option value="" disabled>계정 목록 조회 실패</option>`;
+      try {
+        const res = await mustOk(await fetch(apiBase() + '/api/financial-statement-accounts/leaves'));
+        const accounts = await res.json();
+        html = buildAccountOptionsHtml(accounts);
+      } catch (e) {
+        console.error("계정 목록 조회 실패", e);
+      }
+      document.getElementById('debitAccount').innerHTML = html;
+      document.getElementById('creditAccount').innerHTML = html;
+    }
+
+    loadAccountOptions();
 
     function resetForm() {
       if (confirm('입력한 내용을 모두 초기화하시겠습니까?')) {

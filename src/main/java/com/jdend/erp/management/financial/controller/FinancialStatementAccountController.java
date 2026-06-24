@@ -2,6 +2,7 @@ package com.jdend.erp.management.financial.controller;
 
 import com.jdend.erp.management.financial.dto.FinancialStatementAccountRequest;
 import com.jdend.erp.management.financial.dto.FinancialStatementAccountResponse;
+import com.jdend.erp.management.financial.dto.FinancialStatementAccountTreeResponse;
 import com.jdend.erp.management.financial.dto.FinancialStatementVoucherRowResponse;
 import com.jdend.erp.management.financial.service.FinancialStatementAccountService;
 import lombok.RequiredArgsConstructor;
@@ -48,5 +49,20 @@ public class FinancialStatementAccountController {
       @RequestParam(required = false) LocalDate endDate
   ) {
     return service.getVoucherRows(id, startDate, endDate);
+  }
+
+  @GetMapping("/tree")
+  public List<FinancialStatementAccountTreeResponse> tree(@RequestParam String category) {
+    return service.tree(category);
+  }
+
+  @GetMapping("/leaves")
+  public List<FinancialStatementAccountResponse> leaves() {
+    return service.leavesForVoucher();
+  }
+
+  @PostMapping("/nodes")
+  public FinancialStatementAccountResponse createNode(@RequestBody FinancialStatementAccountRequest req) {
+    return service.createNode(req);
   }
 }

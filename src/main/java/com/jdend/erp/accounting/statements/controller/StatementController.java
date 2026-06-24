@@ -35,13 +35,15 @@ public class StatementController {
     return service.balance(referenceDate, status);
   }
 
-  // GET /api/statements/balance/details?groupKey=cash&referenceDate=2026-04-20&status=승인
+  // GET /api/statements/balance/details?accountCode=1001&referenceDate=2026-04-20&status=승인
+  // startDate를 같이 주면 그 기간(startDate~referenceDate) 내 전표만 조회한다(손익계산서 상세용).
   @GetMapping("/balance/details")
   public List<BalanceDetailRowResponse> balanceDetails(
-      @RequestParam String groupKey,
+      @RequestParam String accountCode,
+      @RequestParam(required = false) LocalDate startDate,
       @RequestParam LocalDate referenceDate,
       @RequestParam(required = false, defaultValue = "승인") String status
   ) {
-    return service.balanceDetails(groupKey, referenceDate, status);
+    return service.balanceDetails(accountCode, startDate, referenceDate, status);
   }
 }
