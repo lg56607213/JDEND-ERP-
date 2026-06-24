@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차량현황 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/vehicle_status.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>차량현황</h1>
+      <p>차량등록 &gt; 차량현황</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <!-- 검색 섹션 -->
+        <div class="search-section">
+          <div class="search-row">
+            <div class="form-group">
+              <label for="searchStartDate">발주일자</label>
+              <div class="date-range">
+                <input type="date" id="searchStartDate">
+                <span>~</span>
+                <input type="date" id="searchEndDate">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="searchStatus">발주상태</label>
+              <select id="searchStatus">
+                <option value="">전체</option>
+                <option value="발주전">발주전</option>
+                <option value="발주완료">발주완료</option>
+                <option value="출고완료">출고완료</option>
+                <option value="등록완료">등록완료</option>
+                <option value="실행완료">실행완료</option>
+              </select>
+            </div>
+            <div class="button-group">
+              <button type="button" class="btn-search" onclick="searchVehicle()">조회하기</button>
+              <button type="button" class="btn-add" onclick="goToRegister()">+ 등록추가</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>순번</th>
+                <th>발주상태</th>
+                <th>차량관리번호</th>
+                <th>제작사계약번호</th>
+                <th>차종</th>
+                <th>옵션명</th>
+                <th>차량가격</th>
+                <th>옵션가격</th>
+                <th>총차량가</th>
+                <th>발주일자</th>
+                <th>차대번호</th>
+                <th>출고가</th>
+                <th>총 선급가액</th>
+                <th>차량번호</th>
+                <th>등록일자</th>
+              </tr>
+            </thead>
+            <tbody id="vehicleTableBody">
+              <tr onclick="viewDetail('J0001')">
+                <td>1</td>
+                <td><span class="status-badge status-before">발주전</span></td>
+                <td>J0001</td>
+                <td>-</td>
+                <td>그랜져</td>
+                <td>통풍시트,네비게이션패키지</td>
+                <td class="amount-cell">30,000,000</td>
+                <td class="amount-cell">2,400,000</td>
+                <td class="amount-cell">32,400,000</td>
+                <td>2025-12-05</td>
+                <td>-</td>
+                <td class="amount-cell">-</td>
+                <td class="amount-cell">-</td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+              <tr onclick="viewDetail('J0002')">
+                <td>2</td>
+                <td><span class="status-badge status-ordered">발주완료</span></td>
+                <td>J0002</td>
+                <td>B5524M5000123</td>
+                <td>투싼</td>
+                <td>-</td>
+                <td class="amount-cell">25,000,000</td>
+                <td class="amount-cell">-</td>
+                <td class="amount-cell">25,000,000</td>
+                <td>2025-11-05</td>
+                <td>-</td>
+                <td class="amount-cell">-</td>
+                <td class="amount-cell">-</td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+              <tr onclick="viewDetail('J0003')">
+                <td>3</td>
+                <td><span class="status-badge status-released">출고완료</span></td>
+                <td>J0003</td>
+                <td>B5524M5000123</td>
+                <td>투싼</td>
+                <td>통풍시트,네비게이션패키지</td>
+                <td class="amount-cell">25,000,000</td>
+                <td class="amount-cell">1,200,000</td>
+                <td class="amount-cell">26,200,000</td>
+                <td>2025-10-25</td>
+                <td>KMGFFX78BSU123456</td>
+                <td class="amount-cell">26,200,000</td>
+                <td class="amount-cell">28,200,000</td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+              <tr onclick="viewDetail('J0004')">
+                <td>4</td>
+                <td><span class="status-badge status-registered">등록완료</span></td>
+                <td>J0004</td>
+                <td>B5524M5000123</td>
+                <td>투싼</td>
+                <td>통풍시트,네비게이션패키지</td>
+                <td class="amount-cell">25,000,000</td>
+                <td class="amount-cell">1,200,000</td>
+                <td class="amount-cell">26,200,000</td>
+                <td>2025-10-05</td>
+                <td>KMGFFX78BSU123456</td>
+                <td class="amount-cell">25,414,000</td>
+                <td class="amount-cell">27,500,000</td>
+                <td>254노1234</td>
+                <td>2025-12-05</td>
+              </tr>
+              <tr onclick="viewDetail('J0005')">
+                <td>5</td>
+                <td><span class="status-badge status-executed">실행완료</span></td>
+                <td>J0005</td>
+                <td>B5524M5000125</td>
+                <td>투싼</td>
+                <td>통풍시트,네비게이션패키지</td>
+                <td class="amount-cell">25,000,000</td>
+                <td class="amount-cell">1,200,000</td>
+                <td class="amount-cell">26,200,000</td>
+                <td>2025-10-05</td>
+                <td>KMGFFX78BSU123457</td>
+                <td class="amount-cell">25,414,000</td>
+                <td class="amount-cell">27,500,000</td>
+                <td>254노1235</td>
+                <td>2025-12-05</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script>
+    // 샘플 차량현황 데이터
+    const vehicleData = [
+      {
+        no: 1,
+        status: '발주전',
+        vehicleMgmtNo: 'J0001',
+        makerContractNo: '',
+        carModel: '그랜져',
+        optionName: '통풍시트,네비게이션패키지',
+        vehiclePrice: 30000000,
+        optionPrice: 2400000,
+        totalPrice: 32400000,
+        orderDate: '2025-12-05',
+        chassisNo: '',
+        releasePrice: null,
+        totalAdvancePrice: null,
+        vehicleNo: '',
+        registerDate: ''
+      },
+      {
+        no: 2,
+        status: '발주완료',
+        vehicleMgmtNo: 'J0002',
+        makerContractNo: 'B5524M5000123',
+        carModel: '투싼',
+        optionName: '',
+        vehiclePrice: 25000000,
+        optionPrice: 0,
+        totalPrice: 25000000,
+        orderDate: '2025-11-05',
+        chassisNo: '',
+        releasePrice: null,
+        totalAdvancePrice: null,
+        vehicleNo: '',
+        registerDate: ''
+      },
+      {
+        no: 3,
+        status: '출고완료',
+        vehicleMgmtNo: 'J0003',
+        makerContractNo: 'B5524M5000123',
+        carModel: '투싼',
+        optionName: '통풍시트,네비게이션패키지',
+        vehiclePrice: 25000000,
+        optionPrice: 1200000,
+        totalPrice: 26200000,
+        orderDate: '2025-10-25',
+        chassisNo: 'KMGFFX78BSU123456',
+        releasePrice: 26200000,
+        totalAdvancePrice: 28200000,
+        vehicleNo: '',
+        registerDate: ''
+      },
+      {
+        no: 4,
+        status: '등록완료',
+        vehicleMgmtNo: 'J0004',
+        makerContractNo: 'B5524M5000123',
+        carModel: '투싼',
+        optionName: '통풍시트,네비게이션패키지',
+        vehiclePrice: 25000000,
+        optionPrice: 1200000,
+        totalPrice: 26200000,
+        orderDate: '2025-10-05',
+        chassisNo: 'KMGFFX78BSU123456',
+        releasePrice: 25414000,
+        totalAdvancePrice: 27500000,
+        vehicleNo: '254노1234',
+        registerDate: '2025-12-05'
+      },
+      {
+        no: 5,
+        status: '실행완료',
+        vehicleMgmtNo: 'J0005',
+        makerContractNo: 'B5524M5000125',
+        carModel: '투싼',
+        optionName: '통풍시트,네비게이션패키지',
+        vehiclePrice: 25000000,
+        optionPrice: 1200000,
+        totalPrice: 26200000,
+        orderDate: '2025-10-05',
+        chassisNo: 'KMGFFX78BSU123457',
+        releasePrice: 25414000,
+        totalAdvancePrice: 27500000,
+        vehicleNo: '254노1235',
+        registerDate: '2025-12-05'
+      }
+    ];
+
+    // 페이지 로드 시 기본 날짜 설정
+    window.addEventListener('DOMContentLoaded', function() {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      document.getElementById('searchStartDate').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('searchEndDate').value = today.toISOString().split('T')[0];
+    });
+
+    // 검색 함수
+    function searchVehicle() {
+      const startDate = document.getElementById('searchStartDate').value;
+      const endDate = document.getElementById('searchEndDate').value;
+      const status = document.getElementById('searchStatus').value;
+
+      let filteredData = vehicleData;
+
+      // 날짜 필터
+      if (startDate) {
+        filteredData = filteredData.filter(item => item.orderDate >= startDate);
+      }
+      if (endDate) {
+        filteredData = filteredData.filter(item => item.orderDate <= endDate);
+      }
+
+      // 상태 필터
+      if (status) {
+        filteredData = filteredData.filter(item => item.status === status);
+      }
+
+      displayVehicle(filteredData);
+    }
+
+    // 차량현황 목록 표시
+    function displayVehicle(data) {
+      const tbody = document.getElementById('vehicleTableBody');
+
+      if (data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="15" class="no-data">
+              <div class="no-data-icon">🚗</div>
+              <div>검색 결과가 없습니다.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = data.map((item, index) => {
+        const statusClass = getStatusClass(item.status);
+        return `
+          <tr onclick="viewDetail('${item.vehicleMgmtNo}')">
+            <td>${index + 1}</td>
+            <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+            <td>${item.vehicleMgmtNo}</td>
+            <td>${item.makerContractNo || '-'}</td>
+            <td>${item.carModel}</td>
+            <td>${item.optionName || '-'}</td>
+            <td class="amount-cell">${item.vehiclePrice.toLocaleString()}</td>
+            <td class="amount-cell">${item.optionPrice ? item.optionPrice.toLocaleString() : '-'}</td>
+            <td class="amount-cell">${item.totalPrice.toLocaleString()}</td>
+            <td>${item.orderDate}</td>
+            <td>${item.chassisNo || '-'}</td>
+            <td class="amount-cell">${item.releasePrice ? item.releasePrice.toLocaleString() : '-'}</td>
+            <td class="amount-cell">${item.totalAdvancePrice ? item.totalAdvancePrice.toLocaleString() : '-'}</td>
+            <td>${item.vehicleNo || '-'}</td>
+            <td>${item.registerDate || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 상태별 클래스 반환
+    function getStatusClass(status) {
+      switch(status) {
+        case '발주전': return 'status-before';
+        case '발주완료': return 'status-ordered';
+        case '출고완료': return 'status-released';
+        case '등록완료': return 'status-registered';
+        case '실행완료': return 'status-executed';
+        default: return '';
+      }
+    }
+
+    // 등록 페이지로 이동
+    function goToRegister() {
+      window.location.href = 'vehicle_order.html';
+    }
+
+    // 상세보기
+    function viewDetail(vehicleMgmtNo) {
+      window.location.href = `vehicle_detail.html?id=${vehicleMgmtNo}`;
+    }
+  </script>
+</body>
+</html>

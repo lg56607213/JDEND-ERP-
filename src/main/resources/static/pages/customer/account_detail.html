@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계좌 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/customer/account_register.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>계좌 상세</h1>
+      <p>고객관리 &gt; 계좌목록 &gt; 상세보기</p>
+    </div>
+
+    <!-- 계좌 상세 정보 섹션 -->
+    <div class="erp-card" id="accountDetailSection">
+      <div class="card-header">
+        <h2>계좌 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+      <div class="card-body">
+        <!-- 기본 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">기본 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>고객번호</label>
+              <div class="detail-value" id="customerNumber">-</div>
+            </div>
+            <div class="detail-item">
+              <label>은행명</label>
+              <div class="detail-value" id="bankName">-</div>
+            </div>
+            <div class="detail-item">
+              <label>은행코드</label>
+              <div class="detail-value" id="bankCode">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 계좌 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">계좌 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>계좌번호</label>
+              <div class="detail-value" id="accountNumber">-</div>
+            </div>
+            <div class="detail-item">
+              <label>예금주명</label>
+              <div class="detail-value" id="accountHolder">-</div>
+            </div>
+            <div class="detail-item">
+              <label>이용자와의 관계</label>
+              <div class="detail-value" id="relationship">-</div>
+            </div>
+            <div class="detail-item">
+              <label>사업자/주민등록번호</label>
+              <div class="detail-value" id="registrationNumber">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 등록 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">등록 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>등록일</label>
+              <div class="detail-value" id="registerDate">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ 스캔 파일 섹션(상세에서 보여주기) -->
+        <div class="form-section">
+          <h3 class="section-title">스캔 파일</h3>
+          <div class="file-preview active" id="fileList"></div>
+        </div>
+
+        <!-- 수정하기 버튼 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editAccountBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 계좌 수정 폼 섹션 (초기에는 숨김) -->
+    <div class="erp-card hidden" id="accountEditSection">
+      <div class="card-header">
+        <h2>계좌 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body">
+        <form id="accountEditForm">
+          <!-- 기본 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editCustomerNumber" class="required">고객번호</label>
+                <input type="text" id="editCustomerNumber" name="customerNumber" placeholder="고객번호를 입력하세요" required>
+              </div>
+
+              <div class="form-group">
+                <label for="editBankName" class="required">은행명</label>
+                <select id="editBankName" name="bankName" required>
+                  <option value="">선택하세요</option>
+                  <option value="KB국민은행">KB국민은행</option>
+                  <option value="신한은행">신한은행</option>
+                  <option value="우리은행">우리은행</option>
+                  <option value="하나은행">하나은행</option>
+                  <option value="NH농협은행">NH농협은행</option>
+                  <option value="IBK기업은행">IBK기업은행</option>
+                  <option value="카카오뱅크">카카오뱅크</option>
+                  <option value="케이뱅크">케이뱅크</option>
+                  <option value="토스뱅크">토스뱅크</option>
+                  <option value="SC제일은행">SC제일은행</option>
+                  <option value="한국씨티은행">한국씨티은행</option>
+                  <option value="부산은행">부산은행</option>
+                  <option value="대구은행">대구은행</option>
+                  <option value="광주은행">광주은행</option>
+                  <option value="경남은행">경남은행</option>
+                  <option value="전북은행">전북은행</option>
+                  <option value="제주은행">제주은행</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editBankCode">은행코드</label>
+                <input type="text" id="editBankCode" name="bankCode" placeholder="은행코드 (자동입력)">
+              </div>
+            </div>
+          </div>
+
+          <!-- 계좌 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">계좌 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editAccountNumber" class="required">계좌번호</label>
+                <input type="text" id="editAccountNumber" name="accountNumber" placeholder="계좌번호를 입력하세요" required>
+              </div>
+
+              <div class="form-group">
+                <label for="editAccountHolder" class="required">예금주명</label>
+                <input type="text" id="editAccountHolder" name="accountHolder" placeholder="예금주명을 입력하세요" required>
+              </div>
+
+              <div class="form-group">
+                <label for="editRelationship">이용자와의 관계</label>
+                <select id="editRelationship" name="relationship">
+                  <option value="">선택하세요</option>
+                  <option value="본인">본인</option>
+                  <option value="배우자">배우자</option>
+                  <option value="부모">부모</option>
+                  <option value="자녀">자녀</option>
+                  <option value="형제자매">형제자매</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editRegistrationNumber">사업자/주민등록번호</label>
+                <input type="text" id="editRegistrationNumber" name="registrationNumber" placeholder="000000-0000000">
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ 수정 화면: 저장된 파일 목록 -->
+          <div class="form-section">
+            <h3 class="section-title">저장된 스캔 파일</h3>
+            <div class="file-preview active" id="editSavedFileList"></div>
+          </div>
+
+          <!-- 파일 업로드 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">스캔 파일 업로드(추가)</h3>
+            <div class="form-group">
+              <label for="editFileInput">파일 선택</label>
+              <input type="file" id="editFileInput" name="scanFile" class="file-input" accept=".jpg,.jpeg,.png,.pdf" multiple>
+              <small class="inline-style-1">지원 형식: JPG, PNG, PDF (최대 10MB)</small>
+            </div>
+            <div class="file-preview" id="editFilePreview"></div>
+          </div>
+
+          <!-- 버튼 영역 -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetEditForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  
+  
+<script>
+const API_BASE = `${API_BASE_URL}/api`; // config.js의 API_BASE_URL 사용
+
+const urlParams = new URLSearchParams(window.location.search);
+const accountId = urlParams.get('id');
+
+const accountDetailSection = document.getElementById('accountDetailSection');
+const accountEditSection = document.getElementById('accountEditSection');
+const editAccountBtn = document.getElementById('editAccountBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+const bankCodes = {
+  'KB국민은행': '004','신한은행': '088','우리은행': '020','하나은행': '081','NH농협은행': '011',
+  'IBK기업은행': '003','카카오뱅크': '090','케이뱅크': '089','토스뱅크': '092','SC제일은행': '023',
+  '한국씨티은행': '027','부산은행': '032','대구은행': '031','광주은행': '034','경남은행': '039',
+  '전북은행': '037','제주은행': '035'
+};
+
+async function apiGet(path) {
+  const res = await fetch(API_BASE + path);
+  if (!res.ok) throw new Error(`GET 실패 ${res.status}`);
+  return res.json();
+}
+async function apiPut(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: "PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `PUT 실패 ${res.status}`);
+  return JSON.parse(text);
+}
+async function apiDelete(path) {
+  const res = await fetch(API_BASE + path, { method:"DELETE" });
+  if (!res.ok && res.status !== 204) throw new Error(`DELETE 실패 ${res.status}`);
+  return true;
+}
+
+let accountData = null;
+
+// =============================
+// ✅ 파일 UI(수정 화면에서 선택한 파일 미리보기)
+// =============================
+const editFileInput = document.getElementById('editFileInput');
+const editFilePreview = document.getElementById('editFilePreview');
+let uploadedFiles = [];
+
+editFileInput.addEventListener('change', (e) => {
+  handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+  for (let file of files) {
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`파일 ${file.name}의 크기가 10MB를 초과합니다.`);
+      continue;
+    }
+    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert(`파일 ${file.name}은 지원하지 않는 형식입니다.`);
+      continue;
+    }
+    uploadedFiles.push(file);
+  }
+  updateEditFilePreview();
+}
+
+function updateEditFilePreview() {
+  if (uploadedFiles.length === 0) {
+    editFilePreview.classList.remove('active');
+    editFilePreview.innerHTML = '';
+    return;
+  }
+  editFilePreview.classList.add('active');
+  editFilePreview.innerHTML = uploadedFiles.map((file, index) => `
+    <div class="file-preview-item">
+      <span class="file-name">${file.name}</span>
+      <span class="file-remove" onclick="removeEditFile(${index})">×</span>
+    </div>
+  `).join('');
+}
+
+function removeEditFile(index) {
+  uploadedFiles.splice(index, 1);
+  updateEditFilePreview();
+}
+window.removeEditFile = removeEditFile;
+
+// =============================
+// ✅ 상세/수정 화면에 저장된 파일 목록 보여주기
+// GET /api/accounts/{id}/files
+// 다운로드: /api/accounts/files/{fileId}/download
+// 삭제: DELETE /api/accounts/files/{fileId}
+// =============================
+async function loadFilesForDetailAndEdit() {
+  try {
+    const files = await apiGet(`/accounts/${accountId}/files`);
+
+    // 상세 화면
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = renderSavedFilesHtml(files, false);
+
+    // 수정 화면
+    const editSaved = document.getElementById('editSavedFileList');
+    editSaved.innerHTML = renderSavedFilesHtml(files, true);
+
+  } catch (e) {
+    // 파일 API가 없으면 여기로 떨어짐
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = "<div style='padding:10px;'>파일 불러오기 실패</div>";
+    const editSaved = document.getElementById('editSavedFileList');
+    editSaved.innerHTML = "<div style='padding:10px;'>파일 불러오기 실패</div>";
+  }
+}
+
+function renderSavedFilesHtml(files, withDelete) {
+  if (!files || files.length === 0) {
+    return "<div style='padding:10px;'>등록된 파일이 없습니다.</div>";
+  }
+  return files.map(f => `
+    <div class="file-preview-item">
+      <a href="${API_BASE}/accounts/files/${f.id}/download" target="_blank">${f.originalName}</a>
+      ${withDelete ? `<span class="file-remove" onclick="deleteSavedFile(${f.id})">×</span>` : ``}
+    </div>
+  `).join("");
+}
+
+async function deleteSavedFile(fileId) {
+  if (!confirm("이 파일을 삭제할까요?")) return;
+  try {
+    await apiDelete(`/accounts/files/${fileId}`);
+    await loadFilesForDetailAndEdit(); // 삭제 후 재조회
+  } catch (e) {
+    alert("파일 삭제 실패: " + e.message);
+  }
+}
+window.deleteSavedFile = deleteSavedFile;
+
+// =============================
+// ✅ 화면에 뿌리기
+// =============================
+function paintDetail(a) {
+  document.getElementById('customerNumber').textContent = a.customerNumber || '-';
+  document.getElementById('bankName').textContent = a.bankName || '-';
+  document.getElementById('bankCode').textContent = a.bankCode || '-';
+  document.getElementById('accountNumber').textContent = a.accountNumber || '-';
+  document.getElementById('accountHolder').textContent = a.accountHolder || '-';
+  document.getElementById('relationship').textContent = a.relationship || '-';
+  document.getElementById('registrationNumber').textContent = a.registrationNumber || '-';
+  document.getElementById('registerDate').textContent = a.registerDate || '-';
+}
+
+async function loadAccountDetail() {
+  try {
+    accountData = await apiGet(`/accounts/${accountId}`);
+    paintDetail(accountData);
+
+    // ✅ 파일 목록도 같이 불러오기
+    await loadFilesForDetailAndEdit();
+
+  } catch (err) {
+    alert("상세 불러오기 실패: " + err.message);
+    goBack();
+  }
+}
+
+// 수정하기 눌렀을 때 폼 채우기 + 파일목록 보여주기
+editAccountBtn.addEventListener('click', async () => {
+  document.getElementById('editCustomerNumber').value = accountData.customerNumber || '';
+  document.getElementById('editBankName').value = accountData.bankName || '';
+  document.getElementById('editBankCode').value = accountData.bankCode || '';
+  document.getElementById('editAccountNumber').value = accountData.accountNumber || '';
+  document.getElementById('editAccountHolder').value = accountData.accountHolder || '';
+  document.getElementById('editRelationship').value = accountData.relationship || '';
+  document.getElementById('editRegistrationNumber').value = accountData.registrationNumber || '';
+
+  // ✅ 수정화면 들어갈 때, 새로 선택한 파일 초기화
+  uploadedFiles = [];
+  updateEditFilePreview();
+  editFileInput.value = "";
+
+  // ✅ 저장된 파일 목록 최신으로 다시 불러오기
+  await loadFilesForDetailAndEdit();
+
+  accountDetailSection.classList.add('hidden');
+  accountEditSection.classList.remove('hidden');
+});
+
+// 취소
+cancelEditBtn.addEventListener('click', () => {
+  if(confirm('수정을 취소하시겠습니까?')) {
+    accountEditSection.classList.add('hidden');
+    accountDetailSection.classList.remove('hidden');
+  }
+});
+
+// 은행 바꾸면 코드 자동
+document.getElementById('editBankName').addEventListener('change', function() {
+  document.getElementById('editBankCode').value = bankCodes[this.value] || '';
+});
+
+// ✅ 수정 제출: (1) 계좌 PUT (2) 새 파일 있으면 업로드
+document.getElementById('accountEditForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if(!confirm('수정하시겠습니까?')) return;
+
+  const payload = {
+    customerId: accountData.customerId, // 기존 유지
+    customerNumber: document.getElementById('editCustomerNumber').value,
+    bankName: document.getElementById('editBankName').value,
+    bankCode: document.getElementById('editBankCode').value || null,
+    accountNumber: document.getElementById('editAccountNumber').value,
+    accountHolder: document.getElementById('editAccountHolder').value,
+    relationship: document.getElementById('editRelationship').value || null,
+    registrationNumber: document.getElementById('editRegistrationNumber').value || null
+  };
+
+  try {
+    // 1) 계좌 정보 수정
+    accountData = await apiPut(`/accounts/${accountId}`, payload);
+    paintDetail(accountData);
+
+    // 2) 새로 선택한 파일 업로드(추가)
+    if (uploadedFiles.length > 0) {
+      const fd = new FormData();
+      uploadedFiles.forEach(f => fd.append("files", f));
+
+      const upRes = await fetch(`${API_BASE}/accounts/${accountId}/files`, {
+        method: "POST",
+        body: fd
+      });
+      const upText = await upRes.text();
+      if (!upRes.ok) throw new Error("파일 업로드 실패: " + upText);
+
+      // 업로드 후 초기화
+      uploadedFiles = [];
+      updateEditFilePreview();
+      editFileInput.value = "";
+    }
+
+    // ✅ 파일 목록 갱신
+    await loadFilesForDetailAndEdit();
+
+    accountEditSection.classList.add('hidden');
+    accountDetailSection.classList.remove('hidden');
+    alert('수정 완료');
+
+  } catch (err) {
+    alert('수정 실패: ' + err.message);
+  }
+});
+
+function resetEditForm() {
+  if(confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+    editAccountBtn.click();
+  }
+}
+window.resetEditForm = resetEditForm;
+
+function goBack() {
+  window.location.href = 'account_register.html';
+}
+window.goBack = goBack;
+
+loadAccountDetail();
+</script>
+
+</body>
+</html>

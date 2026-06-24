@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대시보드 | JDEND ERP</title>
+  <link rel="stylesheet" href="assets/css/sidebar.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>대시보드</h1>
+      <p>홈 &gt; 대시보드</p>
+    </div>
+
+    <!-- 그래프 섹션 -->
+    <div class="charts-container">
+      <div class="chart-card">
+        <div class="card-header">
+          <h2>일일자금일보 (전일자기준)</h2>
+        </div>
+        <div class="card-body">
+          <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="card-header">
+          <h2>계약현황 (장기/단기/대기)</h2>
+        </div>
+        <div class="card-body">
+          <canvas id="contractStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 최근 보험 만기일건 확인 -->
+    <div class="erp-card">
+      <div class="card-header">
+        <h2>최근 보험 만기일건 확인 (보험만기 7일전)</h2>
+        <a href="pages/contract/contract_register.html" class="view-all-link">전체보기 →</a>
+      </div>
+      <div class="card-body">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>계약번호</th>
+                <th>고객명</th>
+                <th>차량번호</th>
+                <th>보험만기일</th>
+                <th>D-Day</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="recentContractsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 섹션 -->
+    <div class="dashboard-grid">
+      <!-- 만기 임박 계약 -->
+      <div class="erp-card">
+        <div class="card-header">
+          <h2>만기 임박 계약</h2>
+          <a href="pages/contract/maturity_management.html" class="view-all-link">전체보기 →</a>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>계약번호</th>
+                  <th>고객명</th>
+                  <th>만기일</th>
+                  <th>D-Day</th>
+                </tr>
+              </thead>
+              <tbody id="maturitySoonTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 미수금 현황 -->
+      <div class="erp-card">
+        <div class="card-header">
+          <h2>미수금 현황</h2>
+          <a href="pages/payment/receivable_status.html" class="view-all-link">전체보기 →</a>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>계약번호</th>
+                  <th>고객명</th>
+                  <th>미수금액</th>
+                  <th>연체일</th>
+                </tr>
+              </thead>
+              <tbody id="receivableTopTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/sidebar.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+      await authCheck();
+
+      try {
+        const base = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
+
+        const monthlyRevenueChart = createCashChart();
+        const contractStatusChart = createContractChart();
+
+        await loadCashDaily(base, monthlyRevenueChart);
+        await loadContractStatus(base, contractStatusChart);
+        await loadInsuranceExpiring(base);
+        await loadMaturitySoon(base);
+        await loadReceivablesTop(base);
+
+        console.log('✅ 대시보드 로드 완료');
+      } catch (e) {
+        console.error('❌ 대시보드 로드 실패:', e);
+        alert('대시보드 데이터를 불러오지 못했습니다. (F12 콘솔 확인)');
+      }
+    });
+
+    function createCashChart() {
+      const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
+
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['전기이월', '당일입금', '당일출금', '차기이월'],
+          datasets: [{
+            label: '금액 (백만원)',
+            data: [0, 0, 0, 0],
+            backgroundColor: [
+              'rgba(148, 163, 184, 0.7)',
+              'rgba(34, 197, 94, 0.7)',
+              'rgba(239, 68, 68, 0.7)',
+              'rgba(56, 189, 248, 0.7)'
+            ],
+            borderColor: [
+              'rgba(148, 163, 184, 1)',
+              'rgba(34, 197, 94, 1)',
+              'rgba(239, 68, 68, 1)',
+              'rgba(56, 189, 248, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (v) => v + '백만'
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function createContractChart() {
+      const ctx = document.getElementById('contractStatusChart').getContext('2d');
+
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['장기', '단기', '대기'],
+          datasets: [{
+            data: [0, 0, 0],
+            backgroundColor: [
+              'rgba(34, 197, 94, 0.8)',
+              'rgba(250, 204, 21, 0.8)',
+              'rgba(148, 163, 184, 0.8)'
+            ],
+            borderColor: [
+              'rgba(34, 197, 94, 1)',
+              'rgba(250, 204, 21, 1)',
+              'rgba(148, 163, 184, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                generateLabels(chart) {
+                  const data = chart.data;
+                  const dataset = data.datasets[0];
+                  return data.labels.map((label, i) => ({
+                    text: `${label} (${dataset.data[i] || 0})`,
+                    fillStyle: dataset.backgroundColor[i],
+                    strokeStyle: dataset.borderColor[i],
+                    lineWidth: 1,
+                    hidden: false,
+                    index: i
+                  }));
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.raw || 0;
+                  return `${label}: ${value}건`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    async function loadCashDaily(base, chart) {
+      const data = await getJson(`${base}/api/dashboard/cash-daily`);
+      const toMillion = (v) => Math.round((Number(v || 0) / 1000000) * 100) / 100;
+
+      chart.data.datasets[0].data = [
+        toMillion(data.openingBalance),
+        toMillion(data.todayDeposit),
+        toMillion(data.todayWithdrawal),
+        toMillion(data.closingBalance)
+      ];
+      chart.update();
+    }
+
+    async function loadContractStatus(base, chart) {
+      const data = await getJson(`${base}/api/dashboard/contract-status`);
+      console.log('📌 계약현황 API 응답:', data);
+
+      const longTerm = Number(
+        data.longTerm ??
+        data.long_term ??
+        data.longterm ??
+        data.longCount ??
+        data.long_count ??
+        0
+      );
+
+      const shortTerm = Number(
+        data.shortTerm ??
+        data.short_term ??
+        data.shortterm ??
+        data.shortCount ??
+        data.short_count ??
+        0
+      );
+
+      const waiting = Number(
+        data.waiting ??
+        data.pending ??
+        data.standby ??
+        data.waitCount ??
+        data.waitingCount ??
+        data.wait_count ??
+        data.pendingCount ??
+        data.pending_count ??
+        0
+      );
+
+      chart.data.datasets[0].data = [longTerm, shortTerm, waiting];
+      chart.update();
+
+      console.log('✅ 계약현황 차트 반영값:', {
+        longTerm,
+        shortTerm,
+        waiting
+      });
+    }
+
+    async function loadInsuranceExpiring(base) {
+      const rows = await getJson(`${base}/api/dashboard/insurance-expiring?days=7&limit=5`);
+      const tbody = document.getElementById('recentContractsTable');
+      tbody.innerHTML = '';
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
+        return;
+      }
+
+      for (const r of rows) {
+        const dday = Number(r.dday || 0);
+        const badge = dday <= 1 ? 'badge-danger' : 'badge-warning';
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${esc(r.contractNumber)}</td>
+            <td>${esc(r.customerName)}</td>
+            <td>${esc(r.vehicleNo)}</td>
+            <td>${fmtDate(r.insuranceEndDate)}</td>
+            <td><span class="badge ${badge}">D-${dday}</span></td>
+            <td><span class="badge badge-warning">갱신필요</span></td>
+          </tr>
+        `);
+      }
+    }
+
+    async function loadMaturitySoon(base) {
+      const rows = await getJson(`${base}/api/dashboard/maturity-soon?days=30&limit=5`);
+      const tbody = document.getElementById('maturitySoonTbody');
+      tbody.innerHTML = '';
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
+        return;
+      }
+
+      for (const r of rows) {
+        const dday = Number(r.dday || 0);
+        const badge = dday <= 7 ? 'badge-warning' : 'badge-info';
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${esc(r.contractNumber)}</td>
+            <td>${esc(r.customerName)}</td>
+            <td>${fmtDate(r.endDate)}</td>
+            <td><span class="badge ${badge}">D-${dday}</span></td>
+          </tr>
+        `);
+      }
+    }
+
+    async function loadReceivablesTop(base) {
+      const rows = await getJson(`${base}/api/dashboard/receivables-top?limit=5`);
+      const tbody = document.getElementById('receivableTopTbody');
+      tbody.innerHTML = '';
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
+        return;
+      }
+
+      for (const r of rows) {
+        const overdue = Number(r.overdueDays || 0);
+        const badge = overdue >= 30 ? 'badge-danger' : (overdue >= 10 ? 'badge-warning' : 'badge-info');
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${esc(r.contractNumber)}</td>
+            <td>${esc(r.customerName)}</td>
+            <td class="amount-cell">${fmtNumber(r.receivableAmount)}</td>
+            <td><span class="badge ${badge}">${overdue}일</span></td>
+          </tr>
+        `);
+      }
+    }
+
+    async function getJson(url) {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} - ${url}`);
+      return await res.json();
+    }
+
+    function fmtNumber(v) {
+      return Number(v || 0).toLocaleString('ko-KR');
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '';
+      return String(iso).substring(0, 10);
+    }
+
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+  </script>
+</body>
+</html>

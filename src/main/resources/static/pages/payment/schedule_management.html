@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스케줄관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/schedule_management.css">
+
+  <style>
+    .input-with-icon{ position:relative; }
+    .input-with-icon input{ width:100%; padding-right:46px; }
+    .icon-btn{
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      width:34px; height:34px; border:1px solid #ddd; background:#fff;
+      border-radius:8px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .icon-btn:hover{ background:#f5f5f5; }
+
+    .modal-backdrop{
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.45);
+      z-index:9999; align-items:center; justify-content:center;
+      padding:20px;
+    }
+    .modal{
+      width:min(980px, 96vw);
+      max-height:84vh;
+      background:#fff; border-radius:12px; overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+      display:flex; flex-direction:column;
+    }
+    .modal-header{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:14px 16px; border-bottom:1px solid #eee;
+    }
+    .modal-title{ font-weight:700; color:#111827; }
+    .modal-close{
+      border:1px solid #ddd; background:#fff; border-radius:8px;
+      width:34px; height:34px; cursor:pointer;
+    }
+    .modal-body{ padding:14px 16px; overflow:auto; }
+    .modal-search{ display:flex; gap:8px; margin-bottom:12px; }
+    .modal-search input{
+      flex:1; padding:10px 12px; border:1px solid #d1d5db;
+      border-radius:10px; outline:none;
+    }
+    .modal-search button{
+      padding:10px 14px; border:1px solid #d1d5db; background:#fff;
+      border-radius:10px; cursor:pointer;
+    }
+    .pick-table{ width:100%; border-collapse:collapse; }
+    .pick-table th, .pick-table td{
+      border-bottom:1px solid #eee; padding:10px; text-align:left; font-size:14px;
+    }
+    .pick-table thead th{
+      background:#f9fafb; position:sticky; top:0; z-index:1;
+    }
+    .pick-row{ cursor:pointer; }
+    .pick-row:hover{ background:#f3f4f6; }
+    .muted{ color:#6b7280; font-size:13px; }
+
+    .status-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:60px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      border:1px solid transparent;
+    }
+    .status-paid{
+      background:#ecfdf3;
+      color:#027a48;
+      border-color:#abefc6;
+    }
+    .status-partial{
+      background:#fff7e6;
+      color:#b54708;
+      border-color:#fedf89;
+    }
+    .status-unpaid{
+      background:#fef3f2;
+      color:#b42318;
+      border-color:#fecdca;
+    }
+    .status-planned{
+      background:#f2f4f7;
+      color:#475467;
+      border-color:#d0d5dd;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>스케줄관리</h1>
+      <p>수납관리 &gt; 스케줄조정</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <div class="form-section">
+          <h3 class="section-title">차량조회</h3>
+          <div class="search-row">
+            <div class="form-group">
+              <label for="vehicleNo">차량번호</label>
+              <div class="input-with-icon">
+                <input type="text" id="vehicleNo" placeholder="예: 123노1234">
+                <button type="button" class="icon-btn" id="openVehicleModalBtn" title="차량 검색">🔍</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="contractNo">계약번호</label>
+              <input type="text" id="contractNo" placeholder="조회시 출력" readonly>
+            </div>
+
+            <button type="button" class="btn-search" id="searchBtn">조회</button>
+          </div>
+        </div>
+
+        <div class="schedule-compare" id="scheduleCompare" style="display: none;">
+          <div class="schedule-panel">
+            <div class="panel-header">
+              <h4>변경전 스케줄</h4>
+            </div>
+            <div class="table-container">
+              <table class="schedule-table" id="beforeTable">
+                <thead>
+                  <tr>
+                    <th>회차</th>
+                    <th>청구시작일</th>
+                    <th>청구종료일</th>
+                    <th>세금계산서발행일</th>
+                    <th>납부일자</th>
+                    <th>렌트료</th>
+                    <th>수납금액</th>
+                    <th>미납금액</th>
+                    <th>미수금액</th>
+                    <th>상태</th>
+                    <th>원금</th>
+                    <th>이자</th>
+                    <th>미회수원금</th>
+                  </tr>
+                </thead>
+                <tbody id="beforeTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="schedule-panel">
+            <div class="panel-header">
+              <h4>변경후 스케줄</h4>
+            </div>
+            <div class="table-container">
+              <table class="schedule-table" id="afterTable">
+                <thead>
+                  <tr>
+                    <th>회차</th>
+                    <th>청구시작일</th>
+                    <th>청구종료일</th>
+                    <th>세금계산서발행일</th>
+                    <th>납부일자</th>
+                    <th>렌트료</th>
+                    <th>수납금액</th>
+                    <th>미납금액</th>
+                    <th>미수금액</th>
+                    <th>상태</th>
+                    <th>원금</th>
+                    <th>이자</th>
+                    <th>미회수원금</th>
+                  </tr>
+                </thead>
+                <tbody id="afterTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions" id="actionButtons" style="display: none;">
+          <button type="button" class="btn btn-secondary" id="resetBtn">초기화</button>
+          <button type="button" class="btn btn-primary" id="saveBtn">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="vehicleModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">차량 선택</div>
+          <div class="muted">선택하면 차량번호가 자동 입력됩니다.</div>
+        </div>
+        <button type="button" class="modal-close" id="closeVehicleModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search">
+          <input type="text" id="vehicleKw" placeholder="차량번호/차량관리번호 키워드">
+          <button type="button" id="vehicleSearchBtn">검색</button>
+        </div>
+        <table class="pick-table">
+          <thead>
+            <tr>
+              <th style="width:200px;">차량관리번호</th>
+              <th style="width:160px;">차량번호</th>
+              <th>차종</th>
+            </tr>
+          </thead>
+          <tbody id="vehiclePickBody">
+            <tr><td colspan="3" style="text-align:center; color:#888;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll("\"","&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    async function mustOk(res){
+      if(res.ok) return res;
+      let msg = "HTTP " + res.status;
+      try{
+        const b = await res.json();
+        msg = b.message || b.error || b.msg || msg;
+      }catch(e){}
+      throw new Error(msg);
+    }
+
+    function formatNumber(num){
+      if(num === '' || num === null || num === undefined) return '';
+      if(num === '-') return '-';
+      const n = Number(num);
+      if(Number.isNaN(n)) return String(num);
+      return n.toLocaleString();
+    }
+
+    function renderStatusBadge(status){
+      const s = status || '';
+      if (s === '완납') return `<span class="status-badge status-paid">완납</span>`;
+      if (s === '부분수납') return `<span class="status-badge status-partial">부분수납</span>`;
+      if (s === '미납') return `<span class="status-badge status-unpaid">미납</span>`;
+      return `<span class="status-badge status-planned">예정</span>`;
+    }
+
+    let originalSchedule = [];
+    let modifiedSchedule = [];
+    let currentContractNumber = null;
+
+    function showPanels(show){
+      $('scheduleCompare').style.display = show ? 'flex' : 'none';
+      $('actionButtons').style.display = show ? 'flex' : 'none';
+    }
+
+    function renderTables(){
+      renderBeforeTable();
+      renderAfterTable();
+    }
+
+    function renderBeforeTable(){
+      const tbody = $('beforeTableBody');
+      tbody.innerHTML = '';
+
+      originalSchedule.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.no ?? ''}</td>
+          <td>${escapeHtml(row.startDate ?? '')}</td>
+          <td>${escapeHtml(row.endDate ?? '')}</td>
+          <td>${escapeHtml(row.taxDate ?? '')}</td>
+          <td>${escapeHtml(row.payDate ?? '')}</td>
+          <td class="amount">${row.rent == null ? '' : formatNumber(row.rent)}</td>
+          <td class="amount">${row.paid == null ? '' : formatNumber(row.paid)}</td>
+          <td class="amount">${row.unpaid == null ? '' : formatNumber(row.unpaid)}</td>
+          <td class="amount">${row.receivable == null ? '' : formatNumber(row.receivable)}</td>
+          <td>${renderStatusBadge(row.status)}</td>
+          <td class="amount">${row.principal == null ? '' : formatNumber(row.principal)}</td>
+          <td class="amount">${row.interest == null ? '' : formatNumber(row.interest)}</td>
+          <td class="amount">${row.balance == null ? '' : formatNumber(row.balance)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAfterTable(){
+      const tbody = $('afterTableBody');
+      tbody.innerHTML = '';
+
+      modifiedSchedule.forEach((row, index) => {
+        const org = originalSchedule[index] || {};
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${row.no ?? ''}</td>
+          <td><input type="date" class="editable" data-field="startDate" data-index="${index}" value="${escapeHtml(row.startDate ?? '')}"></td>
+          <td><input type="date" class="editable" data-field="endDate" data-index="${index}" value="${escapeHtml(row.endDate ?? '')}"></td>
+          <td><input type="date" class="editable" data-field="taxDate" data-index="${index}" value="${escapeHtml(row.taxDate ?? '')}"></td>
+          <td><input type="date" class="editable" data-field="payDate" data-index="${index}" value="${escapeHtml(row.payDate ?? '')}"></td>
+          <td class="amount">${row.rent == null ? '' : formatNumber(row.rent)}</td>
+          <td class="amount">${row.paid == null ? '' : formatNumber(row.paid)}</td>
+          <td class="amount">${row.unpaid == null ? '' : formatNumber(row.unpaid)}</td>
+          <td class="amount">${row.receivable == null ? '' : formatNumber(row.receivable)}</td>
+          <td>${renderStatusBadge(row.status)}</td>
+          <td class="amount">${row.principal == null ? '' : formatNumber(row.principal)}</td>
+          <td class="amount">${row.interest == null ? '' : formatNumber(row.interest)}</td>
+          <td class="amount">${row.balance == null ? '' : formatNumber(row.balance)}</td>
+        `;
+        tbody.appendChild(tr);
+
+        tr.querySelectorAll('input.editable').forEach(inp=>{
+          inp.addEventListener('change', ()=>{
+            const i = Number(inp.dataset.index);
+            const f = inp.dataset.field;
+            modifiedSchedule[i][f] = inp.value;
+
+            const originalValue = (org[f] ?? '');
+            if(inp.value !== originalValue) inp.classList.add('changed');
+            else inp.classList.remove('changed');
+          });
+        });
+      });
+    }
+
+    async function searchVehicle(){
+      const vehicleNo = $('vehicleNo').value.trim();
+      if(!vehicleNo){
+        alert('차량번호를 입력해주세요.');
+        return;
+      }
+
+      try{
+        const res = await fetch(`${BASE}/api/schedules/by-vehicle-no?vehicleNo=${encodeURIComponent(vehicleNo)}`);
+        await mustOk(res);
+        const data = await res.json();
+
+        $('contractNo').value = data.contractNumber || '';
+        currentContractNumber = data.contractNumber || null;
+
+        originalSchedule = Array.isArray(data.schedule) ? data.schedule : [];
+        modifiedSchedule = JSON.parse(JSON.stringify(originalSchedule));
+
+        if(originalSchedule.length === 0){
+          showPanels(false);
+          alert('스케줄이 없습니다.');
+          return;
+        }
+
+        renderTables();
+        showPanels(true);
+      }catch(e){
+        showPanels(false);
+        $('contractNo').value = '';
+        currentContractNumber = null;
+        alert('조회 실패: ' + e.message);
+      }
+    }
+
+    function resetSchedule(){
+      if(!confirm('변경사항을 초기화하시겠습니까?')) return;
+      modifiedSchedule = JSON.parse(JSON.stringify(originalSchedule));
+      renderAfterTable();
+    }
+
+    async function saveSchedule(){
+      if(!currentContractNumber){
+        alert('계약번호가 없습니다. 먼저 조회하세요.');
+        return;
+      }
+
+      let changedCount = 0;
+      for(let i=0;i<modifiedSchedule.length;i++){
+        const a = modifiedSchedule[i];
+        const b = originalSchedule[i] || {};
+        if((a.startDate||'') !== (b.startDate||'') ||
+           (a.endDate||'')   !== (b.endDate||'')   ||
+           (a.taxDate||'')   !== (b.taxDate||'')   ||
+           (a.payDate||'')   !== (b.payDate||'')) {
+          changedCount++;
+        }
+      }
+
+      if(changedCount === 0){
+        alert('변경된 내용이 없습니다.');
+        return;
+      }
+
+      if(!confirm(`${changedCount}건의 스케줄이 변경되었습니다.\n저장하시겠습니까?`)) return;
+
+      try{
+        const res = await fetch(`${BASE}/api/schedules`, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            contractNumber: currentContractNumber,
+            schedule: modifiedSchedule
+          })
+        });
+        await mustOk(res);
+
+        alert('저장되었습니다.');
+        await searchVehicle();
+      }catch(e){
+        alert('저장 실패: ' + e.message);
+      }
+    }
+
+    function openVehicleModal(){
+      $('vehicleModalBackdrop').style.display = 'flex';
+      $('vehicleKw').value = '';
+      loadVehicles('');
+      setTimeout(()=>$('vehicleKw').focus(),0);
+    }
+    function closeVehicleModal(){ $('vehicleModalBackdrop').style.display = 'none'; }
+
+    function renderVehicles(list){
+      const body = $('vehiclePickBody');
+      if(!Array.isArray(list) || list.length===0){
+        body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">결과 없음</td></tr>`;
+        return;
+      }
+      body.innerHTML = list.map(it=>`
+        <tr class="pick-row" data-veh="${escapeHtml(it.vehicleNo||'')}">
+          <td>${escapeHtml(it.vehicleMgmtNo||'-')}</td>
+          <td>${escapeHtml(it.vehicleNo||'-')}</td>
+          <td>${escapeHtml(it.carModel||'-')}</td>
+        </tr>
+      `).join('');
+
+      body.querySelectorAll('.pick-row').forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          $('vehicleNo').value = tr.dataset.veh || '';
+          closeVehicleModal();
+        });
+      });
+    }
+
+    async function loadVehicles(kw){
+      const body = $('vehiclePickBody');
+      body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">불러오는 중...</td></tr>`;
+      try{
+        const res = await fetch(`${BASE}/api/vehicle-orders/search?kw=${encodeURIComponent(kw||'')}`);
+        await mustOk(res);
+        const data = await res.json();
+        renderVehicles(data);
+      }catch(e){
+        body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){
+        if($('vehicleModalBackdrop').style.display === 'flex') closeVehicleModal();
+      }
+    });
+    $('vehicleModalBackdrop').addEventListener('click', (e)=>{
+      if(e.target === $('vehicleModalBackdrop')) closeVehicleModal();
+    });
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      $('searchBtn').addEventListener('click', searchVehicle);
+      $('resetBtn').addEventListener('click', resetSchedule);
+      $('saveBtn').addEventListener('click', saveSchedule);
+
+      $('openVehicleModalBtn').addEventListener('click', openVehicleModal);
+      $('closeVehicleModalBtn').addEventListener('click', closeVehicleModal);
+      $('vehicleSearchBtn').addEventListener('click', ()=>loadVehicles($('vehicleKw').value.trim()));
+      $('vehicleKw').addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){ e.preventDefault(); loadVehicles($('vehicleKw').value.trim()); }
+      });
+    });
+  </script>
+</body>
+</html>

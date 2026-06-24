@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수납등록 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/payment_register.css">
+
+  <style>
+    .input-with-icon{ position:relative; }
+    .input-with-icon input{ width:100%; padding-right:44px; }
+    .icon-btn{
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      width:34px; height:34px; border:1px solid #ddd; background:#fff;
+      border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .icon-btn:hover{ background:#f5f5f5; }
+
+    .modal-backdrop{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999;
+      align-items:center; justify-content:center; padding:20px;
+    }
+    .modal{
+      width:min(980px, 96vw); background:#fff; border-radius:12px; overflow:hidden;
+      box-shadow:0 12px 30px rgba(0,0,0,.2);
+    }
+    .modal-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #eee;
+    }
+    .modal-title{ font-size:16px; font-weight:700; }
+    .modal-close{ border:none; background:transparent; font-size:22px; cursor:pointer; line-height:1; }
+    .modal-body{ padding:14px 16px; }
+    .modal-search-row{ display:flex; gap:8px; margin-bottom:12px; }
+    .modal-search-row input{
+      flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:8px;
+    }
+    .modal-search-row button{
+      padding:10px 12px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer;
+    }
+    .modal-search-row button:hover{ background:#f5f5f5; }
+    .modal-table{ width:100%; border-collapse:collapse; }
+    .modal-table th, .modal-table td{
+      border-bottom:1px solid #eee; padding:10px 8px; font-size:13px;
+    }
+    .modal-table th{ background:#fafafa; text-align:left; }
+    .row-pick{ cursor:pointer; }
+    .row-pick:hover{ background:#f7fbff; }
+    .badge{
+      display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px;
+      background:#eef6ff; border:1px solid #d7eaff;
+    }
+    .muted{ color:#888; font-size:12px; }
+
+    .btn-small{
+      padding:6px 10px;
+      border:1px solid #ddd;
+      background:#fff;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:12px;
+    }
+    .btn-small:hover{ background:#f5f5f5; }
+
+    .status-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:60px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      border:1px solid transparent;
+    }
+    .status-paid{
+      background:#ecfdf3;
+      color:#027a48;
+      border-color:#abefc6;
+    }
+    .status-partial{
+      background:#fff7e6;
+      color:#b54708;
+      border-color:#fedf89;
+    }
+    .status-unpaid{
+      background:#fef3f2;
+      color:#b42318;
+      border-color:#fecdca;
+    }
+    .status-planned{
+      background:#f2f4f7;
+      color:#475467;
+      border-color:#d0d5dd;
+    }
+    .amount-cell{
+      text-align:right;
+      white-space:nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>수납 관리</h1>
+      <p>수납관리 &gt; 수납관리</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body split-container">
+
+        <div class="top-panel" id="paymentFormSection">
+          <h3 class="panel-title">수납 등록</h3>
+          <div class="panel-content">
+            <form id="paymentForm">
+
+              <div class="form-section">
+                <h3 class="section-title">계약 조회</h3>
+
+                <div class="search-group">
+                  <div class="form-group">
+                    <label for="contractNumber" class="required">계약번호</label>
+
+                    <div class="input-with-icon">
+                      <input type="text" id="contractNumber" name="contractNumber" placeholder="계약번호를 입력하세요 (예: R00001001)" required>
+                      <button type="button" class="icon-btn" id="btnOpenContractModal" title="수납 가능한 계약 검색">
+                        🔎
+                      </button>
+                    </div>
+                    <div class="muted">* 돋보기 클릭 시 수납등록 가능한 계약이 전체조회됩니다.</div>
+                  </div>
+
+                  <button type="button" class="btn-search" id="btnContractSearch">조회</button>
+                </div>
+
+                <div class="customer-info" id="customerInfo">
+                  <h4>고객 정보</h4>
+                  <div class="info-row">
+                    <div class="info-item">
+                      <span class="info-label">차량번호</span>
+                      <span class="info-value" id="displayVehicleNumber">-</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">고객명</span>
+                      <span class="info-value" id="displayCustomerName">-</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">주민등록번호/사업자등록번호</span>
+                      <span class="info-value" id="displayRegistrationNumber">-</span>
+                    </div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-item">
+                      <span class="info-label">고객 Email</span>
+                      <span class="info-value" id="displayEmail">-</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">렌트료</span>
+                      <span class="info-value" id="displayRentAmount">-</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">계약상태</span>
+                      <span class="info-value" id="displayContractStatus">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">입금 정보</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="paymentDate" class="required">입금일자</label>
+                    <input type="date" id="paymentDate" name="paymentDate" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="paymentAmount" class="required">입금금액</label>
+                    <input type="number" id="paymentAmount" name="paymentAmount" placeholder="입금금액을 입력하세요" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="paymentMethod">입금방법</label>
+                    <select id="paymentMethod" name="paymentMethod">
+                      <option value="">선택하세요</option>
+                      <option value="계좌이체">계좌이체</option>
+                      <option value="카드">카드</option>
+                      <option value="현금">현금</option>
+                      <option value="기타">기타</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="companyAccount">당사 계좌번호</label>
+                    <input type="text" id="companyAccount" name="companyAccount" placeholder="당사 계좌번호를 직접 입력하세요">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="paymentNote">비고</label>
+                    <input type="text" id="paymentNote" name="paymentNote" placeholder="비고사항을 입력하세요">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="btnReset">초기화</button>
+                <button type="submit" class="btn btn-primary" id="btnSubmit">수납 등록</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="resizer" id="resizer"></div>
+
+        <div class="bottom-panel" id="paymentListSection">
+          <h3 class="panel-title">수납 현황</h3>
+          <div class="panel-content">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>회차</th>
+                    <th>청구시작일</th>
+                    <th>청구종료일</th>
+                    <th>세금계산서발행일</th>
+                    <th>납부일자</th>
+                    <th>렌트료</th>
+                    <th>수납금액</th>
+                    <th>미납금액</th>
+                    <th>미수금액</th>
+                    <th>상태</th>
+                    <th>원금</th>
+                    <th>이자</th>
+                    <th>미회수원금</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduleStatusTableBody">
+                  <tr>
+                    <td colspan="13" style="text-align:center;padding:18px;color:#64748b;">
+                      계약을 조회하면 수납 현황이 표시됩니다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="muted" style="margin-top:10px;">
+              * 스케줄 기준으로 완납 / 부분수납 / 미납 상태가 표시됩니다.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="contractModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">수납 가능한 계약 검색</div>
+        <button class="modal-close" type="button" id="btnCloseContractModal">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-search-row">
+          <input type="text" id="contractModalKw" placeholder="계약번호 / 고객명 / 차량번호로 검색">
+          <button type="button" id="btnContractModalSearch">검색</button>
+        </div>
+
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th style="width:150px;">계약번호</th>
+              <th style="width:180px;">고객명</th>
+              <th style="width:120px;">차량번호</th>
+              <th style="width:110px;">시작일</th>
+              <th style="width:110px;">만기일</th>
+              <th style="width:120px;">월렌트</th>
+              <th style="width:90px;">선택</th>
+            </tr>
+          </thead>
+          <tbody id="contractModalTbody">
+            <tr><td colspan="7" style="text-align:center;padding:14px;">조회중...</td></tr>
+          </tbody>
+        </table>
+
+        <div class="muted" style="margin-top:10px;">
+          * 상태가 종료/해지/상환/만기종료 등인 계약은 제외되고, 만기일이 지난 계약도 제외됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    const resizer = document.getElementById('resizer');
+    const topPanel = document.getElementById('paymentFormSection');
+    const bottomPanel = document.getElementById('paymentListSection');
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', function() {
+      isResizing = true;
+      document.body.style.cursor = 'row-resize';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isResizing) return;
+
+      const container = document.querySelector('.split-container');
+      const rect = container.getBoundingClientRect();
+      const newTopHeight = e.clientY - rect.top;
+      const totalHeight = rect.height;
+
+      if (newTopHeight < totalHeight * 0.2 || newTopHeight > totalHeight * 0.8) return;
+
+      const topPercent = (newTopHeight / totalHeight) * 100;
+      topPanel.style.height = `${topPercent}%`;
+      bottomPanel.style.height = `${100 - topPercent}%`;
+    });
+
+    document.addEventListener('mouseup', function() {
+      isResizing = false;
+      document.body.style.cursor = 'default';
+    });
+
+    let editId = null;
+    let currentVehicleNo = '';
+
+    function mustOk(res) {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    }
+
+    function todayISO() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function won(n) {
+      if (n == null || n === '') return '-';
+      return Number(n).toLocaleString() + '원';
+    }
+
+    function fmtNumber(n) {
+      if (n == null || n === '') return '';
+      return Number(n).toLocaleString();
+    }
+
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function renderStatusBadge(status) {
+      const s = status || '';
+
+      if (s === '완납') {
+        return `<span class="status-badge status-paid">완납</span>`;
+      }
+
+      if (s === '부분수납') {
+        return `<span class="status-badge status-partial">부분수납</span>`;
+      }
+
+      if (s === '미납') {
+        return `<span class="status-badge status-unpaid">미납</span>`;
+      }
+
+      return `<span class="status-badge status-planned">예정</span>`;
+    }
+
+    async function searchContract() {
+      const cn = document.getElementById('contractNumber').value.trim();
+      if (!cn) return alert('계약번호를 입력하세요.');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/contracts/${encodeURIComponent(cn)}/summary`);
+        mustOk(res);
+        const d = await res.json();
+
+        currentVehicleNo = d.vehicleNo || '';
+
+        document.getElementById('displayVehicleNumber').textContent = d.vehicleNo || '-';
+        document.getElementById('displayCustomerName').textContent = d.customerName || '-';
+        document.getElementById('displayRegistrationNumber').textContent = d.registrationNumber || '-';
+        document.getElementById('displayEmail').textContent = d.email || '-';
+        document.getElementById('displayRentAmount').textContent = (d.monthlyRent ?? 0).toLocaleString() + ' 원';
+        document.getElementById('displayContractStatus').textContent = d.contractStatus || '-';
+        document.getElementById('customerInfo').classList.add('active');
+
+        await loadScheduleStatusByVehicleNo(currentVehicleNo);
+
+      } catch (e) {
+        console.error(e);
+        currentVehicleNo = '';
+        document.getElementById('customerInfo').classList.remove('active');
+        clearScheduleStatus('계약 조회 실패로 수납 현황을 불러올 수 없습니다.');
+        alert('계약 조회 실패: ' + e.message);
+      }
+    }
+
+    async function loadScheduleStatusByVehicleNo(vehicleNo) {
+      const tbody = document.getElementById('scheduleStatusTableBody');
+
+      if (!vehicleNo) {
+        clearScheduleStatus('차량번호가 없어 수납 현황을 불러올 수 없습니다.');
+        return;
+      }
+
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="13" style="text-align:center;padding:18px;color:#64748b;">
+            수납 현황 불러오는 중...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/schedules/by-vehicle-no?vehicleNo=${encodeURIComponent(vehicleNo)}`);
+        mustOk(res);
+        const data = await res.json();
+
+        const schedule = Array.isArray(data.schedule) ? data.schedule : [];
+
+        if (schedule.length === 0) {
+          clearScheduleStatus('등록된 스케줄이 없습니다.');
+          return;
+        }
+
+        renderScheduleStatus(schedule);
+
+      } catch (e) {
+        console.error(e);
+        clearScheduleStatus('수납 현황 조회 실패: ' + e.message);
+      }
+    }
+
+    function clearScheduleStatus(message) {
+      document.getElementById('scheduleStatusTableBody').innerHTML = `
+        <tr>
+          <td colspan="13" style="text-align:center;padding:18px;color:#64748b;">
+            ${esc(message)}
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderScheduleStatus(schedule) {
+      const tbody = document.getElementById('scheduleStatusTableBody');
+      tbody.innerHTML = '';
+
+      schedule.forEach(row => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${row.no ?? ''}</td>
+          <td>${esc(row.startDate ?? '')}</td>
+          <td>${esc(row.endDate ?? '')}</td>
+          <td>${esc(row.taxDate ?? '')}</td>
+          <td>${esc(row.payDate ?? '')}</td>
+          <td class="amount-cell">${row.rent == null ? '' : fmtNumber(row.rent)}</td>
+          <td class="amount-cell">${row.paid == null ? '' : fmtNumber(row.paid)}</td>
+          <td class="amount-cell">${row.unpaid == null ? '' : fmtNumber(row.unpaid)}</td>
+          <td class="amount-cell">${row.receivable == null ? '' : fmtNumber(row.receivable)}</td>
+          <td>${renderStatusBadge(row.status)}</td>
+          <td class="amount-cell">${row.principal == null ? '' : fmtNumber(row.principal)}</td>
+          <td class="amount-cell">${row.interest == null ? '' : fmtNumber(row.interest)}</td>
+          <td class="amount-cell">${row.balance == null ? '' : fmtNumber(row.balance)}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('btnContractSearch').addEventListener('click', searchContract);
+
+    const modalBackdrop = document.getElementById('contractModalBackdrop');
+    const modalKw = document.getElementById('contractModalKw');
+    const modalTbody = document.getElementById('contractModalTbody');
+
+    async function openContractModal() {
+      modalBackdrop.style.display = 'flex';
+      modalKw.value = '';
+      modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;">조회중...</td></tr>`;
+      setTimeout(() => modalKw.focus(), 50);
+      await searchPayableContracts();
+    }
+
+    function closeContractModal() {
+      modalBackdrop.style.display = 'none';
+    }
+
+    document.getElementById('btnOpenContractModal').addEventListener('click', openContractModal);
+    document.getElementById('btnCloseContractModal').addEventListener('click', closeContractModal);
+
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeContractModal();
+    });
+
+    async function searchPayableContracts() {
+      const kw = modalKw.value.trim();
+
+      try {
+        modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;">검색중...</td></tr>`;
+
+        const res = await fetch(`${API_BASE_URL}/api/contracts/payable-search?kw=${encodeURIComponent(kw)}`);
+        mustOk(res);
+        const list = await res.json();
+
+        if (!list.length) {
+          modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;">수납 가능한 계약이 없습니다.</td></tr>`;
+          return;
+        }
+
+        modalTbody.innerHTML = '';
+
+        list.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.className = 'row-pick';
+          tr.innerHTML = `
+            <td><span class="badge">${row.contractNumber ?? '-'}</span></td>
+            <td>${row.customerName ?? '-'}</td>
+            <td>${row.vehicleNo ?? '-'}</td>
+            <td>${row.startDate ?? '-'}</td>
+            <td>${row.endDate ?? '-'}</td>
+            <td>${won(row.monthlyRent)}</td>
+            <td><button type="button" class="btn-small">선택</button></td>
+          `;
+
+          tr.addEventListener('click', async () => {
+            document.getElementById('contractNumber').value = row.contractNumber || '';
+            closeContractModal();
+            await searchContract();
+          });
+
+          modalTbody.appendChild(tr);
+        });
+
+      } catch (e) {
+        console.error(e);
+        modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;">조회 실패: ${e.message}</td></tr>`;
+      }
+    }
+
+    document.getElementById('btnContractModalSearch').addEventListener('click', searchPayableContracts);
+
+    modalKw.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchPayableContracts();
+      }
+    });
+
+    document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        contractNumber: document.getElementById('contractNumber').value.trim(),
+        paymentDate: document.getElementById('paymentDate').value,
+        paymentAmount: Number(document.getElementById('paymentAmount').value || 0),
+        paymentMethod: document.getElementById('paymentMethod').value || null,
+        companyAccount: document.getElementById('companyAccount').value.trim() || null,
+        memo: document.getElementById('paymentNote').value || null
+      };
+
+      if (!payload.contractNumber) return alert('계약번호를 입력하세요.');
+      if (!payload.paymentDate) return alert('입금일자를 입력하세요.');
+      if (!payload.paymentAmount) return alert('입금금액을 입력하세요.');
+
+      const isEdit = !!editId;
+      const url = isEdit ? `${API_BASE_URL}/api/payments/${editId}` : `${API_BASE_URL}/api/payments`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        mustOk(res);
+
+        alert(isEdit ? '수납 수정 완료' : '수납 등록 완료');
+
+        resetForm(true);
+
+        if (currentVehicleNo) {
+          await loadScheduleStatusByVehicleNo(currentVehicleNo);
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert('저장 실패: ' + err.message);
+      }
+    });
+
+    function resetForm(silent = false) {
+      if (!silent && !confirm('초기화 하시겠습니까?')) return;
+
+      editId = null;
+      currentVehicleNo = '';
+
+      document.getElementById('btnSubmit').textContent = '수납 등록';
+      document.getElementById('paymentForm').reset();
+      document.getElementById('customerInfo').classList.remove('active');
+      document.getElementById('paymentDate').value = todayISO();
+
+      clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
+    }
+
+    document.getElementById('btnReset').addEventListener('click', () => resetForm(false));
+
+    document.getElementById('paymentAmount').addEventListener('input', (e) => {
+      let v = String(e.target.value || '').replace(/[^0-9]/g, '');
+      e.target.value = v;
+    });
+
+    window.addEventListener('load', async () => {
+      document.getElementById('paymentDate').value = todayISO();
+      clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
+    });
+  </script>
+</body>
+</html>

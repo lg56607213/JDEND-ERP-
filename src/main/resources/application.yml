@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  web:
+    resources:
+      static-locations: classpath:/static/
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+app:
+  upload-dir: uploads/accounts
+  multidb:
+    default-db: auth
+    datasources:
+      auth:
+        url: jdbc:mysql://localhost:3306/erp?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+        username: root
+        password: root1234!
+        driver-class-name: com.mysql.cj.jdbc.Driver
+
+      erp_company_a:
+        url: jdbc:mysql://localhost:3306/erp_company_a?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+        username: root
+        password: root1234!
+        driver-class-name: com.mysql.cj.jdbc.Driver
+
+      erp_company_b:
+        url: jdbc:mysql://localhost:3306/erp_company_b?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+        username: root
+        password: root1234!
+        driver-class-name: com.mysql.cj.jdbc.Driver
+
+      erp_company_c:
+        url: jdbc:mysql://localhost:3306/erp_company_c?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+        username: root
+        password: root1234!
+        driver-class-name: com.mysql.cj.jdbc.Driver

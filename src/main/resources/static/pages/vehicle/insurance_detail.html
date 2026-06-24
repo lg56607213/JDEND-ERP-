@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보험 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/maintenance_status.css">
+  <style>
+    .card-header-detail{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e2e8f0;}
+    .card-header-detail h2{margin:0;font-size:1.1rem;font-weight:600;color:#1e293b;}
+    .card-body-detail{padding:20px;}
+    .form-section{margin-bottom:24px;}
+    .section-title{font-size:.95rem;font-weight:600;color:#374151;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #e5e7eb;}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+    .detail-grid.three-col{grid-template-columns:repeat(3,1fr);}
+    @media (max-width:768px){.detail-grid,.detail-grid.three-col{grid-template-columns:1fr;}}
+    .detail-item{display:flex;flex-direction:column;gap:4px;}
+    .detail-item label{font-size:.85rem;color:#6b7280;font-weight:500;}
+    .detail-value{font-size:.95rem;color:#1f2937;font-weight:500;padding:8px 12px;background:#f9fafb;border-radius:6px;min-height:38px;display:flex;align-items:center;}
+    .detail-value.amount{color:#dc2626;font-weight:600;}
+    .detail-value.highlight{color:#2563eb;font-weight:600;}
+    .form-actions{display:flex;justify-content:center;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid #e5e7eb;}
+    .btn{padding:10px 24px;border-radius:6px;font-size:.9rem;font-weight:500;cursor:pointer;border:none;transition:all .2s;}
+    .btn-primary{background:#3b82f6;color:#fff;}
+    .btn-primary:hover{background:#2563eb;}
+    .btn-secondary{background:#6b7280;color:#fff;}
+    .btn-secondary:hover{background:#4b5563;}
+    .hidden{display:none !important;}
+    .form-group-column{display:flex;flex-direction:column;gap:4px;}
+    .form-group-column label{font-size:.85rem;color:#6b7280;font-weight:500;}
+    .form-input{padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:.95rem;min-height:38px;}
+    .form-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>보험 상세</h1>
+      <p>차량관리 &gt; 보험관리 &gt; 보험현황 &gt; 상세보기</p>
+    </div>
+
+    <div class="erp-card" id="insuranceDetailSection">
+      <div class="card-header card-header-detail">
+        <h2>보험 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+      <div class="card-body card-body-detail">
+
+        <div class="form-section">
+          <h3 class="section-title">계약/차량 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>계약번호</label>
+              <div class="detail-value" id="contractNo">-</div>
+            </div>
+            <div class="detail-item">
+              <label>차량번호</label>
+              <div class="detail-value" id="vehicleNo">-</div>
+            </div>
+            <div class="detail-item">
+              <label>차량관리번호</label>
+              <div class="detail-value" id="vehicleMgmtNo">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">보험 기간</h3>
+          <div class="detail-grid">
+            <div class="detail-item"><label>보험시작일</label><div class="detail-value" id="startDate">-</div></div>
+            <div class="detail-item"><label>보험종료일</label><div class="detail-value" id="endDate">-</div></div>
+            <div class="detail-item"><label>보험료</label><div class="detail-value amount" id="premium">-</div></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">보장 내용</h3>
+          <div class="detail-grid three-col">
+            <div class="detail-item"><label>대인</label><div class="detail-value highlight" id="bodilyInjury">-</div></div>
+            <div class="detail-item"><label>대물</label><div class="detail-value highlight" id="propertyDamage">-</div></div>
+            <div class="detail-item"><label>자손</label><div class="detail-value" id="personalInjury">-</div></div>
+            <div class="detail-item"><label>자상</label><div class="detail-value" id="autoInjury">-</div></div>
+            <div class="detail-item"><label>무보험차상해</label><div class="detail-value" id="uninsured">-</div></div>
+            <div class="detail-item"><label>자기차량손해</label><div class="detail-value" id="ownVehicle">-</div></div>
+            <div class="detail-item"><label>긴급출동</label><div class="detail-value" id="emergency">-</div></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">운전자/특약</h3>
+          <div class="detail-grid">
+            <div class="detail-item"><label>연령</label><div class="detail-value" id="ageRange">-</div></div>
+            <div class="detail-item"><label>운전자범위</label><div class="detail-value" id="driverRange">-</div></div>
+            <div class="detail-item" style="grid-column:1/-1;"><label>기타특약사항</label><div class="detail-value" id="specialTerms">-</div></div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editInsuranceBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card hidden" id="insuranceEditSection">
+      <div class="card-header card-header-detail">
+        <h2>보험 정보 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body card-body-detail">
+        <form id="insuranceEditForm">
+
+          <div class="form-section">
+            <h3 class="section-title">계약/차량 정보</h3>
+            <div class="detail-grid">
+              <div class="detail-item"><label>계약번호</label><div class="detail-value" id="editContractNo">-</div></div>
+              <div class="detail-item"><label>차량번호</label><div class="detail-value" id="editVehicleNo">-</div></div>
+              <div class="detail-item"><label>차량관리번호</label><div class="detail-value" id="editVehicleMgmtNo">-</div></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">보험 기간</h3>
+            <div class="detail-grid">
+              <div class="form-group-column">
+                <label for="editStartDate">보험시작일</label>
+                <input type="date" id="editStartDate" class="form-input" required>
+              </div>
+              <div class="form-group-column">
+                <label for="editEndDate">보험종료일</label>
+                <input type="date" id="editEndDate" class="form-input" required>
+              </div>
+              <div class="form-group-column">
+                <label for="editPremium">보험료</label>
+                <input type="number" id="editPremium" class="form-input" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">보장 내용</h3>
+            <div class="detail-grid three-col">
+              <div class="form-group-column"><label for="editBodilyInjury">대인</label><input type="text" id="editBodilyInjury" class="form-input"></div>
+              <div class="form-group-column"><label for="editPropertyDamage">대물</label><input type="text" id="editPropertyDamage" class="form-input"></div>
+              <div class="form-group-column"><label for="editPersonalInjury">자손</label><input type="text" id="editPersonalInjury" class="form-input"></div>
+              <div class="form-group-column"><label for="editAutoInjury">자상</label><input type="text" id="editAutoInjury" class="form-input"></div>
+              <div class="form-group-column"><label for="editUninsured">무보험차상해</label><input type="text" id="editUninsured" class="form-input"></div>
+              <div class="form-group-column"><label for="editOwnVehicle">자기차량손해</label><input type="text" id="editOwnVehicle" class="form-input"></div>
+              <div class="form-group-column"><label for="editEmergency">긴급출동</label><input type="text" id="editEmergency" class="form-input"></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">운전자/특약</h3>
+            <div class="detail-grid">
+              <div class="form-group-column">
+                <label for="editAgeRange">연령</label>
+                <select id="editAgeRange" class="form-input">
+                  <option value="">선택</option>
+                  <option value="21">만 21세 이상</option>
+                  <option value="24">만 24세 이상</option>
+                  <option value="26">만 26세 이상</option>
+                  <option value="30">만 30세 이상</option>
+                  <option value="all">전연령</option>
+                </select>
+              </div>
+              <div class="form-group-column">
+                <label for="editDriverRange">운전자범위</label>
+                <select id="editDriverRange" class="form-input">
+                  <option value="">선택</option>
+                  <option value="named">기명피보험자 1인</option>
+                  <option value="named-spouse">기명피보험자+배우자</option>
+                  <option value="family">가족한정</option>
+                  <option value="anyone">누구나</option>
+                </select>
+              </div>
+              <div class="form-group-column" style="grid-column:1/-1;">
+                <label for="editSpecialTerms">기타특약사항</label>
+                <textarea id="editSpecialTerms" class="form-input" style="min-height:90px;"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="resetEditBtn">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
+    const $ = (id) => document.getElementById(id);
+
+    async function mustOk(res){
+      if(res.ok) return res;
+      let msg = "HTTP " + res.status;
+      try{ const b = await res.json(); msg = b.message || b.error || b.msg || msg; }catch(e){}
+      throw new Error(msg);
+    }
+    async function fetchJson(url, opt){
+      const res = await fetch(url, opt);
+      await mustOk(res);
+      return res.json();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+
+    const insuranceDetailSection = $('insuranceDetailSection');
+    const insuranceEditSection = $('insuranceEditSection');
+
+    let current = null;
+
+    function renderDetail(d){
+      $('contractNo').textContent = d.contractNumber || '-';
+      $('vehicleNo').textContent = d.vehicleNo || '-';
+      $('vehicleMgmtNo').textContent = d.vehicleMgmtNo || '-';
+
+      $('startDate').textContent = d.insuranceStartDate || '-';
+      $('endDate').textContent = d.insuranceEndDate || '-';
+      $('premium').textContent = (d.insurancePremium ?? 0).toLocaleString() + '원';
+
+      $('bodilyInjury').textContent = d.bodilyInjury || '-';
+      $('propertyDamage').textContent = d.propertyDamage || '-';
+      $('personalInjury').textContent = d.personalInjury || '-';
+      $('autoInjury').textContent = d.autoInjury || '-';
+      $('uninsured').textContent = d.uninsured || '-';
+      $('ownVehicle').textContent = d.ownVehicle || '-';
+      $('emergency').textContent = d.emergency || '-';
+
+      $('ageRange').textContent = d.ageRange || '-';
+      $('driverRange').textContent = d.driverRange || '-';
+      $('specialTerms').textContent = d.specialTerms || '-';
+    }
+
+    function fillEdit(d){
+      $('editContractNo').textContent = d.contractNumber || '-';
+      $('editVehicleNo').textContent = d.vehicleNo || '-';
+      $('editVehicleMgmtNo').textContent = d.vehicleMgmtNo || '-';
+
+      $('editStartDate').value = d.insuranceStartDate || '';
+      $('editEndDate').value = d.insuranceEndDate || '';
+      $('editPremium').value = d.insurancePremium ?? 0;
+
+      $('editBodilyInjury').value = d.bodilyInjury || '';
+      $('editPropertyDamage').value = d.propertyDamage || '';
+      $('editPersonalInjury').value = d.personalInjury || '';
+      $('editAutoInjury').value = d.autoInjury || '';
+      $('editUninsured').value = d.uninsured || '';
+      $('editOwnVehicle').value = d.ownVehicle || '';
+      $('editEmergency').value = d.emergency || '';
+
+      $('editAgeRange').value = d.ageRange || '';
+      $('editDriverRange').value = d.driverRange || '';
+      $('editSpecialTerms').value = d.specialTerms || '';
+    }
+
+    async function load(){
+      if(!id){ alert('id 파라미터가 없습니다.'); goBack(); return; }
+      try{
+        current = await fetchJson(`${BASE}/api/insurances/${encodeURIComponent(id)}`);
+        renderDetail(current);
+      }catch(e){
+        console.error(e);
+        alert('상세 조회 실패: ' + e.message);
+        goBack();
+      }
+    }
+
+    $('editInsuranceBtn').addEventListener('click', ()=>{
+      fillEdit(current);
+      insuranceDetailSection.classList.add('hidden');
+      insuranceEditSection.classList.remove('hidden');
+    });
+
+    $('cancelEditBtn').addEventListener('click', ()=>{
+      if(!confirm('수정을 취소하시겠습니까?')) return;
+      insuranceEditSection.classList.add('hidden');
+      insuranceDetailSection.classList.remove('hidden');
+    });
+
+    $('resetEditBtn').addEventListener('click', ()=>{
+      if(!confirm('입력을 초기화할까요?')) return;
+      fillEdit(current);
+    });
+
+    $('insuranceEditForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!confirm('수정하시겠습니까?')) return;
+
+      const payload = {
+        insuranceStartDate: $('editStartDate').value,
+        insuranceEndDate: $('editEndDate').value,
+        insurancePremium: Number($('editPremium').value || 0),
+
+        bodilyInjury: $('editBodilyInjury').value.trim(),
+        propertyDamage: $('editPropertyDamage').value.trim(),
+        personalInjury: $('editPersonalInjury').value.trim(),
+        autoInjury: $('editAutoInjury').value.trim(),
+        uninsured: $('editUninsured').value.trim(),
+        ownVehicle: $('editOwnVehicle').value.trim(),
+        emergency: $('editEmergency').value.trim(),
+
+        ageRange: $('editAgeRange').value,
+        driverRange: $('editDriverRange').value,
+
+        specialTerms: $('editSpecialTerms').value.trim()
+      };
+
+      if(!payload.insuranceStartDate || !payload.insuranceEndDate){
+        alert('보험기간을 입력해주세요.');
+        return;
+      }
+      if(!payload.insurancePremium || payload.insurancePremium <= 0){
+        alert('보험료를 입력해주세요.');
+        return;
+      }
+
+      try{
+        const updated = await fetchJson(`${BASE}/api/insurances/${encodeURIComponent(id)}`, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        current = updated;
+        renderDetail(current);
+        insuranceEditSection.classList.add('hidden');
+        insuranceDetailSection.classList.remove('hidden');
+        alert('수정되었습니다.');
+      }catch(err){
+        console.error(err);
+        alert('수정 실패: ' + err.message);
+      }
+    });
+
+    function goBack(){
+      window.location.href = 'insurance_status.html';
+    }
+    window.goBack = goBack;
+
+    load();
+  </script>
+</body>
+</html>

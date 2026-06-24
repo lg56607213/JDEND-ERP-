@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>고객 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/customer/customer_register.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>고객 상세</h1>
+      <p>고객관리 &gt; 고객목록 &gt; 상세보기</p>
+    </div>
+
+    <!-- 고객 상세 정보 섹션 -->
+    <div class="erp-card" id="customerDetailSection">
+      <div class="card-header">
+        <h2>고객 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+      <div class="card-body">
+        <!-- 기본 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">기본 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>고객 구분</label>
+              <div class="detail-value" id="customerType">법인</div>
+            </div>
+            <div class="detail-item">
+              <label>고객명</label>
+              <div class="detail-value" id="customerName">(주)테크솔루션</div>
+            </div>
+            <div class="detail-item">
+              <label id="registrationNumberLabel">사업자/주민번호</label>
+              <div class="detail-value" id="registrationNumber">123-45-67890</div>
+            </div>
+            <div class="detail-item">
+              <label id="phoneDetailLabel">연락처/법인등록번호</label>
+              <div class="detail-value" id="phone">123456-1234567</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 사업자 정보 섹션 -->
+        <div class="form-section" id="businessInfoSection">
+          <h3 class="section-title">사업자 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>대표자명</label>
+              <div class="detail-value" id="ceo">김대표</div>
+            </div>
+            <div class="detail-item">
+              <label>업태</label>
+              <div class="detail-value" id="businessType">-</div>
+            </div>
+            <div class="detail-item">
+              <label>업종</label>
+              <div class="detail-value" id="businessItem">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주소 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">주소 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item full-width">
+              <label>주소</label>
+              <div class="detail-value" id="address">서울시 강남구 테헤란로 123</div>
+            </div>
+            <div class="detail-item full-width">
+              <label>청구지 주소</label>
+              <div class="detail-value" id="billAddress">서울시 강남구 테헤란로 123</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 담당자 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">담당자 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>담당자명</label>
+              <div class="detail-value" id="manager">김철수</div>
+            </div>
+            <div class="detail-item">
+              <label>담당자 연락처</label>
+              <div class="detail-value" id="managerPhone">010-1111-2222</div>
+            </div>
+            <div class="detail-item">
+              <label>담당자 이메일</label>
+              <div class="detail-value" id="managerEmail">kim@techsol.com</div>
+            </div>
+            <div class="detail-item">
+              <label>청구지 이메일</label>
+              <div class="detail-value" id="billEmail">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 등록 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">등록 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>등록일</label>
+              <div class="detail-value" id="registerDate">2024-01-15</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 수정하기 버튼 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editCustomerBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 고객 수정 폼 섹션 -->
+    <div class="erp-card hidden" id="customerEditSection">
+      <div class="card-header">
+        <h2>고객 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body">
+        <form id="customerEditForm">
+          <!-- 기본 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editCustomerType" class="required">고객 구분</label>
+                <select id="editCustomerType" name="customerType" required>
+                  <option value="">선택하세요</option>
+                  <option value="개인">일반회원 (개인)</option>
+                  <option value="개인사업자">개인사업자</option>
+                  <option value="법인">법인</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editCustomerName" class="required">고객명</label>
+                <input type="text" id="editCustomerName" name="customerName" placeholder="고객명을 입력하세요" required>
+              </div>
+
+              <!-- 일반회원용 주민등록번호 -->
+              <div class="form-group hidden" id="editIdNumberGroup">
+                <label for="editIdNumber" class="required">주민등록번호</label>
+                <input type="text" id="editIdNumber" name="idNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인사업자용 사업자등록번호 -->
+              <div class="form-group hidden" id="editBusinessNumberGroup">
+                <label for="editBusinessNumber" class="required">사업자등록번호</label>
+                <input type="text" id="editBusinessNumber" name="businessNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인용 사업자등록번호 -->
+              <div class="form-group hidden" id="editCorpBizNumberGroup">
+                <label for="editCorpBizNumber" class="required">사업자등록번호</label>
+                <input type="text" id="editCorpBizNumber" name="corpBizNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인용 법인등록번호 -->
+              <div class="form-group hidden" id="editCorpNumberGroup">
+                <label for="editCorpNumber" class="required">법인등록번호</label>
+                <input type="text" id="editCorpNumber" name="corpNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인/개인사업자 연락처 -->
+              <div class="form-group" id="editPhoneGroup">
+                <label for="editPhone" id="editPhoneLabel">연락처</label>
+                <input type="tel" id="editPhone" name="phone" placeholder="010-0000-0000">
+              </div>
+            </div>
+          </div>
+
+          <!-- 사업자/법인 정보 섹션 -->
+          <div class="form-section hidden" id="editBusinessSection">
+            <h3 class="section-title">사업자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editCeo">대표자명</label>
+                <input type="text" id="editCeo" name="ceo" placeholder="대표자명을 입력하세요">
+              </div>
+
+              <div class="form-group">
+                <label for="editBusinessType">업태</label>
+                <input type="text" id="editBusinessType" name="businessType" placeholder="예: 제조업, 도소매업">
+              </div>
+
+              <div class="form-group">
+                <label for="editBusinessItem">업종</label>
+                <input type="text" id="editBusinessItem" name="businessItem" placeholder="예: 전자제품 제조">
+              </div>
+            </div>
+          </div>
+
+          <!-- 주소 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">주소 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editAddress">주소</label>
+                <input type="text" id="editAddress" name="address" placeholder="주소를 입력하세요">
+              </div>
+
+              <div class="form-group">
+                <label for="editBillAddress">청구지 주소</label>
+                <input type="text" id="editBillAddress" name="billAddress" placeholder="청구지 주소를 입력하세요">
+              </div>
+            </div>
+          </div>
+
+          <!-- 담당자 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">담당자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editManager">담당자명</label>
+                <input type="text" id="editManager" name="manager" placeholder="담당자명을 입력하세요">
+              </div>
+
+              <div class="form-group">
+                <label for="editManagerPhone">담당자 연락처</label>
+                <input type="tel" id="editManagerPhone" name="managerPhone" placeholder="010-0000-0000">
+              </div>
+
+              <div class="form-group">
+                <label for="editManagerEmail">담당자 이메일</label>
+                <input type="email" id="editManagerEmail" name="managerEmail" placeholder="example@email.com">
+              </div>
+
+              <div class="form-group">
+                <label for="editBillEmail">청구지 이메일</label>
+                <input type="email" id="editBillEmail" name="billEmail" placeholder="billing@email.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- 버튼 영역 -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetEditForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    const API_BASE = `${API_BASE_URL}/api`;
+
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE}${path}`);
+      if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPut(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `PUT ${path} failed: ${res.status}`);
+      return JSON.parse(text);
+    }
+
+    async function apiDelete(path) {
+      const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+      return true;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get('id');
+
+    const customerDetailSection = document.getElementById('customerDetailSection');
+    const customerEditSection = document.getElementById('customerEditSection');
+    const editCustomerBtn = document.getElementById('editCustomerBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+    const editCustomerTypeSelect = document.getElementById('editCustomerType');
+    const editIdNumberGroup = document.getElementById('editIdNumberGroup');
+    const editBusinessNumberGroup = document.getElementById('editBusinessNumberGroup');
+    const editCorpBizNumberGroup = document.getElementById('editCorpBizNumberGroup');
+    const editCorpNumberGroup = document.getElementById('editCorpNumberGroup');
+    const editBusinessSection = document.getElementById('editBusinessSection');
+    const editPhoneGroup = document.getElementById('editPhoneGroup');
+
+    const registrationNumberLabel = document.getElementById('registrationNumberLabel');
+    const phoneDetailLabel = document.getElementById('phoneDetailLabel');
+
+    let customerData = null;
+
+    function formatBizNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+      return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+    }
+
+    function formatCorpNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 13);
+      if (digits.length <= 6) return digits;
+      return digits.slice(0, 6) + '-' + digits.slice(6);
+    }
+
+    document.getElementById('editBusinessNumber').addEventListener('input', (e) => {
+      e.target.value = formatBizNo(e.target.value);
+    });
+
+    document.getElementById('editCorpBizNumber').addEventListener('input', (e) => {
+      e.target.value = formatBizNo(e.target.value);
+    });
+
+    document.getElementById('editIdNumber').addEventListener('input', (e) => {
+      e.target.value = formatCorpNo(e.target.value);
+    });
+
+    document.getElementById('editCorpNumber').addEventListener('input', (e) => {
+      e.target.value = formatCorpNo(e.target.value);
+    });
+
+    function hideAllEditGroups() {
+      editIdNumberGroup.classList.add('hidden');
+      editBusinessNumberGroup.classList.add('hidden');
+      editCorpBizNumberGroup.classList.add('hidden');
+      editCorpNumberGroup.classList.add('hidden');
+      editBusinessSection.classList.add('hidden');
+      editPhoneGroup.classList.remove('hidden');
+
+      document.getElementById('editIdNumber').removeAttribute('required');
+      document.getElementById('editBusinessNumber').removeAttribute('required');
+      document.getElementById('editCorpBizNumber').removeAttribute('required');
+      document.getElementById('editCorpNumber').removeAttribute('required');
+    }
+
+    function updateEditFields(customerType) {
+      hideAllEditGroups();
+
+      switch (customerType) {
+        case '개인':
+          editIdNumberGroup.classList.remove('hidden');
+          document.getElementById('editIdNumber').setAttribute('required', 'required');
+          break;
+
+        case '개인사업자':
+          editBusinessNumberGroup.classList.remove('hidden');
+          editBusinessSection.classList.remove('hidden');
+          document.getElementById('editBusinessNumber').setAttribute('required', 'required');
+          break;
+
+        case '법인':
+          editCorpBizNumberGroup.classList.remove('hidden');
+          editCorpNumberGroup.classList.remove('hidden');
+          editBusinessSection.classList.remove('hidden');
+          editPhoneGroup.classList.add('hidden');
+          document.getElementById('editCorpBizNumber').setAttribute('required', 'required');
+          document.getElementById('editCorpNumber').setAttribute('required', 'required');
+          break;
+      }
+    }
+
+    function updateDetailLabels(customerType) {
+      if (customerType === '법인') {
+        registrationNumberLabel.textContent = '사업자등록번호';
+        phoneDetailLabel.textContent = '법인등록번호';
+      } else if (customerType === '개인사업자') {
+        registrationNumberLabel.textContent = '사업자등록번호';
+        phoneDetailLabel.textContent = '연락처';
+      } else {
+        registrationNumberLabel.textContent = '주민등록번호';
+        phoneDetailLabel.textContent = '연락처';
+      }
+    }
+
+    function paintDetail(c) {
+      updateDetailLabels(c.customerType);
+
+      document.getElementById('customerType').textContent = c.customerType ?? '';
+      document.getElementById('customerName').textContent = c.customerName ?? '';
+      document.getElementById('registrationNumber').textContent = c.registrationNumber ?? '';
+      document.getElementById('phone').textContent = c.phone ?? '';
+      document.getElementById('ceo').textContent = c.ceo || '-';
+      document.getElementById('businessType').textContent = c.businessType || '-';
+      document.getElementById('businessItem').textContent = c.businessItem || '-';
+      document.getElementById('address').textContent = c.address ?? '';
+      document.getElementById('billAddress').textContent = c.billAddress ?? '';
+      document.getElementById('manager').textContent = c.manager ?? '';
+      document.getElementById('managerPhone').textContent = c.managerPhone ?? '';
+      document.getElementById('managerEmail').textContent = c.managerEmail ?? '';
+      document.getElementById('billEmail').textContent = c.billEmail || '-';
+      document.getElementById('registerDate').textContent = c.registerDate ?? '';
+
+      if (c.customerType === '개인') {
+        document.getElementById('businessInfoSection').classList.add('hidden');
+      } else {
+        document.getElementById('businessInfoSection').classList.remove('hidden');
+      }
+    }
+
+    async function loadCustomerDetail() {
+      try {
+        customerData = await apiGet(`/customers/${customerId}`);
+        paintDetail(customerData);
+      } catch (err) {
+        alert('불러오기 실패: ' + err.message);
+        goBack();
+      }
+    }
+
+    editCustomerBtn.addEventListener('click', () => {
+      document.getElementById('editCustomerType').value = customerData.customerType;
+      document.getElementById('editCustomerName').value = customerData.customerName;
+      document.getElementById('editPhone').value = '';
+      document.getElementById('editCeo').value = customerData.ceo || '';
+      document.getElementById('editBusinessType').value = customerData.businessType || '';
+      document.getElementById('editBusinessItem').value = customerData.businessItem || '';
+      document.getElementById('editAddress').value = customerData.address || '';
+      document.getElementById('editBillAddress').value = customerData.billAddress || '';
+      document.getElementById('editManager').value = customerData.manager || '';
+      document.getElementById('editManagerPhone').value = customerData.managerPhone || '';
+      document.getElementById('editManagerEmail').value = customerData.managerEmail || '';
+      document.getElementById('editBillEmail').value = customerData.billEmail || '';
+
+      updateEditFields(customerData.customerType);
+
+      document.getElementById('editIdNumber').value = '';
+      document.getElementById('editBusinessNumber').value = '';
+      document.getElementById('editCorpBizNumber').value = '';
+      document.getElementById('editCorpNumber').value = '';
+
+      if (customerData.customerType === '개인') {
+        document.getElementById('editIdNumber').value = customerData.registrationNumber || '';
+        document.getElementById('editPhone').value = customerData.phone || '';
+      }
+
+      if (customerData.customerType === '개인사업자') {
+        document.getElementById('editBusinessNumber').value = customerData.registrationNumber || '';
+        document.getElementById('editPhone').value = customerData.phone || '';
+      }
+
+      if (customerData.customerType === '법인') {
+        // 변경된 구조
+        // registrationNumber = 사업자등록번호
+        // phone = 법인등록번호
+        document.getElementById('editCorpBizNumber').value = customerData.registrationNumber || '';
+        document.getElementById('editCorpNumber').value = customerData.phone || '';
+      }
+
+      customerDetailSection.classList.add('hidden');
+      customerEditSection.classList.remove('hidden');
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+      if (confirm('수정을 취소하시겠습니까?')) {
+        customerEditSection.classList.add('hidden');
+        customerDetailSection.classList.remove('hidden');
+      }
+    });
+
+    editCustomerTypeSelect.addEventListener('change', function () {
+      updateEditFields(this.value);
+    });
+
+    document.getElementById('customerEditForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!confirm('수정하시겠습니까?')) return;
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      const type = data.customerType;
+      let reg = '';
+      let phoneValue = null;
+
+      if (type === '개인') {
+        reg = data.idNumber || '';
+        phoneValue = data.phone || null;
+      }
+
+      if (type === '개인사업자') {
+        reg = data.businessNumber || '';
+        phoneValue = data.phone || null;
+      }
+
+      if (type === '법인') {
+        const bizNo = (data.corpBizNumber || '').trim();
+        const corpNo = (data.corpNumber || '').trim();
+
+        if (!/^\d{3}-\d{2}-\d{5}$/.test(bizNo)) {
+          alert('법인 사업자등록번호 형식이 아닙니다. 예: 000-00-00000');
+          return;
+        }
+
+        if (!/^\d{6}-\d{7}$/.test(corpNo)) {
+          alert('법인등록번호 형식이 아닙니다. 예: 000000-0000000');
+          return;
+        }
+
+        reg = bizNo;
+        phoneValue = corpNo;
+      }
+
+      const payload = {
+        customerType: data.customerType,
+        customerName: data.customerName,
+        registrationNumber: reg,
+        phone: phoneValue,
+        ceo: data.ceo || null,
+        businessType: data.businessType || null,
+        businessItem: data.businessItem || null,
+        address: data.address || null,
+        billAddress: data.billAddress || null,
+        manager: data.manager || null,
+        managerPhone: data.managerPhone || null,
+        managerEmail: data.managerEmail || null,
+        billEmail: data.billEmail || null
+      };
+
+      try {
+        customerData = await apiPut(`/customers/${customerId}`, payload);
+        paintDetail(customerData);
+        customerEditSection.classList.add('hidden');
+        customerDetailSection.classList.remove('hidden');
+        alert('수정 완료');
+      } catch (err) {
+        alert('수정 실패: ' + err.message);
+      }
+    });
+
+    function resetEditForm() {
+      if (confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+        editCustomerBtn.click();
+      }
+    }
+
+    async function deleteCustomer() {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      try {
+        await apiDelete(`/customers/${customerId}`);
+        alert('삭제 완료');
+        goBack();
+      } catch (err) {
+        alert('삭제 실패: ' + err.message);
+      }
+    }
+
+    function goBack() {
+      window.location.href = 'customer_register.html';
+    }
+
+    window.goBack = goBack;
+    window.resetEditForm = resetEditForm;
+
+    loadCustomerDetail();
+  </script>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>재무제표관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css" />
+  <link rel="stylesheet" href="../../assets/css/pages.css" />
+
+  <style>
+    .erp-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .top-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .tab-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      border: 1px solid #d0d7de;
+      background: #fff;
+      color: #333;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
+    .table-section {
+      display: none;
+    }
+
+    .table-section.active {
+      display: block;
+    }
+
+    .table-container {
+      overflow: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .statement-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .statement-table th,
+    .statement-table td {
+      border-bottom: 1px solid #edf0f2;
+      padding: 12px 10px;
+      font-size: 14px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .statement-table th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .statement-table td.left {
+      text-align: left;
+    }
+
+    .statement-table td.amount {
+      text-align: right;
+      padding-right: 14px;
+    }
+
+    .account-link {
+      color: #1d4ed8;
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .status-use {
+      color: #059669;
+      font-weight: 700;
+    }
+
+    .status-stop {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .empty-row {
+      text-align: center;
+      color: #6b7280;
+      padding: 28px 0;
+    }
+
+    /* 전표조회 모달 */
+    .voucher-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .voucher-modal.show {
+      display: flex;
+    }
+
+    .voucher-modal-content {
+      width: min(1450px, calc(100vw - 30px));
+      max-height: calc(100vh - 30px);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .voucher-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .voucher-modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #111827;
+    }
+
+    .voucher-modal-close {
+      border: none;
+      background: transparent;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .voucher-modal-body {
+      padding: 20px 22px;
+      overflow: auto;
+    }
+
+    .voucher-search-bar {
+      display: grid;
+      grid-template-columns: 160px 160px 220px 1fr;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .voucher-search-bar label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    .voucher-search-bar input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .voucher-search-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .voucher-search-actions button {
+      height: 38px;
+      padding: 0 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .voucher-search-actions .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
+    .voucher-summary {
+      margin-bottom: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .voucher-history-wrap {
+      overflow: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .voucher-history-table {
+      width: 100%;
+      min-width: 1200px;
+      border-collapse: collapse;
+    }
+
+    .voucher-history-table th,
+    .voucher-history-table td {
+      border-bottom: 1px solid #edf0f2;
+      padding: 10px 8px;
+      font-size: 13px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .voucher-history-table th {
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
+    .voucher-history-table td.left {
+      text-align: left;
+    }
+
+    .voucher-history-table td.amount {
+      text-align: right;
+      padding-right: 12px;
+    }
+
+    .badge-debit {
+      display: inline-block;
+      min-width: 56px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+
+    .badge-credit {
+      display: inline-block;
+      min-width: 56px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #fef2f2;
+      color: #dc2626;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+
+<div class="content-wrapper">
+  <div class="page-header">
+    <h1>재무제표관리</h1>
+    <p>총괄관리 &gt; 회계관리 &gt; 재무제표관리</p>
+  </div>
+
+  <div class="erp-card">
+    <div class="card-body">
+
+      <div class="top-toolbar">
+        <div class="info-text">
+          재무상태표 / 손익계산서 계정을 조회합니다. 계정명을 클릭하면 조회일자 기준으로 전표내역을 확인할 수 있습니다.
+        </div>
+      </div>
+
+      <div class="tab-container">
+        <button class="tab-btn active" onclick="switchTab('bs')">재무상태표</button>
+        <button class="tab-btn" onclick="switchTab('is')">손익계산서</button>
+      </div>
+
+      <div id="bsTable" class="table-section active">
+        <div class="table-container">
+          <table class="statement-table">
+            <thead>
+            <tr>
+              <th style="width: 14%;">계정코드</th>
+              <th style="width: 28%;">계정명</th>
+              <th style="width: 20%;">계정구분</th>
+              <th style="width: 14%;">표시순서</th>
+              <th style="width: 14%;">사용여부</th>
+              <th style="width: 10%;">비고</th>
+            </tr>
+            </thead>
+            <tbody id="bsAccountBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="isTable" class="table-section">
+        <div class="table-container">
+          <table class="statement-table">
+            <thead>
+            <tr>
+              <th style="width: 14%;">계정코드</th>
+              <th style="width: 28%;">계정명</th>
+              <th style="width: 20%;">계정구분</th>
+              <th style="width: 14%;">표시순서</th>
+              <th style="width: 14%;">사용여부</th>
+              <th style="width: 10%;">비고</th>
+            </tr>
+            </thead>
+            <tbody id="isAccountBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 전표내역 조회 모달 -->
+<div id="voucherHistoryModal" class="voucher-modal">
+  <div class="voucher-modal-content">
+    <div class="voucher-modal-header">
+      <h2 id="voucherHistoryTitle">전표내역 조회</h2>
+      <button type="button" class="voucher-modal-close" onclick="closeVoucherHistoryModal()">&times;</button>
+    </div>
+
+    <div class="voucher-modal-body">
+      <div class="voucher-search-bar">
+        <div>
+          <label for="voucherStartDate">조회 시작일</label>
+          <input type="date" id="voucherStartDate" />
+        </div>
+        <div>
+          <label for="voucherEndDate">조회 종료일</label>
+          <input type="date" id="voucherEndDate" />
+        </div>
+        <div>
+          <label for="voucherAccountName">계정명</label>
+          <input type="text" id="voucherAccountName" readonly />
+        </div>
+        <div class="voucher-search-actions">
+          <button type="button" class="btn-primary" onclick="searchVoucherHistory()">조회</button>
+          <button type="button" onclick="resetVoucherHistoryDates()">초기화</button>
+        </div>
+      </div>
+
+      <div class="voucher-summary" id="voucherSummaryText">조회된 전표내역이 없습니다.</div>
+
+      <div class="voucher-history-wrap">
+        <table class="voucher-history-table">
+          <thead>
+          <tr>
+            <th>전표일자</th>
+            <th>전표번호</th>
+            <th>구분</th>
+            <th>계정명</th>
+            <th>금액</th>
+            <th>적요</th>
+            <th>계약번호</th>
+            <th>차량번호</th>
+            <th>메모</th>
+            <th>상태</th>
+          </tr>
+          </thead>
+          <tbody id="voucherHistoryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+
+<script>
+  function buildUrl(path) {
+    const base = (typeof API_BASE_URL !== "undefined") ? API_BASE_URL : "";
+    const normalizedBase = String(base).replace(/\/$/, "");
+    const normalizedPath = path.startsWith("/") ? path : "/" + path;
+    return normalizedBase + normalizedPath;
+  }
+
+  async function request(method, path, body) {
+    const res = await fetch(buildUrl(path), {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined
+    });
+
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const json = await res.json();
+          msg = json?.message || json?.error || JSON.stringify(json);
+        } else {
+          const text = await res.text();
+          if (text) msg = text;
+        }
+      } catch (_) {}
+      throw new Error(msg);
+    }
+
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      return await res.json();
+    }
+    return await res.text();
+  }
+
+  const api = {
+    get: (path) => request("GET", path),
+  };
+
+  let currentTab = "bs";
+  let selectedVoucherAccountId = null;
+  let selectedVoucherAccountName = "";
+
+  function escapeHtml(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function escapeHtmlJs(value) {
+    return String(value ?? "")
+      .replaceAll("\\", "\\\\")
+      .replaceAll("'", "\\'");
+  }
+
+  async function fetchList(statementType) {
+    return await api.get("/api/financial-statement-accounts?statementType=" + encodeURIComponent(statementType));
+  }
+
+  function rowHtml(item) {
+    const activeClass = item.isActive === "사용" ? "status-use" : "status-stop";
+
+    return `
+      <tr>
+        <td>${escapeHtml(item.accountCode)}</td>
+        <td class="left">
+          <span class="account-link" onclick="openVoucherHistoryModal(${item.id}, '${escapeHtmlJs(item.accountName)}')">
+            ${escapeHtml(item.accountName)}
+          </span>
+        </td>
+        <td>${escapeHtml(item.accountType)}</td>
+        <td>${item.displayOrder ?? ""}</td>
+        <td class="${activeClass}">${escapeHtml(item.isActive)}</td>
+        <td>-</td>
+      </tr>
+    `;
+  }
+
+  async function displayAccounts() {
+    try {
+      const [bsList, isList] = await Promise.all([
+        fetchList("bs"),
+        fetchList("is")
+      ]);
+
+      const bsBody = document.getElementById("bsAccountBody");
+      const isBody = document.getElementById("isAccountBody");
+
+      if (!bsList || bsList.length === 0) {
+        bsBody.innerHTML = `<tr><td colspan="6" class="empty-row">재무상태표 계정이 없습니다.</td></tr>`;
+      } else {
+        bsBody.innerHTML = bsList.map(rowHtml).join("");
+      }
+
+      if (!isList || isList.length === 0) {
+        isBody.innerHTML = `<tr><td colspan="6" class="empty-row">손익계산서 계정이 없습니다.</td></tr>`;
+      } else {
+        isBody.innerHTML = isList.map(rowHtml).join("");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("재무제표 계정 조회 실패: " + e.message);
+    }
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".table-section").forEach(section => section.classList.remove("active"));
+
+    document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add("active");
+    document.getElementById(tab === "bs" ? "bsTable" : "isTable").classList.add("active");
+  }
+
+  function ymd(date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function firstDayOfMonth() {
+    const now = new Date();
+    return ymd(new Date(now.getFullYear(), now.getMonth(), 1));
+  }
+
+  function today() {
+    return ymd(new Date());
+  }
+
+  function openVoucherHistoryModal(accountId, accountName) {
+    selectedVoucherAccountId = accountId;
+    selectedVoucherAccountName = accountName;
+
+    document.getElementById("voucherHistoryTitle").textContent = `전표내역 조회 - ${accountName}`;
+    document.getElementById("voucherAccountName").value = accountName;
+    document.getElementById("voucherStartDate").value = firstDayOfMonth();
+    document.getElementById("voucherEndDate").value = today();
+    document.getElementById("voucherHistoryBody").innerHTML = "";
+    document.getElementById("voucherSummaryText").textContent = "조회 중...";
+    document.getElementById("voucherHistoryModal").classList.add("show");
+
+    searchVoucherHistory();
+  }
+
+  function closeVoucherHistoryModal() {
+    document.getElementById("voucherHistoryModal").classList.remove("show");
+    selectedVoucherAccountId = null;
+    selectedVoucherAccountName = "";
+  }
+
+  function resetVoucherHistoryDates() {
+    document.getElementById("voucherStartDate").value = firstDayOfMonth();
+    document.getElementById("voucherEndDate").value = today();
+    searchVoucherHistory();
+  }
+
+  function formatNumber(v) {
+    return v == null ? "" : Number(v).toLocaleString();
+  }
+
+  function typeBadge(type) {
+    if (type === "DEBIT") return `<span class="badge-debit">차변</span>`;
+    return `<span class="badge-credit">대변</span>`;
+  }
+
+  async function searchVoucherHistory() {
+    if (!selectedVoucherAccountId) return;
+
+    const startDate = document.getElementById("voucherStartDate").value;
+    const endDate = document.getElementById("voucherEndDate").value;
+
+    try {
+      const query = new URLSearchParams();
+      if (startDate) query.set("startDate", startDate);
+      if (endDate) query.set("endDate", endDate);
+
+      const rows = await api.get(`/api/financial-statement-accounts/${selectedVoucherAccountId}/voucher-rows?` + query.toString());
+
+      const body = document.getElementById("voucherHistoryBody");
+      body.innerHTML = "";
+
+      if (!rows || rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="10" class="empty-row">조회된 전표내역이 없습니다.</td></tr>`;
+        document.getElementById("voucherSummaryText").textContent =
+          `${selectedVoucherAccountName} 계정의 전표내역이 없습니다.`;
+        return;
+      }
+
+      body.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.voucherDate ?? ""}</td>
+          <td>${escapeHtml(r.voucherNo)}</td>
+          <td>${typeBadge(r.lineType)}</td>
+          <td>${escapeHtml(r.accountName)}</td>
+          <td class="amount">${formatNumber(r.amount)}</td>
+          <td class="left">${escapeHtml(r.description)}</td>
+          <td>${escapeHtml(r.contractNumber)}</td>
+          <td>${escapeHtml(r.vehicleNo)}</td>
+          <td class="left">${escapeHtml(r.memo)}</td>
+          <td>${escapeHtml(r.status)}</td>
+        </tr>
+      `).join("");
+
+      document.getElementById("voucherSummaryText").textContent =
+        `${selectedVoucherAccountName} 계정 전표내역 ${rows.length}건 조회됨`;
+    } catch (e) {
+      console.error(e);
+      alert("전표내역 조회 실패: " + e.message);
+    }
+  }
+
+  window.addEventListener("load", () => {
+    displayAccounts();
+  });
+
+  window.addEventListener("click", (event) => {
+    const voucherModal = document.getElementById("voucherHistoryModal");
+    if (event.target === voucherModal) {
+      closeVoucherHistoryModal();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeVoucherHistoryModal();
+    }
+  });
+</script>
+</body>
+</html>

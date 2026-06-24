@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>중도상환 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/contract/early_termination.css">
+
+  <style>
+    .modal-backdrop{
+      display:none;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.45);
+      z-index:9999;
+      padding:40px 14px;
+      overflow:auto;
+    }
+    .modal-box{
+      background:#fff;
+      max-width:1100px;
+      margin:0 auto;
+      border-radius:10px;
+      padding:16px;
+    }
+    .modal-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .modal-title{ font-size:18px; font-weight:700; }
+    .modal-body .row{
+      display:flex; gap:8px; align-items:center;
+      margin-bottom:10px;
+    }
+    .modal-body input{
+      flex:1;
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:8px;
+    }
+    .modal-table{
+      width:100%;
+      border-collapse:collapse;
+    }
+    .modal-table th,.modal-table td{
+      border:1px solid #e6e6e6;
+      padding:10px;
+      text-align:left;
+      font-size:14px;
+    }
+    .modal-table tbody tr{
+      cursor:pointer;
+    }
+    .modal-table tbody tr:hover{
+      background:#f7f7f7;
+    }
+    .btn-icon{
+      width:42px;
+      height:42px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid #ddd;
+      border-radius:8px;
+      background:#fff;
+      cursor:pointer;
+    }
+    .btn-icon:active{ transform: translateY(1px); }
+    .modal-footer{
+      display:flex;
+      justify-content:flex-end;
+      margin-top:10px;
+    }
+    .muted{
+      color:#666; font-size:13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>중도상환 관리</h1>
+      <p>계약관리 &gt; 중도상환</p>
+    </div>
+
+    <div class="erp-card" id="terminationListSection">
+      <div class="card-header">
+        <h2>중도상환 목록</h2>
+        <button type="button" class="btn btn-primary" id="addTerminationBtn">
+          <span>+ 중도상환 추가</span>
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="filter-section">
+          <label for="statusFilter">상태:</label>
+          <select id="statusFilter" class="filter-select">
+            <option value="all">전체</option>
+            <option value="처리대기">처리대기</option>
+            <option value="처리완료">처리완료</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>계약번호</th>
+                <th>고객명</th>
+                <th>차량번호</th>
+                <th>중도상환방법</th>
+                <th>중도상환일</th>
+                <th>중도상환금액</th>
+                <th>미회수렌트료</th>
+                <th>합계금액</th>
+                <th>상태</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody id="terminationTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="pagination">
+          <button class="pagination-btn" id="prevBtn">이전</button>
+          <div class="pagination-numbers" id="pageNumbers"></div>
+          <button class="pagination-btn" id="nextBtn">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card hidden" id="terminationFormSection">
+      <div class="card-header">
+        <h2>중도상환 등록</h2>
+        <button type="button" class="btn btn-secondary" id="cancelFormBtn">취소</button>
+      </div>
+
+      <div class="card-body">
+        <form id="terminationForm">
+          <div class="form-section">
+            <h3 class="section-title">계약 검색</h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="contractNumber" class="required">계약번호</label>
+
+                <div class="flex-row-gap">
+                  <input type="text" id="contractNumber" name="contractNumber" class="flex-1" placeholder="돋보기로 계약을 선택하세요" required>
+                  <button type="button" class="btn-icon" id="btnOpenContractModal" title="계약 조회">
+                    🔍
+                  </button>
+                </div>
+
+                <small class="help-text">돋보기로 계약 선택 시 계약 현황이 자동으로 출력됩니다</small>
+              </div>
+            </div>
+
+            <div class="contract-info hidden" id="contractInfo">
+              <h4>계약 현황</h4>
+
+              <div class="info-row">
+                <div class="info-item">
+                  <span class="info-label">고객명</span>
+                  <span class="info-value" id="displayCustomerName">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">차량번호</span>
+                  <span class="info-value" id="displayVehicleNumber">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">계약구분</span>
+                  <span class="info-value" id="displayContractType">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">계약기간</span>
+                  <span class="info-value" id="displayContractPeriod">-</span>
+                </div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-item">
+                  <span class="info-label">월 렌트료</span>
+                  <span class="info-value" id="displayMonthlyRent">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">총 렌트료</span>
+                  <span class="info-value" id="displayTotalRent">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">경과 개월</span>
+                  <span class="info-value" id="displayElapsedMonths">-</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">잔여 개월</span>
+                  <span class="info-value" id="displayRemainingMonths">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">중도상환 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="terminationMethod" class="required">중도상환방법</label>
+                <select id="terminationMethod" name="terminationMethod" required>
+                  <option value="">선택하세요</option>
+                  <option value="인수">인수</option>
+                  <option value="반납">반납</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="terminationDate" class="required">중도상환일</label>
+                <input type="date" id="terminationDate" name="terminationDate" required>
+              </div>
+
+              <div class="form-group">
+                <label for="status" class="required">상태</label>
+                <select id="status" name="status" required>
+                  <option value="">선택하세요</option>
+                  <option value="처리대기">처리대기</option>
+                  <option value="처리완료">처리완료</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">금액 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="terminationAmount" class="required">중도상환금액</label>
+                <input type="number" id="terminationAmount" name="terminationAmount" placeholder="중도상환금액을 입력하세요" required>
+              </div>
+
+              <div class="form-group">
+                <label for="uncollectedRent">미회수렌트료</label>
+                <input type="number" id="uncollectedRent" name="uncollectedRent" placeholder="금액을 직접 입력하세요">
+                <small class="help-text">전표 항목은 미회수렌트료로 고정되고, 금액만 직접 입력합니다</small>
+              </div>
+
+              <div class="form-group">
+                <label for="terminationFee">중도상환수수료</label>
+                <input type="number" id="terminationFee" name="terminationFee" placeholder="수수료를 입력하세요" value="0">
+              </div>
+            </div>
+
+            <div class="total-amount">
+              <div class="total-label">합계 금액 (미수금)</div>
+              <div class="total-value" id="totalAmount">0 원</div>
+            </div>
+
+            <div class="alert-info">
+              <strong>⚠️ 안내</strong>
+              반납 + 처리완료 시 전표가 자동 발생됩니다.
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btnReset">초기화</button>
+            <button type="submit" class="btn btn-primary">중도상환 등록</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="contractModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">계약 조회</div>
+        <button type="button" class="btn btn-secondary" id="btnCloseContractModal">닫기</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row">
+          <input type="text" id="contractSearchKw" placeholder="검색어(계약번호/고객명/차량번호)를 입력하세요">
+          <button type="button" class="btn btn-primary" id="btnContractSearch">검색</button>
+        </div>
+        <div class="muted">행을 클릭하면 해당 계약이 선택됩니다.</div>
+
+        <div style="margin-top:10px; overflow:auto;">
+          <table class="modal-table">
+            <thead>
+              <tr>
+                <th style="width:140px;">계약번호</th>
+                <th style="width:140px;">고객명</th>
+                <th style="width:120px;">차량번호</th>
+                <th style="width:90px;">구분</th>
+                <th>기간</th>
+                <th style="width:120px;">월렌트료</th>
+              </tr>
+            </thead>
+            <tbody id="contractSearchBody">
+              <tr><td colspan="6" style="text-align:center; padding:14px;">검색어를 입력하고 검색하세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <span class="muted" id="contractSearchCount"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    const BASE = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
+
+    const terminationListSection = document.getElementById('terminationListSection');
+    const terminationFormSection = document.getElementById('terminationFormSection');
+    const addTerminationBtn = document.getElementById('addTerminationBtn');
+    const cancelFormBtn = document.getElementById('cancelFormBtn');
+
+    const statusFilter = document.getElementById('statusFilter');
+    const tbody = document.getElementById('terminationTableBody');
+
+    const pageSize = 15;
+    let currentPage = 1;
+    let totalPages = 1;
+
+    let loadedContract = null;
+
+    function formatNumber(n){ return Number(n || 0).toLocaleString('ko-KR'); }
+    function formatWon(n){ return formatNumber(n) + '원'; }
+    function ymd(d){ return d ? String(d).slice(0,10) : ''; }
+    function mustOk(res){ if(!res.ok) throw new Error('HTTP ' + res.status); return res; }
+
+    function setToday(){
+      document.getElementById('terminationDate').value = new Date().toISOString().slice(0,10);
+    }
+
+    function diffMonthsFloor(d1, d2){
+      const y1 = d1.getFullYear(), m1 = d1.getMonth();
+      const y2 = d2.getFullYear(), m2 = d2.getMonth();
+      return Math.max(0, (y2 - y1) * 12 + (m2 - m1));
+    }
+
+    addTerminationBtn.addEventListener('click', () => {
+      terminationListSection.classList.add('hidden');
+      terminationFormSection.classList.remove('hidden');
+      setToday();
+    });
+
+    cancelFormBtn.addEventListener('click', () => {
+      if (!confirm('작성 중인 내용이 있습니다. 취소하시겠습니까?')) return;
+      resetFormHard();
+      terminationFormSection.classList.add('hidden');
+      terminationListSection.classList.remove('hidden');
+    });
+
+    async function loadList(){
+      const status = statusFilter.value;
+      const qs = new URLSearchParams();
+      qs.set('page', String(currentPage));
+      qs.set('size', String(pageSize));
+      if(status && status !== 'all') qs.set('status', status);
+
+      const data = await fetch(`${BASE}/api/early-terminations?${qs.toString()}`, {
+        headers: { 'Accept': 'application/json' }
+      }).then(mustOk).then(r => r.json());
+
+      const rows = data.content || [];
+      totalPages = data.totalPages || 1;
+
+      renderTable(rows, data.number, data.size);
+      renderPagination();
+    }
+
+    function renderTable(rows, pageZeroBased, size){
+      tbody.innerHTML = '';
+      if(!rows.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="11" style="text-align:center; padding:16px;">데이터가 없습니다.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      const startNo = pageZeroBased * size;
+      rows.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${startNo + idx + 1}</td>
+          <td>${r.contractNumber || '-'}</td>
+          <td>${r.customerName || '-'}</td>
+          <td>${r.vehicleNo || '-'}</td>
+          <td>${r.terminationMethod || '-'}</td>
+          <td>${ymd(r.terminationDate) || '-'}</td>
+          <td>${formatWon(r.terminationAmount)}</td>
+          <td>${formatWon(r.uncollectedRent)}</td>
+          <td>${formatWon(r.totalAmount)}</td>
+          <td>${r.status || '-'}</td>
+          <td>
+            <button class="btn-small btn-edit" type="button">수정</button>
+            <button class="btn-small btn-delete" type="button">삭제</button>
+          </td>
+        `;
+
+        tr.addEventListener('click', (e) => {
+          if(e.target.closest('.btn-edit') || e.target.closest('.btn-delete')) return;
+          window.location.href = `early_termination_detail.html?id=${r.id}`;
+        });
+
+        tr.querySelector('.btn-edit').addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.location.href = `early_termination_detail.html?id=${r.id}`;
+        });
+
+        tr.querySelector('.btn-delete').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if(!confirm('정말로 이 중도상환을 삭제하시겠습니까?')) return;
+          await fetch(`${BASE}/api/early-terminations/${r.id}`, { method: 'DELETE' }).then(mustOk);
+          alert('삭제되었습니다.');
+          await loadList();
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderPagination(){
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageNumbersDiv = document.getElementById('pageNumbers');
+
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages;
+
+      pageNumbersDiv.innerHTML = '';
+      for(let i=1;i<=totalPages;i++){
+        const b = document.createElement('button');
+        b.textContent = i;
+        b.className = 'pagination-number' + (i===currentPage ? ' active' : '');
+        b.addEventListener('click', async () => {
+          currentPage = i;
+          await loadList();
+        });
+        pageNumbersDiv.appendChild(b);
+      }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', async () => {
+      if(currentPage <= 1) return;
+      currentPage--;
+      await loadList();
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', async () => {
+      if(currentPage >= totalPages) return;
+      currentPage++;
+      await loadList();
+    });
+
+    statusFilter.addEventListener('change', async () => {
+      currentPage = 1;
+      await loadList();
+    });
+
+    const contractModal = document.getElementById('contractModal');
+    const btnOpenContractModal = document.getElementById('btnOpenContractModal');
+    const btnCloseContractModal = document.getElementById('btnCloseContractModal');
+    const btnContractSearch = document.getElementById('btnContractSearch');
+    const contractSearchKw = document.getElementById('contractSearchKw');
+    const contractSearchBody = document.getElementById('contractSearchBody');
+    const contractSearchCount = document.getElementById('contractSearchCount');
+
+    btnOpenContractModal.addEventListener('click', async () => {
+      openContractModal();
+      contractSearchKw.focus();
+      await doContractSearch('');
+    });
+
+    btnCloseContractModal.addEventListener('click', closeContractModal);
+
+    contractModal.addEventListener('click', (e) => {
+      if(e.target === contractModal) closeContractModal();
+    });
+
+    contractSearchKw.addEventListener('keydown', async (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        await doContractSearch(contractSearchKw.value);
+      }
+      if(e.key === 'Escape'){
+        closeContractModal();
+      }
+    });
+
+    btnContractSearch.addEventListener('click', async () => {
+      await doContractSearch(contractSearchKw.value);
+    });
+
+    function openContractModal(){
+      contractModal.style.display = 'block';
+    }
+    function closeContractModal(){
+      contractModal.style.display = 'none';
+    }
+
+    async function doContractSearch(kw){
+      const q = (kw || '').trim();
+      const url = `${BASE}/api/contracts/search?kw=${encodeURIComponent(q)}`;
+
+      try{
+        const list = await fetch(url, { headers:{'Accept':'application/json'} })
+          .then(mustOk)
+          .then(r => r.json());
+
+        renderContractSearch(list || []);
+      }catch(err){
+        console.error(err);
+        contractSearchBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:14px;">검색 실패(서버 확인)</td></tr>`;
+        contractSearchCount.textContent = '';
+      }
+    }
+
+    function renderContractSearch(list){
+      contractSearchBody.innerHTML = '';
+
+      if(!list.length){
+        contractSearchBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:14px;">검색 결과가 없습니다.</td></tr>`;
+        contractSearchCount.textContent = '';
+        return;
+      }
+
+      contractSearchCount.textContent = `총 ${list.length}건`;
+
+      list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.contractNumber || '-'}</td>
+          <td>${c.customerName || '-'}</td>
+          <td>${c.vehicleNo || '-'}</td>
+          <td>${c.contractType || '-'}</td>
+          <td>${ymd(c.startDate)} ~ ${ymd(c.endDate)}</td>
+          <td>${formatWon(c.monthlyRent)}</td>
+        `;
+
+        tr.addEventListener('click', () => {
+          applySelectedContract(c);
+          closeContractModal();
+        });
+
+        contractSearchBody.appendChild(tr);
+      });
+    }
+
+    function applySelectedContract(c){
+      loadedContract = c;
+
+      document.getElementById('contractNumber').value = c.contractNumber || '';
+      document.getElementById('contractInfo').classList.remove('hidden');
+      document.getElementById('displayCustomerName').textContent = c.customerName || '-';
+      document.getElementById('displayVehicleNumber').textContent = c.vehicleNo || '-';
+      document.getElementById('displayContractType').textContent = c.contractType || '-';
+
+      const start = new Date(c.startDate);
+      const end = new Date(c.endDate);
+      const tVal = document.getElementById('terminationDate').value || new Date().toISOString().slice(0,10);
+      const t = new Date(tVal);
+
+      const totalMonths = diffMonthsFloor(start, end);
+      const elapsedMonths = diffMonthsFloor(start, t);
+      const remainingMonths = Math.max(0, totalMonths - elapsedMonths);
+
+      document.getElementById('displayContractPeriod').textContent =
+        `${ymd(c.startDate)} ~ ${ymd(c.endDate)} (${totalMonths}개월)`;
+
+      document.getElementById('displayMonthlyRent').textContent = formatWon(c.monthlyRent);
+      document.getElementById('displayTotalRent').textContent = formatWon(c.totalRent);
+      document.getElementById('displayElapsedMonths').textContent = `${elapsedMonths}개월`;
+      document.getElementById('displayRemainingMonths').textContent = `${remainingMonths}개월`;
+
+      calculateTotal();
+    }
+
+    function calculateTotal(){
+      const terminationAmount = Number(document.getElementById('terminationAmount').value || 0);
+      const terminationFee = Number(document.getElementById('terminationFee').value || 0);
+      const uncollectedRent = Number(document.getElementById('uncollectedRent').value || 0);
+
+      const total = terminationAmount + terminationFee + uncollectedRent;
+      document.getElementById('totalAmount').textContent = formatNumber(total) + ' 원';
+    }
+
+    document.getElementById('terminationAmount').addEventListener('input', calculateTotal);
+    document.getElementById('terminationFee').addEventListener('input', calculateTotal);
+    document.getElementById('uncollectedRent').addEventListener('input', calculateTotal);
+
+    document.getElementById('terminationDate').addEventListener('change', () => {
+      calculateTotal();
+    });
+
+    document.getElementById('terminationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const contractNumber = document.getElementById('contractNumber').value.trim();
+      if(!contractNumber){
+        alert('계약번호를 선택하세요(돋보기).');
+        return;
+      }
+
+      const payload = {
+        contractNumber: contractNumber,
+        terminationMethod: document.getElementById('terminationMethod').value,
+        terminationDate: document.getElementById('terminationDate').value,
+        status: document.getElementById('status').value,
+        terminationAmount: Number(document.getElementById('terminationAmount').value || 0),
+        uncollectedRent: Number(document.getElementById('uncollectedRent').value || 0),
+        terminationFee: Number(document.getElementById('terminationFee').value || 0)
+      };
+
+      try{
+        await fetch(`${BASE}/api/early-terminations`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        }).then(mustOk);
+
+        alert('중도상환이 성공적으로 등록되었습니다!');
+        resetFormHard();
+
+        terminationFormSection.classList.add('hidden');
+        terminationListSection.classList.remove('hidden');
+
+        currentPage = 1;
+        await loadList();
+      }catch(err){
+        console.error(err);
+        alert('등록 실패: 서버 콘솔 로그 확인');
+      }
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      if(!confirm('모든 입력 내용을 초기화하시겠습니까?')) return;
+      resetFormHard();
+    });
+
+    function resetFormHard(){
+      document.getElementById('terminationForm').reset();
+      document.getElementById('contractInfo').classList.add('hidden');
+      document.getElementById('uncollectedRent').value = '';
+      document.getElementById('totalAmount').textContent = '0 원';
+      document.getElementById('terminationFee').value = 0;
+      loadedContract = null;
+      setToday();
+    }
+
+    (async function init(){
+      await loadList();
+    })();
+  </script>
+</body>
+</html>

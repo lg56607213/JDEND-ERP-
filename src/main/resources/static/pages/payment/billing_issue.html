@@ -1,0 +1,464 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>청구서 발행 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/billing_issue.css">
+
+  <style>
+    .input-with-icon{ position:relative; }
+    .input-with-icon input{ width:100%; padding-right:46px; }
+    .icon-btn{
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      width:36px; height:36px; border:1px solid #ddd; background:#fff; border-radius:8px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .icon-btn:hover{ background:#f5f5f5; }
+
+    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; }
+    .modal{
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:760px; max-width:calc(100vw - 40px);
+      background:#fff; border-radius:12px; overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,0.25);
+    }
+    .modal-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #eee;
+    }
+    .modal-title{ font-size:16px; font-weight:700; }
+    .modal-close{ border:0; background:transparent; cursor:pointer; font-size:18px; }
+    .modal-body{ padding:14px 16px; }
+    .modal-footer{
+      padding:12px 16px; border-top:1px solid #eee;
+      display:flex; justify-content:flex-end; gap:8px;
+    }
+    .search-row{ display:flex; gap:8px; margin-bottom:10px; }
+    .search-row input{ flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:8px; }
+    .btn{ padding:10px 12px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; }
+    .btn-primary{ border-color:#2f6fed; background:#2f6fed; color:#fff; }
+    .table-mini{ width:100%; border-collapse:collapse; }
+    .table-mini th,.table-mini td{ border-bottom:1px solid #eee; padding:10px 8px; text-align:left; font-size:14px; }
+    .table-mini tr:hover{ background:#fafafa; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>청구서 발행</h1>
+      <p>수납관리 &gt; 청구관리 &gt; 청구서발행</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="searchStartDate">시작일</label>
+              <input type="date" id="searchStartDate">
+            </div>
+            <div class="form-group">
+              <label for="searchEndDate">종료일</label>
+              <input type="date" id="searchEndDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchCustomer">거래처명</label>
+              <div class="input-with-icon">
+                <input type="text" id="searchCustomer" placeholder="거래처명 검색">
+                <button type="button" class="icon-btn" onclick="showCustomerModal()">🔍</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="searchContract">계약번호</label>
+              <div class="input-with-icon">
+                <input type="text" id="searchContract" placeholder="계약번호 검색">
+                <button type="button" class="icon-btn" onclick="showContractModal()">🔍</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" onclick="searchBilling()">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>청구번호</th>
+                <th>계약번호</th>
+                <th>거래처명</th>
+                <th>총액</th>
+                <th>Email</th>
+                <th>상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="billingTableBody">
+              <tr>
+                <td colspan="8" class="no-data">
+                  <div class="no-data-icon">📋</div>
+                  <div>조회해주세요.</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 거래처 돋보기 모달 -->
+  <div class="modal-backdrop" id="customerModalBackdrop" onclick="hideCustomerModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">거래처 선택</div>
+        <button class="modal-close" type="button" onclick="hideCustomerModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-row">
+          <input type="text" id="customerKw" placeholder="고객번호/거래처명" onkeydown="if(event.key==='Enter'){doCustomerSearch();}">
+          <button class="btn btn-primary" type="button" onclick="doCustomerSearch()">조회</button>
+        </div>
+
+        <div style="max-height:360px; overflow:auto;">
+          <table class="table-mini">
+            <thead>
+              <tr>
+                <th style="width:160px;">고객번호</th>
+                <th>거래처명</th>
+                <th style="width:240px;">이메일</th>
+                <th style="width:90px;">선택</th>
+              </tr>
+            </thead>
+            <tbody id="customerTbody">
+              <tr><td colspan="4" style="padding:14px;color:#777;">검색어 입력 후 조회하세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" onclick="hideCustomerModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 계약 돋보기 모달 -->
+  <div class="modal-backdrop" id="contractModalBackdrop" onclick="hideContractModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">계약 선택</div>
+        <button class="modal-close" type="button" onclick="hideContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-row">
+          <input type="text" id="contractKw" placeholder="계약번호/고객번호" onkeydown="if(event.key==='Enter'){doContractSearch();}">
+          <button class="btn btn-primary" type="button" onclick="doContractSearch()">조회</button>
+        </div>
+
+        <div style="max-height:360px; overflow:auto;">
+          <table class="table-mini">
+            <thead>
+              <tr>
+                <th style="width:220px;">계약번호</th>
+                <th>고객번호</th>
+                <th style="width:90px;">선택</th>
+              </tr>
+            </thead>
+            <tbody id="contractTbody">
+              <tr><td colspan="3" style="padding:14px;color:#777;">검색어 입력 후 조회하세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" onclick="hideContractModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    if (typeof API_BASE_URL === "undefined") {
+      alert("config.js 로드 실패: API_BASE_URL이 없습니다. (경로 확인)");
+    }
+
+    if (typeof window.apiFetch !== "function") {
+      window.apiFetch = async function(path, options = {}) {
+        const url = API_BASE_URL + path;
+        const opts = {
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options
+        };
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const text = await res.text().catch(()=> "");
+          throw new Error(`HTTP ${res.status} - ${text}`);
+        }
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) return res.json();
+        return res.text();
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    const tbody = document.getElementById("billingTableBody");
+
+    window.addEventListener("load", () => {
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById("searchStartDate").value = startOfMonth.toISOString().split("T")[0];
+      document.getElementById("searchEndDate").value = today.toISOString().split("T")[0];
+      searchBilling();
+    });
+
+    async function searchBilling() {
+      const qs = new URLSearchParams();
+      const startDate = document.getElementById("searchStartDate").value;
+      const endDate = document.getElementById("searchEndDate").value;
+      const customerName = document.getElementById("searchCustomer").value.trim();
+      const contractNumber = document.getElementById("searchContract").value.trim();
+
+      if (startDate) qs.set("startDate", startDate);
+      if (endDate) qs.set("endDate", endDate);
+      if (customerName) qs.set("customerName", customerName);
+      if (contractNumber) qs.set("contractNumber", contractNumber);
+
+      tbody.innerHTML = `<tr><td colspan="8" class="no-data"><div>조회중...</div></td></tr>`;
+
+      try {
+        const rows = await apiFetch(`/api/billings?${qs.toString()}`);
+        render(rows || []);
+      } catch (e) {
+        console.error(e);
+        alert("조회 실패: " + e.message);
+        tbody.innerHTML = `<tr><td colspan="8" class="no-data"><div>오류</div></td></tr>`;
+      }
+    }
+
+    function render(rows) {
+      if (!rows.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="no-data">
+              <div class="no-data-icon">📋</div>
+              <div>검색 결과가 없습니다.</div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((r, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(r.billingNo || "-")}</td>
+          <td>${escapeHtml(r.contractNumber || "-")}</td>
+          <td>${escapeHtml(r.customerName || "-")}</td>
+          <td class="amount-cell">${Number(r.totalAmount || 0).toLocaleString()}</td>
+          <td>${escapeHtml(r.email || "-")}</td>
+          <td>${escapeHtml(r.status || "-")}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-action btn-print"
+                data-billing-no="${escapeHtml(r.billingNo || "")}"
+                onclick="printBillingFromBtn(this)">출력</button>
+
+              <button class="btn-action btn-send"
+                data-billing-no="${escapeHtml(r.billingNo || "")}"
+                data-email="${escapeHtml(r.email || "")}"
+                onclick="sendBillingFromBtn(this)">전송</button>
+
+              <button class="btn-action btn-edit"
+                data-billing-no="${escapeHtml(r.billingNo || "")}"
+                onclick="editBillingFromBtn(this)">수정</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function printBillingFromBtn(btn) {
+      const billingNo = btn.getAttribute("data-billing-no") || "";
+      if (!billingNo) return alert("청구번호가 없습니다.");
+
+      try {
+        const html = await apiFetch(`/api/billings/${encodeURIComponent(billingNo)}/print`);
+        const w = window.open("", "_blank", "width=1000,height=900");
+        if (!w) {
+          alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.");
+          return;
+        }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+      } catch (e) {
+        console.error(e);
+        alert("출력 실패: " + e.message);
+      }
+    }
+
+    async function sendBillingFromBtn(btn) {
+      const billingNo = btn.getAttribute("data-billing-no") || "";
+      const email = (btn.getAttribute("data-email") || "").trim();
+      if (!billingNo) return alert("청구번호가 없습니다.");
+
+      const to = email ? email : prompt("보낼 이메일 입력");
+      if (!to) return;
+      if (!confirm(`${to}로 전송하시겠습니까?`)) return;
+
+      try {
+        await apiFetch(`/api/billings/${encodeURIComponent(billingNo)}/send`, {
+          method: "POST",
+          body: JSON.stringify({ email: to })
+        });
+        alert("전송 처리 완료(SENT)");
+        searchBilling();
+      } catch (e) {
+        console.error(e);
+        alert("전송 실패: " + e.message);
+      }
+    }
+
+    function editBillingFromBtn(btn) {
+      const billingNo = btn.getAttribute("data-billing-no") || "";
+      if (!billingNo) return alert("청구번호가 없습니다.");
+      location.href = `billing_detail.html?billingNo=${encodeURIComponent(billingNo)}`;
+    }
+
+    function showCustomerModal() {
+      document.getElementById("customerModalBackdrop").style.display = "block";
+      document.getElementById("customerKw").value = "";
+      document.getElementById("customerTbody").innerHTML =
+        '<tr><td colspan="4" style="padding:14px;color:#777;">조회중...</td></tr>';
+      setTimeout(() => {
+        document.getElementById("customerKw").focus();
+        doCustomerSearch();
+      }, 50);
+    }
+
+    function hideCustomerModal() {
+      document.getElementById("customerModalBackdrop").style.display = "none";
+    }
+
+    async function doCustomerSearch() {
+      const kw = document.getElementById("customerKw").value.trim();
+      const tbody2 = document.getElementById("customerTbody");
+      tbody2.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">조회중...</td></tr>';
+
+      try {
+        const rows = await apiFetch(`/api/billings/customers/search?kw=${encodeURIComponent(kw)}`);
+        if (!rows || rows.length === 0) {
+          tbody2.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">검색 결과가 없습니다.</td></tr>';
+          return;
+        }
+
+        tbody2.innerHTML = rows.map(r => {
+          const num = r.customerNumber ?? "";
+          const name = r.customerName ?? "";
+          const email = r.email ?? "";
+          return `
+            <tr>
+              <td>${escapeHtml(num)}</td>
+              <td>${escapeHtml(name)}</td>
+              <td>${escapeHtml(email)}</td>
+              <td>
+                <button class="btn" type="button"
+                  data-name="${escapeHtml(name)}"
+                  onclick="pickCustomerNameFromBtn(this)">선택</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) {
+        console.error(e);
+        alert("거래처 검색 실패: " + e.message);
+        tbody2.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">오류</td></tr>';
+      }
+    }
+
+    function pickCustomerNameFromBtn(btn) {
+      const name = btn.getAttribute("data-name") || "";
+      document.getElementById("searchCustomer").value = name;
+      hideCustomerModal();
+      searchBilling();
+    }
+
+    function showContractModal() {
+      document.getElementById("contractModalBackdrop").style.display = "block";
+      document.getElementById("contractKw").value = "";
+      document.getElementById("contractTbody").innerHTML =
+        '<tr><td colspan="3" style="padding:14px;color:#777;">조회중...</td></tr>';
+      setTimeout(() => {
+        document.getElementById("contractKw").focus();
+        doContractSearch();
+      }, 50);
+    }
+
+    function hideContractModal() {
+      document.getElementById("contractModalBackdrop").style.display = "none";
+    }
+
+    async function doContractSearch() {
+      const kw = document.getElementById("contractKw").value.trim();
+      const tbody3 = document.getElementById("contractTbody");
+      tbody3.innerHTML = '<tr><td colspan="3" style="padding:14px;color:#777;">조회중...</td></tr>';
+
+      try {
+        const rows = await apiFetch(`/api/billings/contracts/search?kw=${encodeURIComponent(kw)}`);
+        if (!rows || rows.length === 0) {
+          tbody3.innerHTML = '<tr><td colspan="3" style="padding:14px;color:#777;">검색 결과가 없습니다.</td></tr>';
+          return;
+        }
+
+        tbody3.innerHTML = rows.map(r => {
+          const cn = r.contractNumber ?? "";
+          const cust = r.customerNumber ?? "";
+          return `
+            <tr>
+              <td>${escapeHtml(cn)}</td>
+              <td>${escapeHtml(cust)}</td>
+              <td>
+                <button class="btn" type="button"
+                  data-contract="${escapeHtml(cn)}"
+                  onclick="pickContractFromBtn(this)">선택</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (e) {
+        console.error(e);
+        alert("계약 검색 실패: " + e.message);
+        tbody3.innerHTML = '<tr><td colspan="3" style="padding:14px;color:#777;">오류</td></tr>';
+      }
+    }
+
+    function pickContractFromBtn(btn) {
+      const contract = btn.getAttribute("data-contract") || "";
+      document.getElementById("searchContract").value = contract;
+      hideContractModal();
+      searchBilling();
+    }
+  </script>
+</body>
+</html>

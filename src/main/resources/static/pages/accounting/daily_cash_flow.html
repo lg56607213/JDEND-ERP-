@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일자별 입출금현황 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/accounting/daily_cash_flow.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>일자별 입출금현황</h1>
+      <p>회계관리 &gt; 일일자금 &gt; 일자별 입출금현황</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <!-- 기준월 선택 -->
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="reportMonth" class="required">기준월</label>
+              <input type="month" id="reportMonth" name="reportMonth" required>
+            </div>
+            <div class="form-group btn-group">
+              <button type="button" class="btn-search" onclick="loadReport()">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-container">
+          <table class="cash-flow-table">
+            <thead>
+              <tr>
+                <th rowspan="2" class="date-col">일자</th>
+                <th colspan="2" class="bank-header">은행내역</th>
+                <th colspan="2" class="voucher-header">전표내역</th>
+                <th colspan="2" class="diff-header">비고 (차액)</th>
+              </tr>
+              <tr>
+                <th class="income-col">입금</th>
+                <th class="expense-col">출금</th>
+                <th class="income-col">입금</th>
+                <th class="expense-col">출금</th>
+                <th class="diff-income-col">입금</th>
+                <th class="diff-expense-col">출금</th>
+              </tr>
+            </thead>
+            <tbody id="cashFlowBody"></tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td><strong>합계</strong></td>
+                <td class="amount-cell income" id="totalBankIncome">-</td>
+                <td class="amount-cell expense" id="totalBankExpense">-</td>
+                <td class="amount-cell income" id="totalVoucherIncome">-</td>
+                <td class="amount-cell expense" id="totalVoucherExpense">-</td>
+                <td class="amount-cell" id="totalDiffIncome">-</td>
+                <td class="amount-cell" id="totalDiffExpense">-</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 버튼 영역 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="printReport()">인쇄</button>
+          <button type="button" class="btn btn-primary" onclick="exportExcel()">엑셀 다운로드</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    let lastRows = [];
+
+    function mustOk(res){
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res;
+    }
+    function fmtAmt(v){
+      const n = Number(v || 0);
+      if(n === 0) return "-";
+      return n.toLocaleString();
+    }
+    function fmtDiff(v){
+      const n = Number(v || 0);
+      if(n === 0) return "-";
+      return n.toLocaleString();
+    }
+
+    window.addEventListener('load', function() {
+      const today = new Date();
+      document.getElementById('reportMonth').value = today.toISOString().slice(0,7);
+      loadReport();
+    });
+
+    async function loadReport() {
+      const reportMonth = document.getElementById('reportMonth').value;
+      if (!reportMonth) return alert('기준월을 선택해주세요.');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/cash/daily-cash-flow?month=` + encodeURIComponent(reportMonth));
+        await mustOk(res);
+        const data = await res.json();
+        lastRows = data.rows || [];
+        renderTable(data);
+      } catch (e) {
+        console.error(e);
+        alert("조회 실패: " + e.message);
+      }
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('cashFlowBody');
+      tbody.innerHTML = '';
+
+      (data.rows || []).forEach(row => {
+        const diffIncome = Number(row.diffIncome || 0);
+        const diffExpense = Number(row.diffExpense || 0);
+
+        const tr = document.createElement('tr');
+        if (diffIncome !== 0 || diffExpense !== 0) tr.className = 'has-diff';
+
+        tr.innerHTML = `
+          <td>${row.date}</td>
+          <td class="amount-cell income">${fmtAmt(row.bankIncome)}</td>
+          <td class="amount-cell expense">${fmtAmt(row.bankExpense)}</td>
+          <td class="amount-cell income">${fmtAmt(row.voucherIncome)}</td>
+          <td class="amount-cell expense">${fmtAmt(row.voucherExpense)}</td>
+          <td class="amount-cell ${diffIncome !== 0 ? 'diff-highlight' : ''}">${fmtDiff(diffIncome)}</td>
+          <td class="amount-cell ${diffExpense !== 0 ? 'diff-highlight' : ''}">${fmtDiff(diffExpense)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // 합계
+      document.getElementById('totalBankIncome').textContent = (data.totalBankIncome||0).toLocaleString();
+      document.getElementById('totalBankExpense').textContent = (data.totalBankExpense||0).toLocaleString();
+      document.getElementById('totalVoucherIncome').textContent = (data.totalVoucherIncome||0).toLocaleString();
+      document.getElementById('totalVoucherExpense').textContent = (data.totalVoucherExpense||0).toLocaleString();
+
+      const tdi = Number(data.totalDiffIncome||0);
+      const tdo = Number(data.totalDiffExpense||0);
+
+      const elDI = document.getElementById('totalDiffIncome');
+      const elDO = document.getElementById('totalDiffExpense');
+
+      elDI.textContent = fmtDiff(tdi);
+      elDO.textContent = fmtDiff(tdo);
+
+      elDI.classList.toggle('diff-highlight', tdi !== 0);
+      elDO.classList.toggle('diff-highlight', tdo !== 0);
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    // ✅ 엑셀다운로드: CSV로 다운 (서버 필요없음)
+    function exportExcel() {
+      if (!lastRows || lastRows.length === 0) return alert("다운로드할 데이터가 없습니다.");
+
+      const headers = ["일자","은행입금","은행출금","전표입금","전표출금","차액입금","차액출금"];
+      const lines = [headers.join(",")];
+
+      lastRows.forEach(r => {
+        lines.push([
+          r.date,
+          r.bankIncome || 0,
+          r.bankExpense || 0,
+          r.voucherIncome || 0,
+          r.voucherExpense || 0,
+          r.diffIncome || 0,
+          r.diffExpense || 0
+        ].join(","));
+      });
+
+      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const month = document.getElementById('reportMonth').value || 'report';
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `일자별_입출금현황_${month}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

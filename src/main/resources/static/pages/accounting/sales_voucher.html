@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>매출전표등록 | JDEND ERP</title>
+
+  <link rel="stylesheet" href="../../assets/css/sidebar.css" />
+  <link rel="stylesheet" href="../../assets/css/pages.css" />
+  <link rel="stylesheet" href="../../assets/css/accounting/daily_voucher.css" />
+
+  <style>
+    /* ===== 돋보기 입력 ===== */
+    .input-with-icon{ position:relative; }
+    .input-with-icon input{ width:100%; padding-right:48px; }
+    .icon-btn{
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      width:36px; height:36px; border:1px solid #ddd; background:#fff;
+      border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .icon-btn:hover{ background:#f5f5f5; }
+
+    /* ===== 모달 ===== */
+    .modal-backdrop{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+      align-items:center; justify-content:center; z-index:9999;
+    }
+    .modal{
+      width:min(1000px, calc(100vw - 24px));
+      background:#fff; border-radius:14px; overflow:hidden;
+      box-shadow:0 18px 60px rgba(0,0,0,.25);
+    }
+    .modal-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; border-bottom:1px solid #eee;
+    }
+    .modal-title{ font-size:16px; font-weight:700; }
+    .modal-close{
+      border:0; background:transparent; font-size:18px; cursor:pointer;
+      width:34px; height:34px; border-radius:10px;
+    }
+    .modal-close:hover{ background:#f2f2f2; }
+    .modal-body{ padding:14px 18px 18px; }
+
+    .modal-toolbar{ display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+    .modal-toolbar input{
+      flex:1; height:38px; border:1px solid #ddd; border-radius:10px; padding:0 12px;
+    }
+    .btn{ height:38px; padding:0 14px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    .btn:hover{ background:#f5f5f5; }
+    .btn-primary{ border-color:#2f6fed; background:#2f6fed; color:#fff; }
+    .btn-primary:hover{ filter:brightness(.96); }
+    .btn-ghost{ background:#fff; }
+    .help-text{ font-size:12px; color:#777; margin-left:auto; }
+
+    .result-table{
+      width:100%; border-collapse:collapse;
+      border:1px solid #eee; border-radius:12px; overflow:hidden;
+    }
+    .result-table th, .result-table td{
+      padding:10px 10px; border-bottom:1px solid #f1f1f1; font-size:13px;
+      vertical-align:middle;
+    }
+    .result-table th{ background:#fafafa; text-align:left; font-weight:700; color:#333; }
+    .result-table tr:hover td{ background:#fcfcff; }
+    .pill{
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      border:1px solid #e6e6e6; background:#fff; font-size:12px; color:#444;
+    }
+    .empty{
+      padding:18px; text-align:center; color:#777; font-size:13px;
+      border:1px dashed #e5e5e5; border-radius:12px;
+    }
+    .hidden{ display:none !important; }
+  </style>
+</head>
+
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>매출전표등록</h1>
+      <p>회계관리 &gt; 전표등록 &gt; 매출전표등록</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <form id="voucherForm">
+          <!-- 기본 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="voucherType" class="required">전표유형</label>
+                <select id="voucherType" name="voucherType" required>
+                  <option value="">선택하세요</option>
+                  <option value="매출" selected>매출전표</option>
+                  <option value="매입">매입전표</option>
+                  <option value="일반">일반전표</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="voucherDate" class="required">전표일자</label>
+                <input type="date" id="voucherDate" name="voucherDate" required />
+              </div>
+
+              <div class="form-group">
+                <label for="voucherNo">전표번호</label>
+                <input type="text" id="voucherNo" name="voucherNo" placeholder="자동생성" readonly />
+              </div>
+
+              <!-- ✅ 계약번호(돋보기 선택) -->
+              <div class="form-group">
+                <label for="contractNumber">계약번호</label>
+                <div class="input-with-icon">
+                  <input type="text" id="contractNumber" name="contractNumber" placeholder="돋보기로 선택" readonly />
+                  <button type="button" class="icon-btn" id="contractSearchBtn" title="계약 검색">🔍</button>
+                </div>
+                <div style="margin-top:6px; font-size:12px; color:#777;">
+                  고객명: <span id="contractCustomerName">-</span> /
+                  차량번호: <span id="contractVehicleNo">-</span>
+                </div>
+              </div>
+
+              <!-- ✅ 차량번호(직접입력 가능, 계약 선택 시 자동 채움) -->
+              <div class="form-group">
+                <label for="vehicleNo">차량번호</label>
+                <input type="text" id="vehicleNo" name="vehicleNo" placeholder="123소1234" />
+              </div>
+
+              <div class="form-group">
+                <label for="totalAmount" class="required">합계금액</label>
+                <input type="text" id="totalAmount" name="totalAmount" placeholder="0" />
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label for="memo">메모</label>
+                <input type="text" id="memo" name="memo" placeholder="전표 메모(선택)" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 차변 섹션 -->
+          <div class="form-section">
+            <div class="section-header-with-button">
+              <h3 class="section-title debit-title">차변 (借)</h3>
+              <button type="button" class="btn-add" onclick="addDebitRow()">+ 추가</button>
+            </div>
+
+            <div class="entries-table">
+              <table class="voucher-table">
+                <thead>
+                  <tr>
+                    <th class="col-width-30">계정과목</th>
+                    <th class="col-width-25">금액</th>
+                    <th class="col-width-35">적요</th>
+                    <th class="col-width-10">삭제</th>
+                  </tr>
+                </thead>
+
+                <tbody id="debitEntriesBody">
+                  <tr class="entry-row">
+                    <td>
+                      <select class="debit-account" required>
+                        <option value="">계정 선택</option>
+                        <optgroup label="자산">
+                          <option value="현금">현금</option>
+                          <option value="보통예금">보통예금</option>
+                          <option value="정기예금">정기예금</option>
+                          <option value="미수금">미수금</option>
+                          <option value="선급금">선급금</option>
+                          <option value="렌트자산">렌트자산</option>
+                          <option value="감가상각누계액">감가상각누계액</option>
+                          <option value="부가세대급금">부가세대급금</option>
+                        </optgroup>
+                        <optgroup label="부채">
+                          <option value="미지급금">미지급금</option>
+                          <option value="선수금">선수금</option>
+                          <option value="차입금">차입금</option>
+                          <option value="보증금">보증금</option>
+                          <option value="부가세예수금">부가세예수금</option>
+                        </optgroup>
+                        <optgroup label="자본">
+                          <option value="자본금">자본금</option>
+                          <option value="자본잉여금">자본잉여금</option>
+                          <option value="이익잉여금">이익잉여금</option>
+                        </optgroup>
+                        <optgroup label="수익">
+                          <option value="렌트수익">렌트수익</option>
+                          <option value="매각수익">매각수익</option>
+                          <option value="이자수익">이자수익</option>
+                          <option value="기타수익">기타수익</option>
+                        </optgroup>
+                        <optgroup label="비용">
+                          <option value="급여">급여</option>
+                          <option value="감가상각비">감가상각비</option>
+                          <option value="차량유지비">차량유지비</option>
+                          <option value="보험료">보험료</option>
+                          <option value="이자비용">이자비용</option>
+                          <option value="기타비용">기타비용</option>
+                        </optgroup>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" class="debit-amount" placeholder="0" required />
+                    </td>
+                    <td>
+                      <input type="text" class="debit-description" placeholder="적요" />
+                    </td>
+                    <td>
+                      <button type="button" class="btn-delete-row" onclick="deleteRow(this, 'debit')">삭제</button>
+                    </td>
+                  </tr>
+                </tbody>
+
+                <tfoot>
+                  <tr class="vat-row">
+                    <td><span class="vat-label">부가세 대급금</span></td>
+                    <td><span id="debitVatAmount">0</span></td>
+                    <td colspan="2"></td>
+                  </tr>
+                  <tr class="total-row">
+                    <td><strong>합계</strong></td>
+                    <td><strong id="debitTotal">0</strong></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- 대변 섹션 -->
+          <div class="form-section">
+            <div class="section-header-with-button">
+              <h3 class="section-title credit-title">대변 (貸)</h3>
+              <button type="button" class="btn-add" onclick="addCreditRow()">+ 추가</button>
+            </div>
+
+            <div class="entries-table">
+              <table class="voucher-table">
+                <thead>
+                  <tr>
+                    <th class="col-width-30">계정과목</th>
+                    <th class="col-width-25">금액</th>
+                    <th class="col-width-35">적요</th>
+                    <th class="col-width-10">삭제</th>
+                  </tr>
+                </thead>
+
+                <tbody id="creditEntriesBody">
+                  <tr class="entry-row">
+                    <td>
+                      <select class="credit-account" required>
+                        <option value="">계정 선택</option>
+                        <optgroup label="자산">
+                          <option value="현금">현금</option>
+                          <option value="보통예금">보통예금</option>
+                          <option value="정기예금">정기예금</option>
+                          <option value="미수금">미수금</option>
+                          <option value="선급금">선급금</option>
+                          <option value="렌트자산">렌트자산</option>
+                          <option value="감가상각누계액">감가상각누계액</option>
+                          <option value="부가세대급금">부가세대급금</option>
+                        </optgroup>
+                        <optgroup label="부채">
+                          <option value="미지급금">미지급금</option>
+                          <option value="선수금">선수금</option>
+                          <option value="차입금">차입금</option>
+                          <option value="보증금">보증금</option>
+                          <option value="부가세예수금">부가세예수금</option>
+                        </optgroup>
+                        <optgroup label="자본">
+                          <option value="자본금">자본금</option>
+                          <option value="자본잉여금">자본잉여금</option>
+                          <option value="이익잉여금">이익잉여금</option>
+                        </optgroup>
+                        <optgroup label="수익">
+                          <option value="렌트수익">렌트수익</option>
+                          <option value="매각수익">매각수익</option>
+                          <option value="이자수익">이자수익</option>
+                          <option value="기타수익">기타수익</option>
+                        </optgroup>
+                        <optgroup label="비용">
+                          <option value="급여">급여</option>
+                          <option value="감가상각비">감가상각비</option>
+                          <option value="차량유지비">차량유지비</option>
+                          <option value="보험료">보험료</option>
+                          <option value="이자비용">이자비용</option>
+                          <option value="기타비용">기타비용</option>
+                        </optgroup>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" class="credit-amount" placeholder="0" required />
+                    </td>
+                    <td>
+                      <input type="text" class="credit-description" placeholder="적요" />
+                    </td>
+                    <td>
+                      <button type="button" class="btn-delete-row" onclick="deleteRow(this, 'credit')">삭제</button>
+                    </td>
+                  </tr>
+                </tbody>
+
+                <tfoot>
+                  <tr class="vat-row">
+                    <td><span class="vat-label">부가세 예수금</span></td>
+                    <td><span id="creditVatAmount">0</span></td>
+                    <td colspan="2"></td>
+                  </tr>
+                  <tr class="total-row">
+                    <td><strong>합계</strong></td>
+                    <td><strong id="creditTotal">0</strong></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- 합계 및 검증 -->
+          <div class="summary-section">
+            <div class="summary-card">
+              <label>차변 합계</label>
+              <div class="summary-value" id="debitTotalSummary">0</div>
+            </div>
+            <div class="summary-card">
+              <label>대변 합계</label>
+              <div class="summary-value" id="creditTotalSummary">0</div>
+            </div>
+            <div class="summary-card balance balanced" id="balanceCard">
+              <label>차액</label>
+              <div class="summary-value" id="balanceAmount">0</div>
+            </div>
+          </div>
+
+          <div class="error-message hidden" id="errorMessage">
+            차변과 대변이 일치하지 않습니다. 전표를 등록할 수 없습니다.
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">전표 등록</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ 계약검색 모달 -->
+  <div class="modal-backdrop" id="contractModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="contractModalTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="contractModalTitle">계약 검색</div>
+        <button type="button" class="modal-close" id="contractModalClose" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-toolbar">
+          <input type="text" id="contractKw" placeholder="계약번호 / 고객명 / 차량번호로 검색" />
+          <button type="button" class="btn btn-primary" id="contractDoSearchBtn">검색</button>
+          <button type="button" class="btn btn-ghost" id="contractClearBtn">초기화</button>
+          <div class="help-text">Enter로 검색</div>
+        </div>
+
+        <div id="contractEmpty" class="empty hidden">검색 결과가 없습니다.</div>
+
+        <table class="result-table" id="contractTable">
+          <thead>
+            <tr>
+              <th style="width:18%;">계약번호</th>
+              <th style="width:18%;">고객명</th>
+              <th style="width:16%;">차량번호</th>
+              <th style="width:16%;">구분</th>
+              <th style="width:22%;">기간</th>
+              <th style="width:10%;">선택</th>
+            </tr>
+          </thead>
+          <tbody id="contractTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    // =========================
+    // API BASE
+    // =========================
+    const API_BASE = (typeof API_BASE_URL !== "undefined" && API_BASE_URL)
+      ? API_BASE_URL.replace(/\/$/, "")
+      : "";
+
+    function qs(sel){ return document.querySelector(sel); }
+    function qsa(sel){ return document.querySelectorAll(sel); }
+
+    async function mustOk(res){
+      if(!res.ok){
+        const text = await res.text().catch(()=> "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+      return res;
+    }
+    async function apiGet(path){
+      const res = await fetch(API_BASE + path, { method:"GET" });
+      await mustOk(res);
+      return res.json();
+    }
+    async function apiPost(path, body){
+      const res = await fetch(API_BASE + path, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body),
+      });
+      await mustOk(res);
+      return res.json();
+    }
+
+    // =========================
+    // 공통 옵션
+    // =========================
+    const accountOptions = `
+      <option value="">계정 선택</option>
+      <optgroup label="자산">
+        <option value="현금">현금</option>
+        <option value="보통예금">보통예금</option>
+        <option value="정기예금">정기예금</option>
+        <option value="미수금">미수금</option>
+        <option value="선급금">선급금</option>
+        <option value="렌트자산">렌트자산</option>
+        <option value="감가상각누계액">감가상각누계액</option>
+        <option value="부가세대급금">부가세대급금</option>
+      </optgroup>
+      <optgroup label="부채">
+        <option value="미지급금">미지급금</option>
+        <option value="선수금">선수금</option>
+        <option value="차입금">차입금</option>
+        <option value="보증금">보증금</option>
+        <option value="부가세예수금">부가세예수금</option>
+      </optgroup>
+      <optgroup label="자본">
+        <option value="자본금">자본금</option>
+        <option value="자본잉여금">자본잉여금</option>
+        <option value="이익잉여금">이익잉여금</option>
+      </optgroup>
+      <optgroup label="수익">
+        <option value="렌트수익">렌트수익</option>
+        <option value="매각수익">매각수익</option>
+        <option value="이자수익">이자수익</option>
+        <option value="기타수익">기타수익</option>
+      </optgroup>
+      <optgroup label="비용">
+        <option value="급여">급여</option>
+        <option value="감가상각비">감가상각비</option>
+        <option value="차량유지비">차량유지비</option>
+        <option value="보험료">보험료</option>
+        <option value="이자비용">이자비용</option>
+        <option value="기타비용">기타비용</option>
+      </optgroup>
+    `;
+
+    function todayStr(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2,"0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    // =========================
+    // 전표번호(서버 next-no)
+    // =========================
+    async function refreshVoucherNo(){
+      const date = qs("#voucherDate").value;
+      if(!date) return;
+      try{
+        const data = await apiGet(`/api/vouchers/next-no?date=${encodeURIComponent(date)}`);
+        qs("#voucherNo").value = data.voucherNo || "";
+      }catch(e){
+        const ymd = date.replace(/-/g,"");
+        qs("#voucherNo").value = "V" + ymd + "-001";
+        console.warn("next-no 실패, fallback:", e.message);
+      }
+    }
+
+    // =========================
+    // 금액/합계
+    // =========================
+    function formatAmountInput(input){
+      const raw = (input.value || "").replace(/,/g,"").replace(/[^\d]/g,"");
+      input.value = raw ? Number(raw).toLocaleString() : "";
+    }
+
+    function sumAmounts(selector){
+      let total = 0;
+      qsa(selector).forEach(inp=>{
+        const v = (inp.value || "").replace(/,/g,"");
+        if(v && !isNaN(v)) total += Number(v);
+      });
+      return total;
+    }
+
+    function calculateTotals(){
+      const debitTotal = sumAmounts(".debit-amount");
+      const creditTotal = sumAmounts(".credit-amount");
+      const balance = debitTotal - creditTotal;
+
+      qs("#debitTotal").textContent = debitTotal.toLocaleString();
+      qs("#creditTotal").textContent = creditTotal.toLocaleString();
+      qs("#debitTotalSummary").textContent = debitTotal.toLocaleString();
+      qs("#creditTotalSummary").textContent = creditTotal.toLocaleString();
+      qs("#balanceAmount").textContent = balance.toLocaleString();
+
+      const balanceCard = qs("#balanceCard");
+      const errorMessage = qs("#errorMessage");
+      if(balance === 0){
+        balanceCard.className = "summary-card balance balanced";
+        errorMessage.classList.add("hidden");
+      }else{
+        balanceCard.className = "summary-card balance unbalanced";
+        errorMessage.classList.remove("hidden");
+      }
+    }
+
+    function addDebitRow(){
+      const tbody = qs("#debitEntriesBody");
+      const tr = document.createElement("tr");
+      tr.className = "entry-row";
+      tr.innerHTML = `
+        <td><select class="debit-account" required>${accountOptions}</select></td>
+        <td><input type="text" class="debit-amount" placeholder="0" required></td>
+        <td><input type="text" class="debit-description" placeholder="적요"></td>
+        <td><button type="button" class="btn-delete-row">삭제</button></td>
+      `;
+      tr.querySelector(".btn-delete-row").addEventListener("click", ()=> deleteRow(tr, "debit"));
+      tr.querySelector(".debit-amount").addEventListener("input", (e)=>{ formatAmountInput(e.target); calculateTotals(); syncVatDisplayFromLines(); });
+      tbody.appendChild(tr);
+      calculateTotals();
+    }
+
+    function addCreditRow(){
+      const tbody = qs("#creditEntriesBody");
+      const tr = document.createElement("tr");
+      tr.className = "entry-row";
+      tr.innerHTML = `
+        <td><select class="credit-account" required>${accountOptions}</select></td>
+        <td><input type="text" class="credit-amount" placeholder="0" required></td>
+        <td><input type="text" class="credit-description" placeholder="적요"></td>
+        <td><button type="button" class="btn-delete-row">삭제</button></td>
+      `;
+      tr.querySelector(".btn-delete-row").addEventListener("click", ()=> deleteRow(tr, "credit"));
+      tr.querySelector(".credit-amount").addEventListener("input", (e)=>{ formatAmountInput(e.target); calculateTotals(); syncVatDisplayFromLines(); });
+      tbody.appendChild(tr);
+      calculateTotals();
+    }
+
+    function deleteRow(rowEl, type){
+      const tbody = (type==="debit") ? qs("#debitEntriesBody") : qs("#creditEntriesBody");
+      if(tbody.children.length <= 1){
+        alert("최소 1개의 항목은 유지해야 합니다.");
+        return;
+      }
+      rowEl.remove();
+      calculateTotals();
+      syncVatDisplayFromLines();
+    }
+
+    // =========================
+    // VAT 표시: 라인에 있는 부가세 계정 금액 합산해서 표시
+    // =========================
+    function syncVatDisplayFromLines(){
+      let debitVat = 0;
+      qsa("#debitEntriesBody tr").forEach(tr=>{
+        const acc = tr.querySelector(".debit-account")?.value || "";
+        const amt = Number((tr.querySelector(".debit-amount")?.value || "0").replace(/,/g,"")) || 0;
+        if(acc === "부가세대급금") debitVat += amt;
+      });
+
+      let creditVat = 0;
+      qsa("#creditEntriesBody tr").forEach(tr=>{
+        const acc = tr.querySelector(".credit-account")?.value || "";
+        const amt = Number((tr.querySelector(".credit-amount")?.value || "0").replace(/,/g,"")) || 0;
+        if(acc === "부가세예수금") creditVat += amt;
+      });
+
+      qs("#debitVatAmount").textContent = debitVat.toLocaleString();
+      qs("#creditVatAmount").textContent = creditVat.toLocaleString();
+    }
+
+    // =========================
+    // 자동분개(매출/매입)
+    // =========================
+    function setSelectSelected(htmlOptions, valueToSelect){
+      // 옵션 문자열에서 value="X" 를 찾아 selected 넣는 간단 치환
+      return htmlOptions.replace(`value="${valueToSelect}"`, `value="${valueToSelect}" selected`);
+    }
+
+    function autoCalculate(){
+      const type = qs("#voucherType").value;
+      const total = Number((qs("#totalAmount").value || "0").replace(/,/g,"")) || 0;
+      if(!type || total <= 0) return;
+
+      if(type === "일반"){
+        // 일반은 자동분개 안 함(입력한 대로)
+        return;
+      }
+
+      // 공급가액/부가세 (10% VAT 가정)
+      const supply = Math.round(total / 1.1);
+      const vat = total - supply;
+
+      const vehicleNo = (qs("#vehicleNo").value || "").trim();
+      const prefix = vehicleNo ? (vehicleNo + " ") : "";
+
+      if(type === "매출"){
+        // 차변: 보통예금 total
+        qs("#debitEntriesBody").innerHTML = `
+          <tr class="entry-row">
+            <td><select class="debit-account" required>${setSelectSelected(accountOptions, "보통예금")}</select></td>
+            <td><input type="text" class="debit-amount" value="${total.toLocaleString()}" required></td>
+            <td><input type="text" class="debit-description" value="${escapeHtml(prefix)}매출" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+        `;
+
+        // 대변: 렌트수익 supply + 부가세예수금 vat
+        qs("#creditEntriesBody").innerHTML = `
+          <tr class="entry-row">
+            <td><select class="credit-account" required>${setSelectSelected(accountOptions, "렌트수익")}</select></td>
+            <td><input type="text" class="credit-amount" value="${supply.toLocaleString()}" required></td>
+            <td><input type="text" class="credit-description" value="${escapeHtml(prefix)}렌트료" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+          <tr class="entry-row vat-entry">
+            <td><select class="credit-account" required>${setSelectSelected(accountOptions, "부가세예수금")}</select></td>
+            <td><input type="text" class="credit-amount" value="${vat.toLocaleString()}" required></td>
+            <td><input type="text" class="credit-description" value="${escapeHtml(prefix)}부가세" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+        `;
+      }
+
+      if(type === "매입"){
+        // 차변: 차량유지비 supply + 부가세대급금 vat
+        qs("#debitEntriesBody").innerHTML = `
+          <tr class="entry-row">
+            <td><select class="debit-account" required>${setSelectSelected(accountOptions, "차량유지비")}</select></td>
+            <td><input type="text" class="debit-amount" value="${supply.toLocaleString()}" required></td>
+            <td><input type="text" class="debit-description" value="${escapeHtml(prefix)}매입" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+          <tr class="entry-row vat-entry">
+            <td><select class="debit-account" required>${setSelectSelected(accountOptions, "부가세대급금")}</select></td>
+            <td><input type="text" class="debit-amount" value="${vat.toLocaleString()}" required></td>
+            <td><input type="text" class="debit-description" value="${escapeHtml(prefix)}부가세" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+        `;
+
+        // 대변: 보통예금 total
+        qs("#creditEntriesBody").innerHTML = `
+          <tr class="entry-row">
+            <td><select class="credit-account" required>${setSelectSelected(accountOptions, "보통예금")}</select></td>
+            <td><input type="text" class="credit-amount" value="${total.toLocaleString()}" required></td>
+            <td><input type="text" class="credit-description" value="${escapeHtml(prefix)}매입대금" placeholder="적요"></td>
+            <td><button type="button" class="btn-delete-row">삭제</button></td>
+          </tr>
+        `;
+      }
+
+      // 새로 만들어진 input 들 이벤트 재바인딩
+      bindLineEventsAfterReplace();
+      calculateTotals();
+      syncVatDisplayFromLines();
+    }
+
+    function bindLineEventsAfterReplace(){
+      qsa("#debitEntriesBody .btn-delete-row").forEach(btn=>{
+        btn.addEventListener("click", ()=> deleteRow(btn.closest("tr"), "debit"));
+      });
+      qsa("#creditEntriesBody .btn-delete-row").forEach(btn=>{
+        btn.addEventListener("click", ()=> deleteRow(btn.closest("tr"), "credit"));
+      });
+
+      qsa("#debitEntriesBody .debit-amount").forEach(inp=>{
+        inp.addEventListener("input", (e)=>{ formatAmountInput(e.target); calculateTotals(); syncVatDisplayFromLines(); });
+      });
+      qsa("#creditEntriesBody .credit-amount").forEach(inp=>{
+        inp.addEventListener("input", (e)=>{ formatAmountInput(e.target); calculateTotals(); syncVatDisplayFromLines(); });
+      });
+
+      // 계정 변경 시 VAT 표시 갱신
+      qsa("#debitEntriesBody .debit-account").forEach(sel=>{
+        sel.addEventListener("change", syncVatDisplayFromLines);
+      });
+      qsa("#creditEntriesBody .credit-account").forEach(sel=>{
+        sel.addEventListener("change", syncVatDisplayFromLines);
+      });
+    }
+
+    // =========================
+    // 계약 모달
+    // =========================
+    const contractModal = qs("#contractModal");
+    const contractTbody = qs("#contractTbody");
+    const contractEmpty = qs("#contractEmpty");
+
+    function setContractInfo(c){
+      if(!c){
+        qs("#contractNumber").value = "";
+        qs("#contractCustomerName").textContent = "-";
+        qs("#contractVehicleNo").textContent = "-";
+        return;
+      }
+      qs("#contractNumber").value = c.contractNumber || "";
+      qs("#contractCustomerName").textContent = c.customerName || "-";
+      qs("#contractVehicleNo").textContent = c.vehicleNo || "-";
+      if(c.vehicleNo) qs("#vehicleNo").value = c.vehicleNo;
+    }
+
+    function openContractModal(){
+      contractModal.style.display = "flex";
+      qs("#contractKw").focus();
+      doContractSearch();
+    }
+    function closeContractModal(){ contractModal.style.display = "none"; }
+
+    function formatDateOrDash(d){ return d ? String(d) : "-"; }
+
+    function renderContractRows(list){
+      contractTbody.innerHTML = "";
+      if(!list || list.length === 0){
+        contractEmpty.classList.remove("hidden");
+        qs("#contractTable").classList.add("hidden");
+        return;
+      }
+      contractEmpty.classList.add("hidden");
+      qs("#contractTable").classList.remove("hidden");
+
+      for(const c of list){
+        const period = `${formatDateOrDash(c.startDate)} ~ ${formatDateOrDash(c.endDate)}`;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><span class="pill">${escapeHtml(c.contractNumber)}</span></td>
+          <td>${escapeHtml(c.customerName)}</td>
+          <td>${escapeHtml(c.vehicleNo)}</td>
+          <td>${escapeHtml(c.contractType)}</td>
+          <td>${escapeHtml(period)}</td>
+          <td><button type="button" class="btn btn-primary">선택</button></td>
+        `;
+        tr.querySelector("button").addEventListener("click", ()=>{
+          setContractInfo(c);
+          closeContractModal();
+          // 계약/차량이 바뀌면 자동분개 적요에도 영향을 줄 수 있으니 재계산
+          autoCalculate();
+        });
+        contractTbody.appendChild(tr);
+      }
+    }
+
+    async function doContractSearch(){
+      const kw = (qs("#contractKw").value || "").trim();
+      try{
+        const data = await apiGet(`/api/contracts/search?kw=${encodeURIComponent(kw)}`);
+        renderContractRows(data);
+      }catch(e){
+        console.error(e);
+        alert("계약 검색 오류\n\n" + e.message);
+      }
+    }
+
+    // =========================
+    // 저장(POST /api/vouchers)
+    // =========================
+    function collectEntries(kind){
+      const rows = qsa(kind === "debit" ? "#debitEntriesBody tr" : "#creditEntriesBody tr");
+      const entries = [];
+      let total = 0;
+
+      rows.forEach(tr=>{
+        const account = tr.querySelector(`.${kind}-account`)?.value || "";
+        const amount = Number((tr.querySelector(`.${kind}-amount`)?.value || "0").replace(/,/g,"")) || 0;
+        const description = tr.querySelector(`.${kind}-description`)?.value || "";
+
+        if(account && amount > 0){
+          entries.push({ account, amount: Math.trunc(amount), description });
+          total += amount;
+        }
+      });
+
+      return { entries, total };
+    }
+
+    async function submitVoucher(){
+      const voucherType = qs("#voucherType").value;
+      if(!voucherType){
+        alert("전표유형을 선택해주세요.");
+        return;
+      }
+      if(voucherType === "일반"){
+        // 일반도 저장은 가능(그냥 입력한대로)
+        // 단, 합계금액 자동분개는 안 함
+      }
+
+      const voucherDate = qs("#voucherDate").value;
+      if(!voucherDate){
+        alert("전표일자를 입력하세요.");
+        return;
+      }
+
+      const voucherNo = qs("#voucherNo").value || "";
+      const contractNumber = (qs("#contractNumber").value || "").trim();
+      const vehicleNo = (qs("#vehicleNo").value || "").trim();
+      const memo = (qs("#memo").value || "").trim();
+
+      const { entries: debitEntries, total: debitSum } = collectEntries("debit");
+      const { entries: creditEntries, total: creditSum } = collectEntries("credit");
+
+      if(debitSum <= 0 || creditSum <= 0){
+        alert("차변/대변 금액을 입력해주세요.");
+        return;
+      }
+      if(debitSum !== creditSum){
+        alert(`차변과 대변이 일치하지 않습니다.\n\n차변: ${debitSum.toLocaleString()}원\n대변: ${creditSum.toLocaleString()}원`);
+        return;
+      }
+
+      const payload = {
+        voucherNo: voucherNo || null,
+        voucherDate,
+        contractNumber: contractNumber || null,
+        vehicleNo: vehicleNo || null,
+        memo: (memo ? `[${voucherType}] ${memo}` : `[${voucherType}]`) ,
+        debitEntries,
+        creditEntries,
+      };
+
+      try{
+        const saved = await apiPost("/api/vouchers", payload);
+        alert(`${voucherType} 전표가 등록되었습니다.\n\n전표번호: ${saved.voucherNo}\nID: ${saved.id}`);
+        resetForm();
+      }catch(e){
+        console.error(e);
+        alert("전표 등록 실패\n\n" + e.message);
+      }
+    }
+
+    // =========================
+    // 초기화
+    // =========================
+    function resetForm(){
+      if(!confirm("입력한 내용을 모두 초기화하시겠습니까?")) return;
+
+      qs("#voucherForm").reset();
+      qs("#voucherType").value = "매출";
+      qs("#voucherDate").value = todayStr();
+
+      setContractInfo(null);
+      qs("#vehicleNo").value = "";
+      qs("#totalAmount").value = "";
+      qs("#memo").value = "";
+
+      qs("#debitEntriesBody").innerHTML = `
+        <tr class="entry-row">
+          <td><select class="debit-account" required>${accountOptions}</select></td>
+          <td><input type="text" class="debit-amount" placeholder="0" required></td>
+          <td><input type="text" class="debit-description" placeholder="적요"></td>
+          <td><button type="button" class="btn-delete-row">삭제</button></td>
+        </tr>
+      `;
+      qs("#creditEntriesBody").innerHTML = `
+        <tr class="entry-row">
+          <td><select class="credit-account" required>${accountOptions}</select></td>
+          <td><input type="text" class="credit-amount" placeholder="0" required></td>
+          <td><input type="text" class="credit-description" placeholder="적요"></td>
+          <td><button type="button" class="btn-delete-row">삭제</button></td>
+        </tr>
+      `;
+
+      bindLineEventsAfterReplace();
+      refreshVoucherNo();
+      calculateTotals();
+      syncVatDisplayFromLines();
+    }
+
+    // =========================
+    // 이벤트 바인딩
+    // =========================
+    window.addEventListener("load", async ()=>{
+      qs("#voucherDate").value = todayStr();
+      await refreshVoucherNo();
+
+      // 금액 입력 포맷
+      qs("#totalAmount").addEventListener("input", (e)=>{
+        formatAmountInput(e.target);
+        autoCalculate();
+      });
+
+      qs("#voucherType").addEventListener("change", ()=>{
+        autoCalculate();
+      });
+
+      qs("#voucherDate").addEventListener("change", refreshVoucherNo);
+
+      // 차량번호 바뀌면 자동분개 적요 갱신하고 싶으면 재계산
+      qs("#vehicleNo").addEventListener("change", ()=> autoCalculate());
+
+      // 폼 제출
+      qs("#voucherForm").addEventListener("submit", (e)=>{
+        e.preventDefault();
+        submitVoucher();
+      });
+
+      // 엔터키 제출 방지
+      qs("#voucherForm").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter" && e.target.tagName !== "TEXTAREA"){
+          e.preventDefault();
+        }
+      });
+
+      // 계약 모달
+      qs("#contractSearchBtn").addEventListener("click", openContractModal);
+      qs("#contractModalClose").addEventListener("click", closeContractModal);
+      qs("#contractDoSearchBtn").addEventListener("click", doContractSearch);
+      qs("#contractClearBtn").addEventListener("click", ()=>{ qs("#contractKw").value=""; doContractSearch(); });
+      qs("#contractKw").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); doContractSearch(); } });
+      contractModal.addEventListener("click", (e)=>{ if(e.target === contractModal) closeContractModal(); });
+      document.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && contractModal.style.display==="flex") closeContractModal(); });
+
+      // 라인 입력 이벤트
+      bindLineEventsAfterReplace();
+      calculateTotals();
+      syncVatDisplayFromLines();
+    });
+  </script>
+</body>
+</html>

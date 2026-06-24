@@ -1,0 +1,40 @@
+package com.jdend.erp.accounting.voucher.repository;
+
+import com.jdend.erp.accounting.voucher.entity.VoucherLine;
+import com.jdend.erp.management.financial.dto.FinancialStatementVoucherRowResponse;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public interface VoucherLineRepository extends JpaRepository<VoucherLine, Long> {
+
+  @Query("""
+      select new com.jdend.erp.management.financial.dto.FinancialStatementVoucherRowResponse(
+          v.id,
+          v.voucherDate,
+          v.voucherNo,
+          l.lineType,
+          l.accountName,
+          l.amount,
+          l.description,
+          v.contractNumber,
+          v.vehicleNo,
+          v.memo,
+          v.status
+      )
+      from VoucherLine l
+      join l.voucher v
+      where l.accountName = :accountName
+        and (:startDate is null or v.voucherDate >= :startDate)
+        and (:endDate is null or v.voucherDate <= :endDate)
+      order by v.voucherDate desc, v.id desc, l.sortOrder asc
+  """)
+  List<FinancialStatementVoucherRowResponse> findVoucherRowsByAccountNameAndDateRange(
+      @Param("accountName") String accountName,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate
+  );
+}

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발주 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/vehicle_order.css">
+
+  <style>
+    .option-layout-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px 24px;
+    }
+
+    .option-layout-grid .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .option-layout-grid .form-group {
+      min-width: 0;
+    }
+
+    .option-layout-grid .form-group input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .checkbox-cell {
+      width: 52px;
+      text-align: center;
+    }
+
+    .checkbox-cell input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .option-layout-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .option-layout-grid .full-width {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>발주</h1>
+      <p>차량등록 &gt; 차량현황 &gt; 발주</p>
+    </div>
+
+    <!-- 현황 조회 화면 -->
+    <div class="erp-card" id="statusView">
+      <div class="card-body">
+
+        <div class="search-section">
+          <div class="search-row">
+            <div class="form-group">
+              <label for="searchStartDate">발주일자</label>
+              <div class="date-range">
+                <input type="date" id="searchStartDate">
+                <span>~</span>
+                <input type="date" id="searchEndDate">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="searchStatus">발주상태</label>
+              <select id="searchStatus">
+                <option value="">전체</option>
+                <option value="발주전">발주전</option>
+                <option value="발주완료">발주완료</option>
+                <option value="출고완료">출고완료</option>
+                <option value="등록완료">등록완료</option>
+                <option value="실행완료">실행완료</option>
+              </select>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn-search" onclick="searchVehicle()">조회하기</button>
+              <button type="button" class="btn-add" onclick="showRegisterForm()">+ 등록추가</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="checkbox-cell">
+                  <input type="checkbox" id="checkAll" onchange="toggleAllRows(this)">
+                </th>
+                <th>순번</th>
+                <th>발주상태</th>
+                <th>차량관리번호</th>
+                <th>제작사계약번호</th>
+                <th>차종</th>
+                <th>옵션명</th>
+                <th>차량가격</th>
+                <th>옵션가격</th>
+                <th>총차량가</th>
+                <th>발주일자</th>
+                <th>차대번호</th>
+                <th>출고가</th>
+                <th>총 선급가액</th>
+                <th>차량번호</th>
+                <th>등록일자</th>
+              </tr>
+            </thead>
+            <tbody id="vehicleTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 등록 화면 -->
+    <div class="erp-card" id="registerView" style="display:none;">
+      <div class="card-body">
+        <div class="view-header">
+          <h2>발주 등록</h2>
+          <button type="button" class="btn-back" onclick="showStatusView()">← 목록으로</button>
+        </div>
+
+        <form id="orderForm">
+          <div class="vehicle-id-display">
+            <div class="vehicle-id-label">차량관리번호</div>
+            <div class="vehicle-id-value" id="vehicleManagementId">(저장 시 자동 생성)</div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">차량 기본 정보</h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="vehicleModel" class="required">차종</label>
+                <input type="text" id="vehicleModel" name="vehicleModel" placeholder="차종 직접 입력" required>
+              </div>
+
+              <div class="form-group">
+                <label for="vehiclePrice" class="required">차량가격</label>
+                <input type="text" id="vehiclePrice" placeholder="0" oninput="handlePriceInput(this)">
+              </div>
+
+              <div class="form-group">
+                <label for="orderDate" class="required">발주일자</label>
+                <input type="date" id="orderDate" required>
+              </div>
+            </div>
+
+            <div class="option-layout-grid">
+              <div class="form-group full-width">
+                <label for="optionName">옵션명</label>
+                <input type="text" id="optionName">
+              </div>
+
+              <div class="form-group">
+                <label for="optionPrice">옵션가격</label>
+                <input type="text" id="optionPrice" placeholder="0" oninput="handlePriceInput(this)">
+              </div>
+
+              <div class="form-group">
+                <label for="totalPrice">총차량가격</label>
+                <input type="text" id="totalPrice" placeholder="0" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">제조사 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="manufacturerContract">제작사계약번호</label>
+                <input type="text" id="manufacturerContract">
+              </div>
+
+              <div class="form-group">
+                <label for="vinNumber">차대번호</label>
+                <input type="text" id="vinNumber">
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleNumber">차량번호</label>
+                <input type="text" id="vehicleNumber">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">발주 등록</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+<script>
+  const API_BASE = '/api/vehicle-orders';
+  let currentVehicleRows = [];
+
+  window.addEventListener('DOMContentLoaded', async function() {
+    document.getElementById('searchStartDate').value = '';
+    document.getElementById('searchEndDate').value = '';
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+    updateTotalPrice();
+    await searchVehicle();
+  });
+
+  function showRegisterForm() {
+    document.getElementById('statusView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'block';
+    updateTotalPrice();
+  }
+
+  function showStatusView() {
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('statusView').style.display = 'block';
+  }
+
+  function formatNumber(input) {
+    const v = input.value.replace(/[^0-9]/g, '');
+    input.value = v ? parseInt(v, 10).toLocaleString() : '';
+  }
+
+  function parseNumber(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    return Number(String(value).replace(/,/g, '').replace(/[^0-9]/g, '')) || 0;
+  }
+
+  function formatAmount(value) {
+    return Number(value || 0).toLocaleString();
+  }
+
+  function handlePriceInput(input) {
+    formatNumber(input);
+    updateTotalPrice();
+  }
+
+  function updateTotalPrice() {
+    const vehiclePrice = parseNumber(document.getElementById('vehiclePrice').value);
+    const optionPrice = parseNumber(document.getElementById('optionPrice').value);
+    const totalPrice = vehiclePrice + optionPrice;
+    document.getElementById('totalPrice').value = totalPrice ? formatAmount(totalPrice) : '';
+  }
+
+  async function searchVehicle() {
+    try {
+      const startDate = document.getElementById('searchStartDate').value;
+      const endDate = document.getElementById('searchEndDate').value;
+      const status = document.getElementById('searchStatus').value;
+
+      const url = new URL(API_BASE, window.location.origin);
+
+      if (startDate) url.searchParams.set('startDate', startDate);
+      if (endDate) url.searchParams.set('endDate', endDate);
+      if (status) url.searchParams.set('status', status);
+
+      const res = await fetch(url.toString());
+
+      if (!res.ok) {
+        document.getElementById('vehicleTableBody').innerHTML = `
+          <tr>
+            <td colspan="16" class="no-data">조회 실패: ${res.status}</td>
+          </tr>
+        `;
+        return;
+      }
+
+      const data = await res.json();
+      currentVehicleRows = Array.isArray(data) ? data : [];
+      displayVehicle(currentVehicleRows);
+      resetSelectionState();
+    } catch (error) {
+      console.error('조회 오류:', error);
+      document.getElementById('vehicleTableBody').innerHTML = `
+        <tr>
+          <td colspan="16" class="no-data">조회 중 오류가 발생했습니다.</td>
+        </tr>
+      `;
+    }
+  }
+
+  function getStatusClass(status) {
+    switch(status) {
+      case '발주전': return 'status-before';
+      case '발주완료': return 'status-ordered';
+      case '출고완료': return 'status-released';
+      case '등록완료': return 'status-registered';
+      case '실행완료': return 'status-executed';
+      default: return '';
+    }
+  }
+
+  function displayVehicle(data) {
+    const tbody = document.getElementById('vehicleTableBody');
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="16" class="no-data">검색 결과가 없습니다.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = data.map((item, index) => {
+      const vehiclePrice = parseNumber(item.vehiclePrice);
+      const optionPrice = parseNumber(item.optionPrice);
+      const totalPrice = item.totalPrice !== null && item.totalPrice !== undefined
+        ? parseNumber(item.totalPrice)
+        : (vehiclePrice + optionPrice);
+
+      return `
+        <tr onclick="viewDetail('${item.vehicleMgmtNo}')">
+          <td class="checkbox-cell" onclick="event.stopPropagation()">
+            <input
+              type="checkbox"
+              class="row-check"
+              value="${item.vehicleMgmtNo ?? ''}"
+              onchange="updateSelectedCount()"
+            >
+          </td>
+          <td>${index + 1}</td>
+          <td><span class="status-badge ${getStatusClass(item.orderStatus)}">${item.orderStatus ?? '-'}</span></td>
+          <td>${item.vehicleMgmtNo ?? '-'}</td>
+          <td>${item.makerContractNo ?? '-'}</td>
+          <td>${item.carModel ?? '-'}</td>
+          <td>${item.optionName ?? '-'}</td>
+          <td class="amount-cell">${formatAmount(vehiclePrice)}</td>
+          <td class="amount-cell">${optionPrice ? formatAmount(optionPrice) : '-'}</td>
+          <td class="amount-cell">${formatAmount(totalPrice)}</td>
+          <td>${item.orderDate ?? '-'}</td>
+          <td>${item.chassisNo ?? '-'}</td>
+          <td class="amount-cell">${item.releasePrice ? formatAmount(item.releasePrice) : '-'}</td>
+          <td class="amount-cell">${item.totalAdvancePrice ? formatAmount(item.totalAdvancePrice) : '-'}</td>
+          <td>${item.vehicleNo ?? '-'}</td>
+          <td>${item.registerDate ?? '-'}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function viewDetail(vehicleMgmtNo) {
+    window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(vehicleMgmtNo);
+  }
+
+  function toggleAllRows(source) {
+    const checks = document.querySelectorAll('.row-check');
+    checks.forEach(chk => {
+      chk.checked = source.checked;
+    });
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount() {
+    const checks = document.querySelectorAll('.row-check');
+    const checked = document.querySelectorAll('.row-check:checked');
+
+    const checkAll = document.getElementById('checkAll');
+    if (checks.length === 0) {
+      checkAll.checked = false;
+      checkAll.indeterminate = false;
+      return;
+    }
+
+    if (checked.length === 0) {
+      checkAll.checked = false;
+      checkAll.indeterminate = false;
+    } else if (checked.length === checks.length) {
+      checkAll.checked = true;
+      checkAll.indeterminate = false;
+    } else {
+      checkAll.checked = false;
+      checkAll.indeterminate = true;
+    }
+  }
+
+  function resetSelectionState() {
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) {
+      checkAll.checked = false;
+      checkAll.indeterminate = false;
+    }
+  }
+
+  document.getElementById('orderForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const vehiclePriceValue = parseNumber(document.getElementById('vehiclePrice').value);
+    const optionPriceValue = parseNumber(document.getElementById('optionPrice').value);
+
+    const payload = {
+      carModel: document.getElementById('vehicleModel').value,
+      vehiclePrice: vehiclePriceValue,
+      optionName: document.getElementById('optionName').value || null,
+      optionPrice: optionPriceValue,
+      totalPrice: vehiclePriceValue + optionPriceValue,
+      orderDate: document.getElementById('orderDate').value,
+      makerContractNo: document.getElementById('manufacturerContract').value || null,
+      chassisNo: document.getElementById('vinNumber').value || null,
+      vehicleNo: document.getElementById('vehicleNumber').value || null
+    };
+
+    try {
+      const res = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('등록 실패:', errorText);
+        alert('등록 실패');
+        return;
+      }
+
+      alert('발주 등록 완료');
+
+      resetForm();
+      showStatusView();
+      await searchVehicle();
+    } catch (error) {
+      console.error('등록 오류:', error);
+      alert('등록 중 오류가 발생했습니다.');
+    }
+  });
+
+  function resetForm() {
+    document.getElementById('orderForm').reset();
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('totalPrice').value = '';
+  }
+</script>
+</body>
+</html>

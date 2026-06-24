@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>미수 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/receivable_status.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>미수 상세</h1>
+      <p>수납관리 &gt; 미수관리 &gt; 미수현황 &gt; 상세보기</p>
+    </div>
+
+    <!-- 상세 -->
+    <div class="erp-card" id="receivableDetailSection">
+      <div class="card-header card-header-detail">
+        <h2>미수 상세 정보</h2>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+          <button type="button" class="btn btn-secondary" id="btnDelete">삭제</button>
+        </div>
+      </div>
+      <div class="card-body card-body-detail">
+        <div class="form-section">
+          <h3 class="section-title">계약 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>계약번호</label>
+              <div class="detail-value" id="contractNumber">-</div>
+            </div>
+            <div class="detail-item">
+              <label>고객명</label>
+              <div class="detail-value" id="customerName">-</div>
+            </div>
+            <div class="detail-item">
+              <label>차량번호</label>
+              <div class="detail-value" id="vehicleNumber">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">미수 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>미수금액</label>
+              <div class="detail-value" id="receivableAmount">-</div>
+            </div>
+            <div class="detail-item">
+              <label>미수발생일</label>
+              <div class="detail-value" id="receivableDate">-</div>
+            </div>
+            <div class="detail-item">
+              <label>미수유형</label>
+              <div class="detail-value" id="receivableType">-</div>
+            </div>
+            <div class="detail-item full-width">
+              <label>내용</label>
+              <div class="detail-value" id="content">-</div>
+            </div>
+            <div class="detail-item">
+              <label>상태</label>
+              <div class="detail-value" id="status">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editReceivableBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수정 -->
+    <div class="erp-card hidden" id="receivableEditSection">
+      <div class="card-header card-header-detail">
+        <h2>미수 정보 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body card-body-detail">
+        <form id="receivableEditForm">
+          <div class="form-section">
+            <h3 class="section-title">계약 정보</h3>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>계약번호</label>
+                <div class="detail-value" id="editContractNumber">-</div>
+              </div>
+              <div class="detail-item">
+                <label>고객명</label>
+                <div class="detail-value" id="editCustomerName">-</div>
+              </div>
+              <div class="detail-item">
+                <label>차량번호</label>
+                <div class="detail-value" id="editVehicleNumber">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">미수 정보</h3>
+            <div class="detail-grid">
+              <div class="form-group form-group-column">
+                <label for="editReceivableAmount">미수금액</label>
+                <input type="number" id="editReceivableAmount" name="receivableAmount" class="form-input" required>
+              </div>
+
+              <div class="form-group form-group-column">
+                <label for="editReceivableDate">미수발생일</label>
+                <input type="date" id="editReceivableDate" name="receivableDate" class="form-input" required>
+              </div>
+
+              <div class="form-group form-group-column">
+                <label for="editReceivableType">미수유형</label>
+                <select id="editReceivableType" name="receivableType" class="form-input" required>
+                  <option value="연체">연체</option>
+                  <option value="미납">미납</option>
+                  <option value="일부결제">일부결제</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-column full-width">
+                <label for="editContent">내용</label>
+                <input type="text" id="editContent" name="content" class="form-input" required>
+              </div>
+
+              <div class="form-group form-group-column">
+                <label for="editStatus">상태</label>
+                <select id="editStatus" name="status" class="form-input" required>
+                  <option value="미납">미납</option>
+                  <option value="일부결제">일부결제</option>
+                  <option value="완료">완료</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btnResetEdit">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    function mustOk(res){ if(!res.ok) throw new Error(`HTTP ${res.status}`); return res; }
+    function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+    const receivableId = qs('id');
+    if(!receivableId){ alert('id가 없습니다.'); location.href='receivable_status.html'; }
+
+    const detailSec = document.getElementById('receivableDetailSection');
+    const editSec = document.getElementById('receivableEditSection');
+
+    const editBtn = document.getElementById('editReceivableBtn');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+
+    let current = null; // 서버에서 받은 데이터 보관
+
+    async function loadDetail(){
+      const res = await fetch(`${API_BASE_URL}/api/receivables/${receivableId}`);
+      mustOk(res);
+      current = await res.json();
+
+      document.getElementById('contractNumber').textContent = current.contractNumber ?? '-';
+      document.getElementById('customerName').textContent = current.customerName ?? '-';
+      document.getElementById('vehicleNumber').textContent = current.vehicleNo ?? '-';
+
+      document.getElementById('receivableAmount').textContent = Number(current.receivableAmount ?? 0).toLocaleString() + '원';
+      document.getElementById('receivableDate').textContent = current.receivableDate ?? '-';
+      document.getElementById('receivableType').textContent = current.receivableType ?? '-';
+      document.getElementById('content').textContent = current.content ?? '-';
+      document.getElementById('status').textContent = current.status ?? '-';
+    }
+
+    function openEdit(){
+      if(!current) return;
+
+      document.getElementById('editContractNumber').textContent = current.contractNumber ?? '-';
+      document.getElementById('editCustomerName').textContent = current.customerName ?? '-';
+      document.getElementById('editVehicleNumber').textContent = current.vehicleNo ?? '-';
+
+      document.getElementById('editReceivableAmount').value = current.receivableAmount ?? 0;
+      document.getElementById('editReceivableDate').value = current.receivableDate ?? '';
+      document.getElementById('editReceivableType').value = current.receivableType ?? '기타';
+      document.getElementById('editContent').value = current.content ?? '';
+      document.getElementById('editStatus').value = current.status ?? '미납';
+
+      detailSec.classList.add('hidden');
+      editSec.classList.remove('hidden');
+    }
+
+    function closeEdit(){
+      editSec.classList.add('hidden');
+      detailSec.classList.remove('hidden');
+    }
+
+    editBtn.addEventListener('click', openEdit);
+    cancelBtn.addEventListener('click', () => {
+      if(confirm('수정을 취소하시겠습니까?')) closeEdit();
+    });
+
+    document.getElementById('btnResetEdit').addEventListener('click', () => {
+      if(!confirm('원래 값으로 되돌릴까요?')) return;
+      openEdit(); // current로 다시 채움
+    });
+
+    document.getElementById('receivableEditForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if(!confirm('수정하시겠습니까?')) return;
+
+      const payload = {
+        receivableAmount: Number(document.getElementById('editReceivableAmount').value || 0),
+        receivableDate: document.getElementById('editReceivableDate').value,
+        receivableType: document.getElementById('editReceivableType').value,
+        content: document.getElementById('editContent').value,
+        status: document.getElementById('editStatus').value
+      };
+
+      if(!payload.receivableAmount) return alert('미수금액을 입력하세요.');
+      if(!payload.receivableDate) return alert('미수발생일을 입력하세요.');
+      if(!payload.content || !payload.content.trim()) return alert('내용을 입력하세요.');
+
+      try{
+        const res = await fetch(`${API_BASE_URL}/api/receivables/${receivableId}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        mustOk(res);
+        current = await res.json();
+        await loadDetail();
+        closeEdit();
+        alert('수정 완료');
+      }catch(err){
+        console.error(err);
+        alert('수정 실패: ' + err.message);
+      }
+    });
+
+    document.getElementById('btnDelete').addEventListener('click', async () => {
+      if(!confirm('삭제하시겠습니까?')) return;
+      try{
+        const res = await fetch(`${API_BASE_URL}/api/receivables/${receivableId}`, { method:'DELETE' });
+        mustOk(res);
+        alert('삭제 완료');
+        goBack();
+      }catch(e){
+        console.error(e);
+        alert('삭제 실패: ' + e.message);
+      }
+    });
+
+    function goBack(){ window.location.href = 'receivable_status.html'; }
+    window.goBack = goBack;
+
+    window.addEventListener('load', async () => {
+      try{
+        await loadDetail();
+      }catch(e){
+        console.error(e);
+        alert('상세 조회 실패: ' + e.message);
+        goBack();
+      }
+    });
+  </script>
+</body>
+</html>

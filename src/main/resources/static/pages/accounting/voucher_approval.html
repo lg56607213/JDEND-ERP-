@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전표승인 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/accounting/voucher_approval.css">
+  <style>
+    .voucher-table th,
+    .voucher-table td {
+      text-align: center;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .voucher-table .amount-cell {
+      text-align: right;
+      padding-right: 12px;
+    }
+
+    .voucher-table .left {
+      text-align: left;
+    }
+
+    .line-desc {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #666;
+      white-space: normal;
+    }
+
+    .blank-cell {
+      background: #fff;
+      color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>전표승인</h1>
+      <p>회계관리 &gt; 전표등록 &gt; 전표승인</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="searchStartDate">조회시작일</label>
+              <input type="date" id="searchStartDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchEndDate">조회종료일</label>
+              <input type="date" id="searchEndDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchStatus">상태</label>
+              <select id="searchStatus">
+                <option value="">전체</option>
+                <option value="대기" selected>대기</option>
+                <option value="승인">승인</option>
+              </select>
+            </div>
+
+            <div class="form-group btn-group">
+              <button type="button" class="btn-search" onclick="searchVouchers()">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <div class="select-info">
+            <label class="checkbox-label">
+              <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+              <span>일괄선택</span>
+            </label>
+            <span class="selected-count" id="selectedCount">0건 선택</span>
+          </div>
+          <div class="action-buttons">
+            <button type="button" class="btn btn-approve" onclick="approveSelected()">승인</button>
+            <button type="button" class="btn btn-delete" onclick="deleteSelected()">삭제</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="voucher-table">
+            <thead>
+              <tr>
+                <th>선택</th>
+                <th>일자</th>
+                <th>전표번호</th>
+                <th>차변 계정</th>
+                <th>차변 금액</th>
+                <th>대변 계정</th>
+                <th>대변 금액</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="voucherTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="info-text">
+          * 승인 / 삭제 선택가능
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function mustOk(res){
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res;
+    }
+
+    function ymdToday(){
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function ymdMonthStart(){
+      const d = new Date();
+      const s = new Date(d.getFullYear(), d.getMonth(), 1);
+      return s.toISOString().split("T")[0];
+    }
+
+    function num(v){
+      return (v === null || v === undefined || v === "") ? "" : Number(v).toLocaleString();
+    }
+
+    function esc(s){
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    window.addEventListener("load", async () => {
+      $("searchStartDate").value = ymdMonthStart();
+      $("searchEndDate").value = ymdToday();
+
+      $("voucherTableBody").addEventListener("change", (e) => {
+        if(e.target && e.target.classList.contains("voucher-checkbox")){
+          updateSelectedCount();
+        }
+      });
+
+      await searchVouchers();
+    });
+
+    function statusBadge(status){
+      if(status === "승인") return `<span class="status-badge approved">승인</span>`;
+      return `<span class="status-badge pending">대기</span>`;
+    }
+
+    async function searchVouchers(){
+      const startDate = $("searchStartDate").value || "";
+      const endDate = $("searchEndDate").value || "";
+      const status = $("searchStatus").value || "";
+
+      if(startDate && endDate && startDate > endDate){
+        return alert("조회시작일이 조회종료일보다 늦을 수 없습니다.");
+      }
+
+      const qs = new URLSearchParams();
+      if(startDate) qs.set("startDate", startDate);
+      if(endDate) qs.set("endDate", endDate);
+      if(status) qs.set("status", status);
+
+      const res = await fetch(`${API_BASE_URL}/api/vouchers?` + qs.toString());
+      await mustOk(res);
+      const rows = await res.json();
+
+      renderRows(rows);
+      $("selectAll").checked = false;
+      updateSelectedCount();
+    }
+
+    function renderAccountCell(account, description){
+      const acc = esc(account || "");
+      const desc = esc(description || "");
+      if(!acc && !desc) return "";
+      return `
+        <div>
+          <div>${acc}</div>
+          ${desc ? `<span class="line-desc">${desc}</span>` : ``}
+        </div>
+      `;
+    }
+
+    function renderRows(rows){
+      const body = $("voucherTableBody");
+      body.innerHTML = "";
+
+      if(!rows || rows.length === 0){
+        body.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px;">검색 결과 없음</td></tr>`;
+        return;
+      }
+
+      for(const r of rows){
+        body.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>${r.showMain ? `<input type="checkbox" class="voucher-checkbox" data-id="${r.id}">` : ``}</td>
+            <td>${r.showMain ? (r.voucherDate || "") : ``}</td>
+            <td>${r.showMain ? (r.voucherNo || "") : ``}</td>
+            <td class="left">${renderAccountCell(r.debitAccount, r.debitDescription)}</td>
+            <td class="amount-cell">${num(r.debitAmount)}</td>
+            <td class="left">${renderAccountCell(r.creditAccount, r.creditDescription)}</td>
+            <td class="amount-cell">${num(r.creditAmount)}</td>
+            <td>${r.showMain ? statusBadge(r.status) : ``}</td>
+          </tr>
+        `);
+      }
+    }
+
+    function toggleSelectAll(){
+      const on = $("selectAll").checked;
+      document.querySelectorAll(".voucher-checkbox").forEach(cb => cb.checked = on);
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount(){
+      const checked = document.querySelectorAll(".voucher-checkbox:checked").length;
+      $("selectedCount").textContent = checked + "건 선택";
+
+      const total = document.querySelectorAll(".voucher-checkbox").length;
+      $("selectAll").checked = (total > 0 && checked === total);
+    }
+
+    function getSelectedIds(){
+      const ids = [];
+      document.querySelectorAll(".voucher-checkbox:checked").forEach(cb => ids.push(Number(cb.dataset.id)));
+      return ids;
+    }
+
+    async function approveSelected(){
+      const ids = getSelectedIds();
+      if(ids.length === 0) return alert("승인할 전표를 선택해주세요.");
+      if(!confirm(ids.length + "건의 전표를 승인하시겠습니까?")) return;
+
+      const res = await fetch(`${API_BASE_URL}/api/vouchers/approve`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ ids })
+      });
+      await mustOk(res);
+
+      alert("승인 완료");
+      await searchVouchers();
+    }
+
+    async function deleteSelected(){
+      const ids = getSelectedIds();
+      if(ids.length === 0) return alert("삭제할 전표를 선택해주세요.");
+      if(!confirm(ids.length + "건의 전표를 삭제하시겠습니까?\n※ 삭제된 전표는 복구 불가")) return;
+
+      const res = await fetch(`${API_BASE_URL}/api/vouchers/delete`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ ids })
+      });
+      await mustOk(res);
+
+      alert("삭제 완료");
+      await searchVouchers();
+    }
+  </script>
+</body>
+</html>

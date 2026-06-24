@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>청구서 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/billing_issue.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>청구서 상세</h1>
+      <p>수납관리 &gt; 청구관리 &gt; 청구서발행 &gt; 상세보기</p>
+    </div>
+
+    <!-- 상세 -->
+    <div class="erp-card" id="billingDetailSection">
+      <div class="card-header card-header-detail">
+        <h2>청구서 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+
+      <div class="card-body card-body-detail">
+        <div class="form-section">
+          <h3 class="section-title">청구 기본</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>청구번호</label>
+              <div class="detail-value" id="billingNoText">-</div>
+            </div>
+            <div class="detail-item">
+              <label>계약번호(대표)</label>
+              <div class="detail-value" id="contractNumberText">-</div>
+            </div>
+            <div class="detail-item">
+              <label>청구일</label>
+              <div class="detail-value" id="billingDateText">-</div>
+            </div>
+            <div class="detail-item">
+              <label>상태</label>
+              <div class="detail-value" id="statusText">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">거래처 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>고객번호</label>
+              <div class="detail-value" id="customerNumberText">-</div>
+            </div>
+            <div class="detail-item">
+              <label>거래처명</label>
+              <div class="detail-value" id="customerNameText">-</div>
+            </div>
+            <div class="detail-item">
+              <label>Email</label>
+              <div class="detail-value" id="emailText">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">청구 금액</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>총액(렌트료)</label>
+              <div class="detail-value" id="totalAmountText">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editBillingBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수정 -->
+    <div class="erp-card hidden" id="billingEditSection">
+      <div class="card-header card-header-detail">
+        <h2>청구서 정보 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+
+      <div class="card-body card-body-detail">
+        <form id="billingEditForm">
+          <div class="form-section">
+            <h3 class="section-title">청구 기본(읽기전용)</h3>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>청구번호</label>
+                <div class="detail-value" id="editBillingNo">-</div>
+              </div>
+              <div class="detail-item">
+                <label>계약번호(대표)</label>
+                <div class="detail-value" id="editContractNumber">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">거래처 정보</h3>
+            <div class="detail-grid">
+              <div class="form-group form-group-column">
+                <label for="editCustomerName">거래처명</label>
+                <input type="text" id="editCustomerName" name="customerName" class="form-input" required>
+              </div>
+              <div class="form-group form-group-column">
+                <label for="editEmail">Email</label>
+                <input type="email" id="editEmail" name="email" class="form-input" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">청구 금액</h3>
+            <div class="detail-grid">
+              <div class="form-group form-group-column">
+                <label for="editTotalAmount">총액(렌트료)</label>
+                <input type="number" id="editTotalAmount" name="totalAmount" class="form-input" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetEditForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    // config.js는 API_BASE_URL만 있으니 여기서 apiFetch 생성
+    if (typeof API_BASE_URL === "undefined") {
+      alert("config.js 로드 실패: API_BASE_URL이 없습니다. (경로 확인)");
+    }
+
+    if (typeof window.apiFetch !== "function") {
+      window.apiFetch = async function(path, options = {}) {
+        const url = API_BASE_URL + path;
+        const opts = {
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options
+        };
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const text = await res.text().catch(()=> "");
+          throw new Error(`HTTP ${res.status} - ${text}`);
+        }
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) return res.json();
+        return res.text();
+      };
+    }
+
+    function fmtMoney(n){ return Number(n || 0).toLocaleString("ko-KR"); }
+
+    const params = new URLSearchParams(location.search);
+    const billingNo = params.get("billingNo");
+
+    const detailSec = document.getElementById("billingDetailSection");
+    const editSec = document.getElementById("billingEditSection");
+    const editBtn = document.getElementById("editBillingBtn");
+    const cancelBtn = document.getElementById("cancelEditBtn");
+
+    let billing = null;
+
+    async function loadDetail() {
+      if (!billingNo) {
+        alert("billingNo가 없습니다. 목록에서 다시 진입하세요.");
+        return goBack();
+      }
+
+      try {
+        billing = await apiFetch(`/api/billings/${encodeURIComponent(billingNo)}`);
+
+        document.getElementById("billingNoText").textContent = billing.billingNo || "-";
+        document.getElementById("contractNumberText").textContent = billing.contractNumber || "-";
+        document.getElementById("billingDateText").textContent = billing.billingDate || "-";
+        document.getElementById("statusText").textContent = billing.status || "-";
+
+        document.getElementById("customerNumberText").textContent = billing.customerNumber || "-";
+        document.getElementById("customerNameText").textContent = billing.customerName || "-";
+        document.getElementById("emailText").textContent = billing.email || "-";
+
+        document.getElementById("totalAmountText").textContent = fmtMoney(billing.totalAmount) + "원";
+      } catch (e) {
+        console.error(e);
+        alert("상세 조회 실패: " + e.message);
+        goBack();
+      }
+    }
+
+    editBtn.addEventListener("click", () => {
+      if (!billing) return;
+
+      document.getElementById("editBillingNo").textContent = billing.billingNo || "-";
+      document.getElementById("editContractNumber").textContent = billing.contractNumber || "-";
+      document.getElementById("editCustomerName").value = billing.customerName || "";
+      document.getElementById("editEmail").value = billing.email || "";
+      document.getElementById("editTotalAmount").value = billing.totalAmount || 0;
+
+      detailSec.classList.add("hidden");
+      editSec.classList.remove("hidden");
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      if (confirm("수정을 취소하시겠습니까?")) {
+        editSec.classList.add("hidden");
+        detailSec.classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("billingEditForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!confirm("수정하시겠습니까?")) return;
+
+      const payload = {
+        customerName: document.getElementById("editCustomerName").value.trim(),
+        email: document.getElementById("editEmail").value.trim(),
+        totalAmount: Number(document.getElementById("editTotalAmount").value)
+      };
+
+      try {
+        await apiFetch(`/api/billings/${encodeURIComponent(billingNo)}`, {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+
+        alert("수정했습니다");
+        editSec.classList.add("hidden");
+        detailSec.classList.remove("hidden");
+        await loadDetail();
+      } catch (e2) {
+        console.error(e2);
+        alert("수정 실패: " + e2.message);
+      }
+    });
+
+    function resetEditForm() {
+      if (!billing) return;
+      if (!confirm("모든 입력 내용을 초기화하시겠습니까?")) return;
+
+      document.getElementById("editCustomerName").value = billing.customerName || "";
+      document.getElementById("editEmail").value = billing.email || "";
+      document.getElementById("editTotalAmount").value = billing.totalAmount || 0;
+    }
+
+    function goBack() {
+      location.href = "billing_issue.html";
+    }
+
+    loadDetail();
+  </script>
+</body>
+</html>

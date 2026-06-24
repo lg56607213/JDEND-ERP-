@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 | JDEND ERP</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .login-box {
+      width: 360px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 32px;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .msg {
+      margin-top: 12px;
+      text-align: center;
+      color: red;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+<div class="login-box">
+  <h1>JDEND ERP 로그인</h1>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="loginId">아이디</label>
+      <input type="text" id="loginId" required>
+    </div>
+
+    <div class="form-group">
+      <label for="loginPassword">비밀번호</label>
+      <input type="password" id="loginPassword" required>
+    </div>
+
+    <button type="submit" id="loginBtn">로그인</button>
+    <div class="msg" id="msg"></div>
+  </form>
+</div>
+
+<script>
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const loginId = document.getElementById('loginId').value.trim();
+    const loginPassword = document.getElementById('loginPassword').value.trim();
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('loginBtn');
+
+    msg.textContent = '';
+    btn.disabled = true;
+    btn.textContent = '로그인 중...';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginId, loginPassword })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        msg.textContent = data.message || '로그인 실패';
+        return;
+      }
+
+      if (data.role === 'ADMIN') {
+        location.href = '/admin_users.html';
+      } else {
+        location.href = '/index.html';
+      }
+
+    } catch (e2) {
+      msg.textContent = '로그인 중 오류가 발생했습니다.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '로그인';
+    }
+  });
+</script>
+</body>
+</html>

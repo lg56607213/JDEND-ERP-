@@ -1,0 +1,200 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>미수현황 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/receivable_status.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>미수현황</h1>
+      <p>수납관리 &gt; 미수관리 &gt; 미수현황</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+
+        <!-- 검색 섹션 -->
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="searchStartDate">시작일</label>
+              <input type="date" id="searchStartDate">
+            </div>
+            <div class="form-group">
+              <label for="searchEndDate">종료일</label>
+              <input type="date" id="searchEndDate">
+            </div>
+            <div class="form-group">
+              <label for="searchCustomer">고객명</label>
+              <input type="text" id="searchCustomer" placeholder="고객명 검색">
+            </div>
+            <div class="form-group">
+              <label for="searchStatus">상태</label>
+              <select id="searchStatus">
+                <option value="">전체</option>
+                <option value="미납">미납</option>
+                <option value="일부결제">일부결제</option>
+                <option value="완료">완료</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" id="btnSearch">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>계약번호</th>
+                <th>고객명</th>
+                <th>차량번호</th>
+                <th>미수금액</th>
+                <th>미수발생일</th>
+                <th>미수유형</th>
+                <th>내용</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="receivableTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- 요약 -->
+        <div class="summary-section">
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">총 미수건수</div>
+              <div class="summary-value" id="totalCount">0 건</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">총 미수금액</div>
+              <div class="summary-value" id="totalAmount">0 원</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">미납 건수</div>
+              <div class="summary-value" id="pendingCount">0 건</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">일부결제 건수</div>
+              <div class="summary-value" id="partialCount">0 건</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    function mustOk(res){ if(!res.ok) throw new Error(`HTTP ${res.status}`); return res; }
+    function todayISO(){ return new Date().toISOString().split('T')[0]; }
+    function startOfMonthISO(){
+      const t = new Date();
+      const d = new Date(t.getFullYear(), t.getMonth(), 1);
+      return d.toISOString().split('T')[0];
+    }
+    function esc(s){
+      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+        .replaceAll('"','&quot;').replaceAll("'","&#039;");
+    }
+
+    async function fetchReceivables(){
+      const startDate = document.getElementById('searchStartDate').value;
+      const endDate = document.getElementById('searchEndDate').value;
+      const customerName = document.getElementById('searchCustomer').value.trim();
+      const status = document.getElementById('searchStatus').value;
+
+      const qs = new URLSearchParams();
+      if(startDate) qs.set('startDate', startDate);
+      if(endDate) qs.set('endDate', endDate);
+      if(customerName) qs.set('customerName', customerName);
+      if(status) qs.set('status', status);
+
+      const res = await fetch(`${API_BASE_URL}/api/receivables?${qs.toString()}`);
+      mustOk(res);
+      return res.json();
+    }
+
+    function renderTable(list){
+      const tbody = document.getElementById('receivableTableBody');
+
+      if(!list.length){
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="no-data">
+              <div class="no-data-icon">📋</div>
+              <div>검색 결과가 없습니다.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map((r, idx) => `
+        <tr data-id="${r.id}">
+          <td>${idx + 1}</td>
+          <td>${esc(r.contractNumber)}</td>
+          <td>${esc(r.customerName)}</td>
+          <td>${esc(r.vehicleNo)}</td>
+          <td class="amount-cell">${Number(r.receivableAmount ?? 0).toLocaleString()}</td>
+          <td>${esc(r.receivableDate)}</td>
+          <td>${esc(r.receivableType)}</td>
+          <td>${esc(r.content)}</td>
+          <td>${esc(r.status)}</td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('tr[data-id]').forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const id = tr.getAttribute('data-id');
+          window.location.href = `receivable_detail.html?id=${id}`;
+        });
+      });
+    }
+
+    function updateSummary(list){
+      const totalCount = list.length;
+      const totalAmount = list.reduce((sum, r) => sum + Number(r.receivableAmount ?? 0), 0);
+      const pendingCount = list.filter(r => r.status === '미납').length;
+      const partialCount = list.filter(r => r.status === '일부결제').length;
+
+      document.getElementById('totalCount').textContent = `${totalCount} 건`;
+      document.getElementById('totalAmount').textContent = `${totalAmount.toLocaleString()} 원`;
+      document.getElementById('pendingCount').textContent = `${pendingCount} 건`;
+      document.getElementById('partialCount').textContent = `${partialCount} 건`;
+    }
+
+    async function doSearch(){
+      try{
+        const list = await fetchReceivables();
+        renderTable(list);
+        updateSummary(list);
+      }catch(e){
+        console.error(e);
+        alert('조회 실패: ' + e.message);
+      }
+    }
+
+    document.getElementById('btnSearch').addEventListener('click', doSearch);
+
+    window.addEventListener('load', async ()=>{
+      document.getElementById('searchStartDate').value = startOfMonthISO();
+      document.getElementById('searchEndDate').value = todayISO();
+      await doSearch();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>운영자 계정관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="assets/css/sidebar.css">
+  <link rel="stylesheet" href="assets/css/pages.css">
+  <style>
+    body { margin:0; background:#f5f7fb; font-family:Arial, sans-serif; }
+    .wrap { padding:30px; }
+    .card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 16px rgba(0,0,0,.06); }
+    .form-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    label { font-weight:700; font-size:13px; }
+    input, select { padding:10px; border:1px solid #d1d5db; border-radius:8px; }
+    button { padding:10px 14px; border:none; border-radius:8px; cursor:pointer; }
+    .btn-primary { background:#2563eb; color:white; }
+    .btn-gray { background:#e5e7eb; color:#111827; }
+    .btn-danger { background:#ef4444; color:white; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #e5e7eb; padding:10px; text-align:left; font-size:14px; }
+    th { background:#f8fafc; }
+    .badge { padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+    .admin { background:#fee2e2; color:#991b1b; }
+    .user { background:#dbeafe; color:#1e40af; }
+    .hint { font-size:12px; color:#64748b; margin-top:4px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>운영자 계정관리</h1>
+
+  <div class="card">
+    <h3>계정 등록 / 수정</h3>
+
+    <input type="hidden" id="editId">
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>아이디</label>
+        <input type="text" id="loginId">
+      </div>
+
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="loginPassword">
+      </div>
+
+      <div class="form-group">
+        <label>회사명</label>
+        <input type="text" id="companyName">
+      </div>
+
+      <div class="form-group">
+        <label>회사코드</label>
+        <input type="text" id="targetDb" placeholder="예: test">
+        <div class="hint">저장 시 erp_company_회사코드 DB가 자동 생성됩니다.</div>
+      </div>
+
+      <div class="form-group">
+        <label>권한</label>
+        <select id="role">
+          <option value="USER">USER</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>상태</label>
+        <select id="isActive">
+          <option value="true">활성</option>
+          <option value="false">비활성</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:24px;">
+      <button class="btn-primary" onclick="saveUser()">저장</button>
+      <button class="btn-gray" onclick="resetForm()">초기화</button>
+      <button class="btn-gray" onclick="logout()">로그아웃</button>
+    </div>
+
+    <h3>계정 목록</h3>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="text" id="kw" placeholder="아이디/회사명/권한 검색" style="flex:1;">
+      <button class="btn-primary" onclick="loadUsers()">조회</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>아이디</th>
+          <th>회사명</th>
+          <th>전용 DB</th>
+          <th>권한</th>
+          <th>상태</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="userBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  async function authCheck() {
+    const res = await fetch('/api/auth/me', { credentials:'include' });
+    const data = await res.json();
+
+    if (!data.success) {
+      location.href = '/login.html';
+      return;
+    }
+
+    if (data.role !== 'ADMIN') {
+      alert('운영자 권한이 필요합니다.');
+      location.href = '/index.html';
+    }
+  }
+
+  async function loadUsers() {
+    const kw = document.getElementById('kw').value.trim();
+
+    const res = await fetch('/api/auth/users?kw=' + encodeURIComponent(kw), {
+      credentials:'include'
+    });
+
+    if (!res.ok) {
+      alert('계정 목록 조회 실패');
+      return;
+    }
+
+    const list = await res.json();
+    const tbody = document.getElementById('userBody');
+
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">계정이 없습니다.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(u => `
+      <tr>
+        <td>${u.id}</td>
+        <td>${esc(u.loginId)}</td>
+        <td>${esc(u.companyName)}</td>
+        <td>${esc(u.targetDb)}</td>
+        <td>${roleBadge(u.role)}</td>
+        <td>${u.isActive ? '활성' : '비활성'}</td>
+        <td>
+          <button class="btn-gray" onclick='editUser(${JSON.stringify(u)})'>수정</button>
+          <button class="btn-danger" onclick="deleteUser(${u.id})">삭제</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function saveUser() {
+    const id = document.getElementById('editId').value;
+
+    const body = {
+      loginId: document.getElementById('loginId').value.trim(),
+      loginPassword: document.getElementById('loginPassword').value.trim(),
+      companyName: document.getElementById('companyName').value.trim(),
+      targetDb: document.getElementById('targetDb').value.trim(),
+      role: document.getElementById('role').value,
+      isActive: document.getElementById('isActive').value === 'true'
+    };
+
+    if (!id && !body.loginId) return alert('아이디를 입력하세요.');
+    if (!id && !body.loginPassword) return alert('비밀번호를 입력하세요.');
+    if (!body.companyName) return alert('회사명을 입력하세요.');
+    if (!body.targetDb) return alert('회사코드를 입력하세요.');
+
+    const url = id ? `/api/auth/users/${id}` : '/api/auth/users';
+    const method = id ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      credentials:'include',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert('저장 실패: ' + text);
+      return;
+    }
+
+    alert('저장되었습니다.');
+    resetForm();
+    await loadUsers();
+  }
+
+  function editUser(u) {
+    document.getElementById('editId').value = u.id;
+    document.getElementById('loginId').value = u.loginId;
+    document.getElementById('loginId').disabled = true;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('companyName').value = u.companyName;
+    document.getElementById('targetDb').value = u.targetDb;
+    document.getElementById('role').value = u.role === 'ADMIN' ? 'ADMIN' : 'USER';
+    document.getElementById('isActive').value = String(u.isActive);
+  }
+
+  async function deleteUser(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+
+    const res = await fetch(`/api/auth/users/${id}`, {
+      method:'DELETE',
+      credentials:'include'
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert('삭제 실패: ' + text);
+      return;
+    }
+
+    alert('삭제되었습니다.');
+    await loadUsers();
+  }
+
+  function resetForm() {
+    document.getElementById('editId').value = '';
+    document.getElementById('loginId').disabled = false;
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('companyName').value = '';
+    document.getElementById('targetDb').value = '';
+    document.getElementById('role').value = 'USER';
+    document.getElementById('isActive').value = 'true';
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', {
+      method:'POST',
+      credentials:'include'
+    });
+    location.href = '/login.html';
+  }
+
+  function roleBadge(role) {
+    const r = role === 'ADMIN' ? 'ADMIN' : 'USER';
+    const cls = r === 'ADMIN' ? 'admin' : 'user';
+    return `<span class="badge ${cls}">${r}</span>`;
+  }
+
+  function esc(s) {
+    return String(s ?? '')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'","&#039;");
+  }
+
+  window.addEventListener('load', async () => {
+    await authCheck();
+    await loadUsers();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>손익계산서 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/accounting/income_statement.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>손익계산서</h1>
+      <p>회계관리 &gt; 재무제표관리 &gt; 손익계산서</p>
+    </div>
+
+    <div class="info-notice">
+      ℹ️ 손익계산서는 입력이 불가하며, 기존 전표들의 합산 데이터로 자동 출력됩니다.
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <!-- 기간 선택 -->
+        <div class="date-section">
+          <div class="form-group">
+            <label for="startDate">시작일</label>
+            <input type="date" id="startDate">
+          </div>
+          <div class="form-group">
+            <label for="endDate">종료일</label>
+            <input type="date" id="endDate">
+          </div>
+          <button type="button" class="btn-search" onclick="loadIncomeStatement()">조회</button>
+        </div>
+
+        <!-- 손익계산서 -->
+        <div class="statements-grid">
+          <!-- 왼쪽 열 -->
+          <div>
+            <!-- 매출 섹션 -->
+            <div class="statement-section">
+              <div class="section-header revenue">매출</div>
+              <div class="section-content">
+                <table class="statement-table">
+                  <tbody>
+                    <tr>
+                      <td>매출액</td>
+                      <td id="revenue">0</td>
+                    </tr>
+                    <tr>
+                      <td>매출원가</td>
+                      <td id="costOfSales">0</td>
+                    </tr>
+                    <tr class="subtotal-row">
+                      <td>매출총이익</td>
+                      <td id="grossProfit">0</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 판매비와 관리비 섹션 -->
+            <div class="statement-section">
+              <div class="section-header expenses">판매비와 관리비</div>
+              <div class="section-content">
+                <table class="statement-table">
+                  <tbody>
+                    <tr><td>급여</td><td id="salary">0</td></tr>
+                    <tr><td>상여</td><td id="bonus">0</td></tr>
+                    <tr><td>복리후생비</td><td id="welfare">0</td></tr>
+                    <tr><td>여비교통비</td><td id="travel">0</td></tr>
+                    <tr><td>접대비</td><td id="entertainment">0</td></tr>
+                    <tr><td>통신비</td><td id="communication">0</td></tr>
+                    <tr><td>수도광열비</td><td id="utilities">0</td></tr>
+                    <tr><td>세금과공과</td><td id="taxes">0</td></tr>
+                    <tr><td>감가상각비</td><td id="depreciation">0</td></tr>
+                    <tr><td>보험료</td><td id="insurance">0</td></tr>
+                    <tr><td>임차료</td><td id="rent">0</td></tr>
+                    <tr><td>차량유지비</td><td id="vehicleMaintenance">0</td></tr>
+                    <tr><td>지급수수료</td><td id="fees">0</td></tr>
+                    <tr class="total-row">
+                      <td>판매비와 관리비 합계</td>
+                      <td id="totalExpenses">0</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 오른쪽 열 -->
+          <div>
+            <!-- 영업이익 및 영업외손익 섹션 -->
+            <div class="statement-section">
+              <div class="section-header profit">영업손익 및 기타손익</div>
+              <div class="section-content">
+                <table class="statement-table">
+                  <tbody>
+                    <tr class="subtotal-row"><td>영업이익</td><td id="operatingProfit">0</td></tr>
+                    <tr><td>영업외수익</td><td id="nonOperatingRevenue">0</td></tr>
+                    <tr><td>영업외비용</td><td id="nonOperatingExpense">0</td></tr>
+                    <tr class="subtotal-row"><td>법인세비용차감전이익</td><td id="profitBeforeTax">0</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 당기순이익 섹션 -->
+            <div class="statement-section">
+              <div class="section-header tax">법인세 및 당기순이익</div>
+              <div class="section-content">
+                <table class="statement-table">
+                  <tbody>
+                    <tr><td>법인세</td><td id="corporateTax">0</td></tr>
+                    <tr class="final-profit-row"><td>당기순이익</td><td id="netIncome">0</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 요약 -->
+        <div class="summary-section">
+          <div class="summary-title">손익 요약</div>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">총 매출</div>
+              <div class="summary-value" id="summaryRevenue">0 원</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">영업이익</div>
+              <div class="summary-value" id="summaryOperatingProfit">0 원</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">당기순이익</div>
+              <div class="summary-value" id="summaryNetIncome">0 원</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    function mustOk(res){ if(!res.ok) throw new Error("HTTP "+res.status); return res; }
+    function formatNumber(num) { return Number(num || 0).toLocaleString(); }
+
+    window.addEventListener('load', function() {
+      const today = new Date();
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+
+      document.getElementById('startDate').value = startOfYear.toISOString().split('T')[0];
+      document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+      loadIncomeStatement();
+    });
+
+    async function loadIncomeStatement() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+
+      if (!startDate || !endDate) return alert('시작일과 종료일을 모두 선택해주세요.');
+      if (startDate > endDate) return alert('시작일은 종료일보다 이전이어야 합니다.');
+
+      const qs = new URLSearchParams({ startDate, endDate, status: "승인" });
+
+      const res = await fetch(`${API_BASE_URL}/api/statements/income?` + qs.toString());
+      await mustOk(res);
+      const data = await res.json();
+
+      displayIncomeStatement(data);
+    }
+
+    function displayIncomeStatement(data) {
+      document.getElementById('revenue').textContent = formatNumber(data.revenue);
+      document.getElementById('costOfSales').textContent = formatNumber(data.costOfSales);
+
+      const grossProfit = (data.revenue||0) - (data.costOfSales||0);
+      document.getElementById('grossProfit').textContent = formatNumber(grossProfit);
+
+      document.getElementById('salary').textContent = formatNumber(data.salary);
+      document.getElementById('bonus').textContent = formatNumber(data.bonus);
+      document.getElementById('welfare').textContent = formatNumber(data.welfare);
+      document.getElementById('travel').textContent = formatNumber(data.travel);
+      document.getElementById('entertainment').textContent = formatNumber(data.entertainment);
+      document.getElementById('communication').textContent = formatNumber(data.communication);
+      document.getElementById('utilities').textContent = formatNumber(data.utilities);
+      document.getElementById('taxes').textContent = formatNumber(data.taxes);
+      document.getElementById('depreciation').textContent = formatNumber(data.depreciation);
+      document.getElementById('insurance').textContent = formatNumber(data.insurance);
+      document.getElementById('rent').textContent = formatNumber(data.rent);
+      document.getElementById('vehicleMaintenance').textContent = formatNumber(data.vehicleMaintenance);
+      document.getElementById('fees').textContent = formatNumber(data.fees);
+
+      const totalExpenses =
+        (data.salary||0)+(data.bonus||0)+(data.welfare||0)+(data.travel||0)+(data.entertainment||0)+
+        (data.communication||0)+(data.utilities||0)+(data.taxes||0)+(data.depreciation||0)+(data.insurance||0)+
+        (data.rent||0)+(data.vehicleMaintenance||0)+(data.fees||0);
+
+      document.getElementById('totalExpenses').textContent = formatNumber(totalExpenses);
+
+      const operatingProfit = grossProfit - totalExpenses;
+      document.getElementById('operatingProfit').textContent = formatNumber(operatingProfit);
+
+      document.getElementById('nonOperatingRevenue').textContent = formatNumber(data.nonOperatingRevenue);
+      document.getElementById('nonOperatingExpense').textContent = formatNumber(data.nonOperatingExpense);
+
+      const profitBeforeTax = operatingProfit + (data.nonOperatingRevenue||0) - (data.nonOperatingExpense||0);
+      document.getElementById('profitBeforeTax').textContent = formatNumber(profitBeforeTax);
+
+      document.getElementById('corporateTax').textContent = formatNumber(data.corporateTax);
+
+      const netIncome = profitBeforeTax - (data.corporateTax||0);
+      document.getElementById('netIncome').textContent = formatNumber(netIncome);
+
+      document.getElementById('summaryRevenue').textContent = formatNumber(data.revenue) + ' 원';
+      document.getElementById('summaryOperatingProfit').textContent = formatNumber(operatingProfit) + ' 원';
+      document.getElementById('summaryNetIncome').textContent = formatNumber(netIncome) + ' 원';
+    }
+  </script>
+</body>
+</html>

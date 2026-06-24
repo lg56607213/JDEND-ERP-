@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>청구생성 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/payment/billing_create.css">
+
+  <style>
+    .input-with-button { display:flex; gap:6px; align-items:center; }
+    .btn-search-small{
+      height:38px; width:44px; border:1px solid #ddd;
+      background:#fff; border-radius:8px; cursor:pointer;
+    }
+
+    .modal-backdrop{
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.45); z-index:9999;
+    }
+    .modal{
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:720px; max-width:calc(100vw - 40px);
+      background:#fff; border-radius:12px; overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,0.25);
+    }
+    .modal-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #eee;
+    }
+    .modal-title{ font-size:16px; font-weight:700; }
+    .modal-close{ border:0; background:transparent; cursor:pointer; font-size:18px; }
+    .modal-body{ padding:14px 16px; }
+    .modal-footer{
+      padding:12px 16px; border-top:1px solid #eee;
+      display:flex; justify-content:flex-end; gap:8px;
+    }
+    .search-row{ display:flex; gap:8px; margin-bottom:10px; }
+    .search-row input{
+      flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:8px;
+    }
+    .btn{
+      padding:10px 12px; border:1px solid #ddd; background:#fff;
+      border-radius:8px; cursor:pointer;
+    }
+    .btn-primary{
+      border-color:#2f6fed; background:#2f6fed; color:#fff;
+    }
+    .table-mini{ width:100%; border-collapse:collapse; }
+    .table-mini th,.table-mini td{
+      border-bottom:1px solid #eee; padding:10px 8px; text-align:left; font-size:14px;
+    }
+    .table-mini tr:hover{ background:#fafafa; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>청구생성</h1>
+      <p>수납관리 &gt; 청구관리 &gt; 청구생성</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <div class="form-section">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="billingType">구분 <span class="required">*</span></label>
+              <select id="billingType" onchange="changeBillingType()">
+                <option value="batch">일괄생성</option>
+                <option value="individual">개별생성</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="billingDate">청구일 <span class="required">*</span></label>
+              <input type="date" id="billingDate">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>세금계산서일자 <span class="required">*</span></label>
+              <div class="date-range-group">
+                <input type="date" id="taxStartDate">
+                <span>~</span>
+                <input type="date" id="taxEndDate">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="customerNumber">고객번호 (customerNumber)</label>
+              <div class="input-with-button" id="customerNumberInput">
+                <input type="text" id="customerNumber" placeholder="일괄생성은 선택 불필요" disabled>
+              </div>
+              <small id="customerPickedText" style="display:block;margin-top:6px;color:#666;"></small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="overdueType">연체생성구분</label>
+              <select id="overdueType">
+                <option value="all">연체포함</option>
+                <option value="exclude">연체제외</option>
+                <option value="only">연체만</option>
+              </select>
+            </div>
+            <div class="form-group"></div>
+          </div>
+        </div>
+
+        <div class="info-message" id="infoMessage">
+          일괄생성: 세금계산서일자 기간 내의 모든 스케줄에 대해 청구를 생성합니다.
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" class="btn-submit" onclick="createBilling()">생성</button>
+          <button type="button" class="btn-cancel" onclick="resetForm()">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 고객 검색 모달 -->
+  <div class="modal-backdrop" id="customerModalBackdrop" onclick="hideCustomerModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">고객 선택</div>
+        <button class="modal-close" type="button" onclick="hideCustomerModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-row">
+          <input type="text" id="customerKw" placeholder="고객번호/거래처명 검색" onkeydown="if(event.key==='Enter'){doCustomerSearch();}">
+          <button class="btn btn-primary" type="button" onclick="doCustomerSearch()">조회</button>
+        </div>
+
+        <div style="max-height:360px; overflow:auto;">
+          <table class="table-mini">
+            <thead>
+              <tr>
+                <th style="width:160px;">고객번호</th>
+                <th>거래처명</th>
+                <th style="width:240px;">이메일</th>
+                <th style="width:90px;">선택</th>
+              </tr>
+            </thead>
+            <tbody id="customerTbody">
+              <tr><td colspan="4" style="padding:14px;color:#777;">검색어 입력 후 조회하세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" onclick="hideCustomerModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    if (typeof API_BASE_URL === "undefined") {
+      alert("config.js 로드 실패: API_BASE_URL이 없습니다. (경로 확인)");
+    }
+
+    if (typeof window.apiFetch !== "function") {
+      window.apiFetch = async function(path, options = {}) {
+        const url = API_BASE_URL + path;
+
+        const opts = {
+          headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+          },
+          ...options
+        };
+
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const text = await res.text().catch(()=> "");
+          throw new Error(`HTTP ${res.status} - ${text}`);
+        }
+
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) return res.json();
+        return res.text();
+      };
+    }
+
+    if (typeof window.fmtMoney !== "function") {
+      window.fmtMoney = function(n) {
+        return Number(n || 0).toLocaleString("ko-KR");
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+      document.getElementById('billingDate').value = today.toISOString().split('T')[0];
+      document.getElementById('taxStartDate').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('taxEndDate').value = lastDay.toISOString().split('T')[0];
+
+      changeBillingType();
+    });
+
+    function changeBillingType() {
+      const type = document.getElementById('billingType').value;
+      const customerNumberInput = document.getElementById('customerNumberInput');
+      const customerPickedText = document.getElementById('customerPickedText');
+      const infoMessage = document.getElementById('infoMessage');
+
+      if (type === 'batch') {
+        customerNumberInput.innerHTML = '<input type="text" id="customerNumber" placeholder="일괄생성은 선택 불필요" disabled>';
+        customerPickedText.textContent = '';
+        infoMessage.textContent = '일괄생성: 세금계산서일자 기간 내의 모든 스케줄에 대해 청구를 생성합니다.';
+      } else {
+        customerNumberInput.innerHTML = `
+          <input type="text" id="customerNumber" placeholder="고객번호 선택" readonly>
+          <button type="button" class="btn-search-small" onclick="showCustomerModal()">🔍</button>
+        `;
+        customerPickedText.textContent = '돋보기를 눌러 고객(거래처)을 선택하세요.';
+        infoMessage.textContent = '개별생성: 선택한 고객번호(customerNumber)의 계약 스케줄에 대해서만 청구를 생성합니다.';
+      }
+    }
+
+    function showCustomerModal() {
+      document.getElementById('customerModalBackdrop').style.display = 'block';
+      document.getElementById('customerKw').value = '';
+      document.getElementById('customerTbody').innerHTML =
+        '<tr><td colspan="4" style="padding:14px;color:#777;">조회중...</td></tr>';
+
+      setTimeout(() => {
+        document.getElementById('customerKw').focus();
+        doCustomerSearch();
+      }, 50);
+    }
+
+    function hideCustomerModal() {
+      document.getElementById('customerModalBackdrop').style.display = 'none';
+    }
+
+    async function doCustomerSearch() {
+      const kw = document.getElementById('customerKw').value.trim();
+      const tbody = document.getElementById('customerTbody');
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">조회중...</td></tr>';
+
+      try {
+        const rows = await window.apiFetch(`/api/billings/customers/search?kw=${encodeURIComponent(kw)}`);
+
+        if (!rows || rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">검색 결과가 없습니다.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = rows.map(r => {
+          const num = r.customerNumber ?? "";
+          const name = r.customerName ?? "";
+          const email = r.email ?? "";
+
+          return `
+            <tr>
+              <td>${escapeHtml(num)}</td>
+              <td>${escapeHtml(name)}</td>
+              <td>${escapeHtml(email)}</td>
+              <td>
+                <button class="btn" type="button"
+                  data-num="${escapeHtml(num)}"
+                  data-name="${escapeHtml(name)}"
+                  data-email="${escapeHtml(email)}"
+                  onclick="pickCustomerFromBtn(this)">선택</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        console.error(e);
+        alert('고객 검색 실패: ' + e.message);
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px;color:#777;">오류 발생</td></tr>';
+      }
+    }
+
+    function pickCustomerFromBtn(btn) {
+      const num = btn.getAttribute('data-num') || '';
+      const name = btn.getAttribute('data-name') || '';
+      const email = btn.getAttribute('data-email') || '';
+
+      document.getElementById('customerNumber').value = num;
+      document.getElementById('customerPickedText').textContent = `선택됨: ${name} (${num}) / ${email || '-'}`;
+      hideCustomerModal();
+    }
+
+    async function createBilling() {
+      const type = document.getElementById('billingType').value;
+      const billingDate = document.getElementById('billingDate').value;
+      const taxStartDate = document.getElementById('taxStartDate').value;
+      const taxEndDate = document.getElementById('taxEndDate').value;
+      const overdueType = document.getElementById('overdueType').value;
+
+      const customerNumberEl = document.getElementById('customerNumber');
+      const customerNumber = customerNumberEl ? customerNumberEl.value : "";
+
+      if (!billingDate) return alert('청구일을 입력해주세요.');
+      if (!taxStartDate || !taxEndDate) return alert('세금계산서일자를 입력해주세요.');
+      if (new Date(taxStartDate) > new Date(taxEndDate)) return alert('세금계산서 시작일이 종료일보다 늦을 수 없습니다.');
+      if (type === 'individual' && !customerNumber) return alert('개별생성 시 고객번호(customerNumber)를 선택해주세요.');
+
+      const msg = (type === 'batch')
+        ? `${taxStartDate} ~ ${taxEndDate} 기간의 청구를 일괄 생성하시겠습니까?`
+        : `고객번호 ${customerNumber}의 청구를 생성하시겠습니까?`;
+
+      if (!confirm(msg)) return;
+
+      const payload = {
+        type,
+        billingDate,
+        taxStartDate,
+        taxEndDate,
+        customerNumber: type === "individual" ? customerNumber : null,
+        overdueType
+      };
+
+      try {
+        const res = await window.apiFetch("/api/billings/create", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        const billingNo = res.billingNo ?? "-";
+        const lineCount = res.lineCount ?? 0;
+        const totalAmount = res.totalAmount ?? 0;
+        const skipped = res.skippedCount ?? 0;
+
+        alert(
+          `청구 생성 완료\n` +
+          `- 청구번호: ${billingNo}\n` +
+          `- 라인 생성: ${lineCount}\n` +
+          `- 라인 스킵(중복): ${skipped}\n` +
+          `- 총액: ${window.fmtMoney(totalAmount)}원`
+        );
+
+        location.href = "billing_issue.html";
+      } catch (e) {
+        console.error(e);
+        alert("청구 생성 실패: " + e.message);
+      }
+    }
+
+    function resetForm() {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+      document.getElementById('billingType').value = 'batch';
+      document.getElementById('billingDate').value = today.toISOString().split('T')[0];
+      document.getElementById('taxStartDate').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('taxEndDate').value = lastDay.toISOString().split('T')[0];
+      document.getElementById('overdueType').value = 'all';
+
+      changeBillingType();
+    }
+  </script>
+</body>
+</html>

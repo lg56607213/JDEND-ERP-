@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>중도상환 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/contract/early_termination.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>중도상환 상세</h1>
+      <p>계약관리 &gt; 중도상환 &gt; 상세보기</p>
+    </div>
+
+    <div class="erp-card" id="terminationDetailSection">
+      <div class="card-header">
+        <h2>중도상환 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+      <div class="card-body">
+        <div class="form-section">
+          <h3 class="section-title">계약 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>계약번호</label>
+              <div class="detail-value" id="contractNumber">R00001001</div>
+            </div>
+            <div class="detail-item">
+              <label>고객명</label>
+              <div class="detail-value" id="customerName">홍길동</div>
+            </div>
+            <div class="detail-item">
+              <label>차량번호</label>
+              <div class="detail-value" id="vehicleNumber">12가3456</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">중도상환 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>중도상환방법</label>
+              <div class="detail-value" id="terminationMethod">반납</div>
+            </div>
+            <div class="detail-item">
+              <label>중도상환일</label>
+              <div class="detail-value" id="terminationDate">2024-11-20</div>
+            </div>
+            <div class="detail-item">
+              <label>상태</label>
+              <div class="detail-value" id="status">처리완료</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">금액 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>중도상환금액</label>
+              <div class="detail-value" id="terminationAmount">5,000,000원</div>
+            </div>
+            <div class="detail-item">
+              <label>미회수렌트료</label>
+              <div class="detail-value" id="uncollectedRent">3,000,000원</div>
+            </div>
+            <div class="detail-item">
+              <label>중도상환수수료</label>
+              <div class="detail-value" id="terminationFee">0원</div>
+            </div>
+            <div class="detail-item">
+              <label>합계금액</label>
+              <div class="detail-value highlight-value" id="totalAmount">8,000,000원</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editTerminationBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card hidden" id="terminationEditSection">
+      <div class="card-header">
+        <h2>중도상환 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body">
+        <form id="terminationEditForm">
+          <div class="form-section">
+            <h3 class="section-title">계약 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>계약번호</label>
+                <input type="text" id="editContractNumber" disabled>
+              </div>
+              <div class="form-group">
+                <label>고객명</label>
+                <input type="text" id="editCustomerName" disabled>
+              </div>
+              <div class="form-group">
+                <label>차량번호</label>
+                <input type="text" id="editVehicleNumber" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">중도상환 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editTerminationMethod" class="required">중도상환방법</label>
+                <select id="editTerminationMethod" name="terminationMethod" required>
+                  <option value="">선택하세요</option>
+                  <option value="인수">인수</option>
+                  <option value="반납">반납</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="editTerminationDate" class="required">중도상환일</label>
+                <input type="date" id="editTerminationDate" name="terminationDate" required>
+              </div>
+              <div class="form-group">
+                <label for="editStatus" class="required">상태</label>
+                <select id="editStatus" name="status" required>
+                  <option value="">선택하세요</option>
+                  <option value="처리대기">처리대기</option>
+                  <option value="처리완료">처리완료</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="section-title">금액 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editTerminationAmount" class="required">중도상환금액</label>
+                <input type="number" id="editTerminationAmount" name="terminationAmount" required>
+              </div>
+              <div class="form-group">
+                <label for="editUncollectedRent">미회수렌트료</label>
+                <input type="number" id="editUncollectedRent" name="uncollectedRent" placeholder="금액 직접 입력">
+              </div>
+              <div class="form-group">
+                <label for="editTerminationFee">중도상환수수료</label>
+                <input type="number" id="editTerminationFee" name="terminationFee" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetEditForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    const BASE = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
+    const urlParams = new URLSearchParams(window.location.search);
+    const terminationId = urlParams.get('id');
+
+    const terminationDetailSection = document.getElementById('terminationDetailSection');
+    const terminationEditSection = document.getElementById('terminationEditSection');
+    const editTerminationBtn = document.getElementById('editTerminationBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+    let terminationData = null;
+
+    function mustOk(res){
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res;
+    }
+
+    function num(v){
+      return Number(v || 0).toLocaleString();
+    }
+
+    function calcTotal(data){
+      return Number(data.terminationAmount || 0)
+           + Number(data.uncollectedRent || 0)
+           + Number(data.terminationFee || 0);
+    }
+
+    async function loadTerminationDetail() {
+      terminationData = await fetch(`${BASE}/api/early-terminations/${terminationId}`, {
+        headers: { 'Accept': 'application/json' }
+      }).then(mustOk).then(r => r.json());
+
+      document.getElementById('contractNumber').textContent = terminationData.contractNumber || '-';
+      document.getElementById('customerName').textContent = terminationData.customerName || '-';
+      document.getElementById('vehicleNumber').textContent = terminationData.vehicleNo || '-';
+      document.getElementById('terminationMethod').textContent = terminationData.terminationMethod || '-';
+      document.getElementById('terminationDate').textContent = terminationData.terminationDate || '-';
+      document.getElementById('status').textContent = terminationData.status || '-';
+      document.getElementById('terminationAmount').textContent = num(terminationData.terminationAmount) + '원';
+      document.getElementById('uncollectedRent').textContent = num(terminationData.uncollectedRent) + '원';
+      document.getElementById('terminationFee').textContent = num(terminationData.terminationFee) + '원';
+      document.getElementById('totalAmount').textContent = num(calcTotal(terminationData)) + '원';
+    }
+
+    editTerminationBtn.addEventListener('click', function() {
+      document.getElementById('editContractNumber').value = terminationData.contractNumber || '';
+      document.getElementById('editCustomerName').value = terminationData.customerName || '';
+      document.getElementById('editVehicleNumber').value = terminationData.vehicleNo || '';
+      document.getElementById('editTerminationMethod').value = terminationData.terminationMethod || '';
+      document.getElementById('editTerminationDate').value = terminationData.terminationDate || '';
+      document.getElementById('editStatus').value = terminationData.status || '';
+      document.getElementById('editTerminationAmount').value = terminationData.terminationAmount || 0;
+      document.getElementById('editUncollectedRent').value = terminationData.uncollectedRent || 0;
+      document.getElementById('editTerminationFee').value = terminationData.terminationFee || 0;
+
+      terminationDetailSection.classList.add('hidden');
+      terminationEditSection.classList.remove('hidden');
+    });
+
+    cancelEditBtn.addEventListener('click', function() {
+      if(confirm('수정을 취소하시겠습니까?')) {
+        terminationEditSection.classList.add('hidden');
+        terminationDetailSection.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('terminationEditForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if(!confirm('수정하시겠습니까?')) {
+        return;
+      }
+
+      const payload = {
+        terminationMethod: document.getElementById('editTerminationMethod').value,
+        terminationDate: document.getElementById('editTerminationDate').value,
+        status: document.getElementById('editStatus').value,
+        terminationAmount: Number(document.getElementById('editTerminationAmount').value || 0),
+        uncollectedRent: Number(document.getElementById('editUncollectedRent').value || 0),
+        terminationFee: Number(document.getElementById('editTerminationFee').value || 0)
+      };
+
+      await fetch(`${BASE}/api/early-terminations/${terminationId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(payload)
+      }).then(mustOk);
+
+      await loadTerminationDetail();
+
+      terminationEditSection.classList.add('hidden');
+      terminationDetailSection.classList.remove('hidden');
+
+      alert('수정했습니다');
+    });
+
+    function resetEditForm() {
+      if(confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+        editTerminationBtn.click();
+      }
+    }
+
+    function goBack() {
+      window.location.href = 'early_termination.html';
+    }
+
+    loadTerminationDetail().catch(err => {
+      console.error(err);
+      alert('상세 조회 실패: 서버를 확인해주세요.');
+    });
+  </script>
+</body>
+</html>

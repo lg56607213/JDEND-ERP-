@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>은행내역업로드 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/maintenance_status.css">
+  <link rel="stylesheet" href="../../assets/css/payment/bank_transaction_upload.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>은행내역업로드</h1>
+      <p>수납관리 &gt; 은행내역 &gt; 은행내역업로드</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <!-- 검색 및 업로드 섹션 -->
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="searchBank">은행명</label>
+              <input type="text" id="searchBank" placeholder="은행명 검색">
+            </div>
+
+            <div class="form-group">
+              <label for="searchStartDate">일자(시작)</label>
+              <input type="date" id="searchStartDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchEndDate">일자(종료)</label>
+              <input type="date" id="searchEndDate">
+            </div>
+
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" onclick="searchTransactions()">조회</button>
+            </div>
+
+            <div class="form-group">
+              <label>CSV 파일 업로드</label>
+              <div class="upload-controls">
+                <div class="file-input-wrapper">
+                  <!-- ✅ 파일 선택하면 바로 업로드까지 진행 -->
+                  <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)">
+                  <label for="csvFile" class="file-input-label">파일 업로드</label>
+                </div>
+                <span class="file-name" id="fileName">선택된 파일 없음</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>은행명</th>
+                <th>계좌번호</th>
+                <th>일자</th>
+                <th>입금</th>
+                <th>출금</th>
+                <th>적요</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody id="transactionTableBody">
+              <tr>
+                <td colspan="8" class="no-data">
+                  <div class="no-data-icon">💳</div>
+                  <div>조회 또는 업로드 후 데이터가 표시됩니다.</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <!-- ✅ 너 프로젝트에 config.js로 API_BASE_URL 쓰는 구조라서 추가 -->
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    // ===== 공용 유틸 =====
+    function mustOk(res){
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    }
+    function escapeHtml(s){
+      return String(s ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;");
+    }
+    function todayISO(){ return new Date().toISOString().split('T')[0]; }
+    function startOfMonthISO(){
+      const d = new Date();
+      const s = new Date(d.getFullYear(), d.getMonth(), 1);
+      return s.toISOString().split('T')[0];
+    }
+
+    // ===== 초기 날짜 세팅 =====
+    window.addEventListener('DOMContentLoaded', ()=>{
+      document.getElementById('searchStartDate').value = startOfMonthISO();
+      document.getElementById('searchEndDate').value = todayISO();
+    });
+
+    // ===== 조회(API) =====
+    async function searchTransactions() {
+      const bank = document.getElementById('searchBank').value.trim();
+      const startDate = document.getElementById('searchStartDate').value;
+      const endDate = document.getElementById('searchEndDate').value;
+
+      const qs = new URLSearchParams();
+      if (bank) qs.set('bank', bank);
+      if (startDate) qs.set('startDate', startDate);
+      if (endDate) qs.set('endDate', endDate);
+
+      const tbody = document.getElementById('transactionTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="no-data">
+            <div class="no-data-icon">⏳</div>
+            <div>불러오는 중...</div>
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bank-transactions?` + qs.toString());
+        mustOk(res);
+        const list = await res.json();
+        renderTransactions(list);
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="no-data">
+              <div class="no-data-icon">⚠️</div>
+              <div>조회 실패: ${escapeHtml(e.message)}</div>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderTransactions(list){
+      const tbody = document.getElementById('transactionTableBody');
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="no-data">
+              <div class="no-data-icon">💳</div>
+              <div>검색 결과가 없습니다.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map((it, idx) => {
+        const dep = Number(it.depositAmount || 0);
+        const wd  = Number(it.withdrawalAmount || 0);
+
+        const depositCell = dep > 0
+          ? `<td class="amount-cell deposit-cell">${dep.toLocaleString()}</td>`
+          : `<td class="amount-cell">-</td>`;
+
+        const withdrawalCell = wd > 0
+          ? `<td class="amount-cell withdrawal-cell">${wd.toLocaleString()}</td>`
+          : `<td class="amount-cell">-</td>`;
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(it.bankName ?? '')}</td>
+            <td>${escapeHtml(it.accountNo ?? '')}</td>
+            <td>${escapeHtml(it.txDate ?? '')}</td>
+            ${depositCell}
+            ${withdrawalCell}
+            <td>${escapeHtml(it.summary ?? '')}</td>
+            <td>${escapeHtml(it.remarks ?? '')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ===== CSV 업로드(API) - 파일 선택하면 자동 업로드 =====
+    async function handleFileUpload(event) {
+      const file = event.target.files[0];
+      const fileNameEl = document.getElementById('fileName');
+
+      if (!file) {
+        fileNameEl.textContent = '선택된 파일 없음';
+        return;
+      }
+
+      fileNameEl.textContent = file.name;
+
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('CSV 파일만 업로드 가능합니다.');
+        event.target.value = '';
+        fileNameEl.textContent = '선택된 파일 없음';
+        return;
+      }
+
+      if (!confirm(`${file.name} 파일을 업로드할까요?`)) {
+        event.target.value = '';
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bank-transactions/upload`, {
+          method: 'POST',
+          body: fd
+        });
+        mustOk(res);
+        const result = await res.json();
+
+        alert(
+          `업로드 완료\n\n` +
+          `batchId: ${result.batchId}\n` +
+          `파싱: ${result.parsedRows}건\n` +
+          `저장: ${result.insertedRows}건\n` +
+          `중복스킵: ${result.skippedDuplicates}건`
+        );
+
+        // 업로드 후 자동 조회
+        await searchTransactions();
+
+        // 파일 선택 초기화(같은 파일 재업로드 가능)
+        event.target.value = '';
+        fileNameEl.textContent = '선택된 파일 없음';
+
+      } catch (e) {
+        console.error(e);
+        alert('업로드 실패: ' + e.message + '\n\n※ CSV는 UTF-8 저장 권장');
+      }
+    }
+  </script>
+</body>
+</html>

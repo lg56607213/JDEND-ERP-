@@ -1,0 +1,385 @@
+.erp-card {
+  background: #fff;
+  padding: 0;
+  overflow: hidden;
+  margin: 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+.card-body {
+  padding: 35px 40px;
+}
+
+.form-section {
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #4299e1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '■';
+  font-size: 0.8rem;
+  color: #4299e1;
+}
+
+/* 선급관리 2열 그리드 스타일 */
+.prepaid-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.prepaid-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 15px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.prepaid-item:hover {
+  background: #f0f7ff;
+  border-color: #4299e1;
+}
+
+.prepaid-label {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.9rem;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.prepaid-inputs {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  align-items: center;
+}
+
+.prepaid-inputs .account-code {
+  width: 70px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+  background: #fff;
+}
+
+.prepaid-inputs .account-code:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+}
+
+.prepaid-inputs .account-select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.prepaid-inputs .account-select:focus {
+  outline: none;
+  border-color: #4299e1;
+}
+
+/* 테이블 스타일 */
+.table-container {
+  overflow-x: auto;
+}
+
+.account-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.account-table thead {
+  background: #f7fafc;
+  border-top: 2px solid #4299e1;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.account-table th {
+  padding: 12px 15px;
+  text-align: center;
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.account-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+
+.account-table td:first-child {
+  font-weight: 600;
+  color: #2d3748;
+  background: #f7fafc;
+  width: 150px;
+}
+
+.account-table tbody tr:hover {
+  background: #f0f7ff;
+}
+
+.account-table .account-code {
+  width: 80px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+  background: #fff;
+}
+
+.account-table .account-code:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+}
+
+.account-table .account-select {
+  width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.account-table .account-select:focus {
+  outline: none;
+  border-color: #4299e1;
+}
+
+/* 매핑 행 스타일 */
+.mapping-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+  padding: 20px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.mapping-item {
+  flex: 1;
+  min-width: 250px;
+}
+
+.mapping-item label {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.mapping-item .sub-label {
+  font-size: 0.85rem;
+  color: #718096;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.mapping-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #4299e1;
+  font-weight: bold;
+  padding-top: 30px;
+}
+
+.account-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.account-input-group .account-code {
+  width: 80px;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+  background: #fff;
+  transition: all 0.3s;
+}
+
+.account-input-group .account-code:focus {
+  outline: none;
+  border-color: #4299e1;
+  background: #fff;
+}
+
+.account-input-group .account-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.account-input-group .account-select:focus {
+  outline: none;
+  border-color: #4299e1;
+}
+
+/* 버튼 영역 */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+  padding-top: 25px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn {
+  padding: 12px 40px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #4299e1;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #3182ce;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #4a5568;
+  border: 2px solid #cbd5e0;
+}
+
+.btn-secondary:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+}
+
+/* 반응형 */
+@media (max-width: 900px) {
+  .card-body {
+    padding: 25px 20px;
+  }
+
+  .prepaid-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mapping-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .mapping-item {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .mapping-arrow {
+    padding-top: 0;
+    transform: rotate(90deg);
+  }
+
+  .account-table .account-code {
+    width: 70px;
+  }
+
+  .account-table .account-select {
+    width: 150px;
+  }
+}
+
+@media (max-width: 600px) {
+  .card-body {
+    padding: 20px 15px;
+  }
+
+  .account-table td {
+    padding: 8px 10px;
+  }
+
+  .account-table td:first-child {
+    width: 100px;
+    font-size: 0.85rem;
+  }
+
+  .account-table .account-code {
+    width: 60px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .account-table .account-select {
+    width: 120px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .account-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .account-input-group .account-code {
+    width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

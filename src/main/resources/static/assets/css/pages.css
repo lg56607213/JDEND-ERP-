@@ -1,0 +1,324 @@
+/* Reset CSS */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #fff;
+  min-height: 100vh;
+}
+
+/* Content Wrapper */
+.content-wrapper {
+  margin-left: 220px;
+  padding: 0;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* Page Header */
+.page-header {
+  margin-bottom: 15px;
+  padding: 15px 40px 10px 80px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.page-header h1 {
+  color: #2d3748;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.page-header p {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+/* ERP Card */
+.erp-card {
+  background: #fff;
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+  margin: 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+.card-body {
+  padding: 40px;
+}
+
+/* Form Group - Common */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+}
+
+/* Detail Page Card Header */
+.card-header-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  background: #f7fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.card-header-detail h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #2d3748;
+  font-weight: 700;
+}
+
+/* Detail Page Card Body */
+.card-body-detail {
+  padding: 35px 40px;
+}
+
+/* Form Group Column Layout */
+.form-group-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group-column label {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+/* Form Input Styles */
+.form-input {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 1rem;
+  background: #f7fafc;
+}
+
+/* Grid Full Width */
+.grid-full-width {
+  grid-column: 1 / -1;
+}
+
+/* Form Actions Margin Top */
+.form-actions-mt {
+  margin-top: 20px;
+}
+
+/* Table Column Widths */
+.col-width-10 { width: 10%; }
+.col-width-25 { width: 25%; }
+.col-width-30 { width: 30%; }
+.col-width-35 { width: 35%; }
+
+/* Vertical Align Middle */
+.valign-middle {
+  vertical-align: middle;
+}
+
+/* Text Colors */
+.text-muted {
+  color: #a0aec0;
+}
+
+.text-placeholder {
+  color: #94a3b8;
+}
+
+/* Inline Style Helpers */
+.inline-style-1,
+.inline-style-2,
+.inline-style-3,
+.inline-style-4,
+.inline-style-5 {
+  color: #718096;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+/* Hidden */
+.hidden {
+  display: none !important;
+}
+
+/* Spacer */
+.spacer-1 {
+  height: 1px;
+}
+
+/* Date Range Separator */
+.date-separator {
+  margin: 0 5px;
+}
+
+/* Flex Row with Gap */
+.flex-row-gap {
+  display: flex;
+  gap: 10px;
+}
+
+/* Flex 1 */
+.flex-1 {
+  flex: 1;
+}
+
+/* Help Text */
+.help-text {
+  color: #718096;
+  margin-top: 5px;
+  display: block;
+}
+
+/* Table Column Widths - Additional */
+.col-width-5 { width: 5%; }
+.col-width-12 { width: 12%; }
+.col-width-14 { width: 14%; }
+.col-width-60 { width: 60px; }
+.col-width-100 { width: 100px; }
+.col-width-130 { width: 130px; }
+
+/* Text Align */
+.text-center { text-align: center; }
+
+/* Detail Grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item label {
+  font-weight: 600;
+  color: #718096;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  color: #2d3748;
+  font-size: 1rem;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-value.highlight-value {
+  font-weight: 700;
+  color: #4299e1;
+}
+
+/* Form Section */
+.form-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #4299e1;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: #4299e1;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #3182ce;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e0;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .content-wrapper {
+    margin-left: 160px;
+    padding: 0;
+  }
+  .card-body {
+    padding: 30px 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-wrapper {
+    margin-left: 0;
+    padding: 0;
+  }
+  .page-header {
+    padding: 12px 20px 8px 70px;
+  }
+  .page-header h1 {
+    font-size: 1rem;
+  }
+  .page-header p {
+    font-size: 0.7rem;
+  }
+  .card-body {
+    padding: 25px 20px;
+  }
+}

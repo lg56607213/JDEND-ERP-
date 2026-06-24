@@ -1,0 +1,285 @@
+/* 섹션 타이틀 */
+.section-title {
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '●';
+  font-size: 0.8rem;
+  color: #4a5568;
+}
+
+/* 폼 섹션 */
+.form-section {
+  margin-bottom: 30px;
+}
+
+/* 검색 영역 */
+.search-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 10px;
+}
+
+.input-with-button input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 1rem;
+  background: #f7fafc;
+  min-width: 200px;
+}
+
+.input-with-button input:focus {
+  outline: none;
+  border-color: #4299e1;
+  background: #fff;
+}
+
+.btn-search-small {
+  padding: 12px 20px;
+  background: #4a5568;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-search-small:hover {
+  background: #2d3748;
+}
+
+/* 대출정보 2열 그리드 */
+.loan-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.loan-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 폼 그룹 */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s;
+  background: #f7fafc;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4299e1;
+  background: #fff;
+}
+
+.form-group input[readonly] {
+  background: #e2e8f0;
+  cursor: not-allowed;
+  color: #4a5568;
+}
+
+/* 필수 표시 */
+.required {
+  color: #e53e3e;
+  font-weight: bold;
+}
+
+/* 토글 버튼 그룹 */
+.btn-toggle-group {
+  display: flex;
+  gap: 0;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.btn-toggle {
+  flex: 1;
+  padding: 12px 20px;
+  background: #f7fafc;
+  color: #4a5568;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-toggle:first-child {
+  border-right: 1px solid #e2e8f0;
+}
+
+.btn-toggle:hover {
+  background: #edf2f7;
+}
+
+.btn-toggle.active {
+  background: #4299e1;
+  color: #fff;
+}
+
+.btn-toggle.active:hover {
+  background: #3182ce;
+}
+
+/* 단위 포함 입력 필드 */
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  border: 2px solid #e2e8f0;
+  border-radius: 4px;
+  background: #f7fafc;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.input-with-unit:focus-within {
+  border-color: #4299e1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.input-with-unit input {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+}
+
+.input-with-unit input:focus {
+  outline: none;
+}
+
+.input-with-unit .unit {
+  padding: 12px 16px;
+  background: #edf2f7;
+  color: #4a5568;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 1px solid #e2e8f0;
+}
+
+/* 강조 필드 (월 납입금액) */
+.highlight-field {
+  background: #ebf8ff !important;
+  border-color: #4299e1 !important;
+  color: #2c5282 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+/* 버튼 영역 */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn {
+  padding: 14px 40px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #4299e1;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(66, 153, 225, 0.3);
+}
+
+.btn-primary:hover {
+  background: #3182ce;
+  box-shadow: 0 4px 8px rgba(66, 153, 225, 0.4);
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #4a5568;
+  border: 2px solid #cbd5e0;
+}
+
+.btn-secondary:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+}
+
+/* 반응형 */
+@media (max-width: 900px) {
+  .loan-form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-with-button {
+    flex-direction: column;
+  }
+
+  .input-with-button input {
+    min-width: auto;
+  }
+
+  .btn-search-small {
+    width: 100%;
+  }
+}

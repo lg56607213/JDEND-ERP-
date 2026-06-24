@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일일자금일보 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/accounting/daily_fund_report.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>일일자금일보</h1>
+      <p>회계관리 &gt; 일일자금 &gt; 일일자금일보</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+        <!-- 기준일자 선택 -->
+        <div class="search-section">
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="reportDate" class="required">기준일자</label>
+              <input type="date" id="reportDate" name="reportDate" required>
+            </div>
+            <div class="form-group btn-group">
+              <button type="button" class="btn-search" onclick="loadReport()">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 메인 컨텐츠 그리드 -->
+        <div class="report-grid">
+          <!-- 은행내역 -->
+          <div class="report-section">
+            <h3 class="section-title">* 은행내역</h3>
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>은행</th>
+                  <th>입금</th>
+                  <th>출금</th>
+                </tr>
+              </thead>
+              <tbody id="bankTableBody"></tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td><strong>합계</strong></td>
+                  <td class="amount-cell income"><strong id="bankIncomeTotal">-</strong></td>
+                  <td class="amount-cell expense"><strong id="bankExpenseTotal">-</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- 전표내역 -->
+          <div class="report-section voucher-section">
+            <h3 class="section-title">* 전표내역</h3>
+            <div class="voucher-grid">
+              <!-- 입금 전표 -->
+              <div class="voucher-half">
+                <h4 class="sub-title income-title">입금</h4>
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>계정코드</th>
+                      <th>계정명</th>
+                      <th>입금금액</th>
+                      <th>비고</th>
+                    </tr>
+                  </thead>
+                  <tbody id="voucherIncomeBody"></tbody>
+                  <tfoot>
+                    <tr class="total-row">
+                      <td colspan="2"><strong>합계</strong></td>
+                      <td class="amount-cell income"><strong id="voucherIncomeTotal">-</strong></td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- 출금 전표 -->
+              <div class="voucher-half">
+                <h4 class="sub-title expense-title">출금</h4>
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>계정코드</th>
+                      <th>계정명</th>
+                      <th>출금금액</th>
+                      <th>비고</th>
+                    </tr>
+                  </thead>
+                  <tbody id="voucherExpenseBody"></tbody>
+                  <tfoot>
+                    <tr class="total-row">
+                      <td colspan="2"><strong>합계</strong></td>
+                      <td class="amount-cell expense"><strong id="voucherExpenseTotal">-</strong></td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 총 수입/지출 내역 비교 -->
+        <div class="summary-grid">
+          <!-- 총 수입내역 -->
+          <div class="summary-section">
+            <h3 class="section-title">* 총 수입내역</h3>
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>은행내역</th>
+                  <th>전표내역</th>
+                  <th>차액</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="amount-cell" id="summaryBankIncome">-</td>
+                  <td class="amount-cell" id="summaryVoucherIncome">-</td>
+                  <td class="amount-cell difference" id="summaryIncomeDiff">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 총 지출내역 -->
+          <div class="summary-section">
+            <h3 class="section-title">* 총 지출내역</h3>
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>은행내역</th>
+                  <th>전표내역</th>
+                  <th>차액</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="amount-cell" id="summaryBankExpense">-</td>
+                  <td class="amount-cell" id="summaryVoucherExpense">-</td>
+                  <td class="amount-cell difference" id="summaryExpenseDiff">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 버튼 영역 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="printReport()">인쇄</button>
+          <button type="button" class="btn btn-primary" onclick="exportExcel()">엑셀 다운로드</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    let lastDaily = null;
+
+    function mustOk(res){
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res;
+    }
+    function fmt(v){
+      const n = Number(v || 0);
+      if(n === 0) return "-";
+      return n.toLocaleString();
+    }
+
+    window.addEventListener('load', function() {
+      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+      loadReport();
+    });
+
+    async function loadReport() {
+      const reportDate = document.getElementById('reportDate').value;
+      if (!reportDate) return alert('기준일자를 선택해주세요.');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/cash/daily-fund-report?date=` + encodeURIComponent(reportDate));
+        await mustOk(res);
+        const data = await res.json();
+        lastDaily = data;
+        renderDaily(data);
+      } catch (e) {
+        console.error(e);
+        alert("조회 실패: " + e.message);
+      }
+    }
+
+    function renderDaily(data){
+      // 은행내역
+      const bankBody = document.getElementById('bankTableBody');
+      bankBody.innerHTML = '';
+      (data.banks || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.bankName || '(미지정)'}</td>
+          <td class="amount-cell income">${fmt(r.income)}</td>
+          <td class="amount-cell expense">${fmt(r.expense)}</td>
+        `;
+        bankBody.appendChild(tr);
+      });
+
+      document.getElementById('bankIncomeTotal').textContent = (data.bankIncomeTotal||0).toLocaleString();
+      document.getElementById('bankExpenseTotal').textContent = (data.bankExpenseTotal||0).toLocaleString();
+
+      // 전표 입금
+      const vInBody = document.getElementById('voucherIncomeBody');
+      vInBody.innerHTML = '';
+      (data.voucherIncomes || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.accountCode || ''}</td>
+          <td>${r.accountName || ''}</td>
+          <td class="amount-cell income">${fmt(r.amount)}</td>
+          <td>${r.memo || ''}</td>
+        `;
+        vInBody.appendChild(tr);
+      });
+
+      // 전표 출금
+      const vOutBody = document.getElementById('voucherExpenseBody');
+      vOutBody.innerHTML = '';
+      (data.voucherExpenses || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.accountCode || ''}</td>
+          <td>${r.accountName || ''}</td>
+          <td class="amount-cell expense">${fmt(r.amount)}</td>
+          <td>${r.memo || ''}</td>
+        `;
+        vOutBody.appendChild(tr);
+      });
+
+      document.getElementById('voucherIncomeTotal').textContent = (data.voucherIncomeTotal||0).toLocaleString();
+      document.getElementById('voucherExpenseTotal').textContent = (data.voucherExpenseTotal||0).toLocaleString();
+
+      // 요약
+      document.getElementById('summaryBankIncome').textContent = (data.bankIncomeTotal||0).toLocaleString();
+      document.getElementById('summaryVoucherIncome').textContent = (data.voucherIncomeTotal||0).toLocaleString();
+      document.getElementById('summaryIncomeDiff').textContent = fmt(data.incomeDiff);
+
+      document.getElementById('summaryBankExpense').textContent = (data.bankExpenseTotal||0).toLocaleString();
+      document.getElementById('summaryVoucherExpense').textContent = (data.voucherExpenseTotal||0).toLocaleString();
+      document.getElementById('summaryExpenseDiff').textContent = fmt(data.expenseDiff);
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    // ✅ CSV 다운로드 (서버 필요없음)
+    function exportExcel() {
+      if (!lastDaily) return alert("다운로드할 데이터가 없습니다.");
+
+      const date = document.getElementById('reportDate').value || 'report';
+
+      const lines = [];
+      lines.push("구분,항목,입금,출금");
+
+      // 은행
+      (lastDaily.banks || []).forEach(b => {
+        lines.push(["은행", b.bankName || "(미지정)", b.income || 0, b.expense || 0].join(","));
+      });
+
+      // 전표 입금/출금
+      (lastDaily.voucherIncomes || []).forEach(v => {
+        lines.push(["전표입금", v.accountName || "", v.amount || 0, 0].join(","));
+      });
+      (lastDaily.voucherExpenses || []).forEach(v => {
+        lines.push(["전표출금", v.accountName || "", 0, v.amount || 0].join(","));
+      });
+
+      lines.push(["합계(은행)", "", lastDaily.bankIncomeTotal||0, lastDaily.bankExpenseTotal||0].join(","));
+      lines.push(["합계(전표)", "", lastDaily.voucherIncomeTotal||0, lastDaily.voucherExpenseTotal||0].join(","));
+      lines.push(["차액", "", lastDaily.incomeDiff||0, lastDaily.expenseDiff||0].join(","));
+
+      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `일일자금일보_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

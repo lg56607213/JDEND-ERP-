@@ -1,0 +1,302 @@
+
+/* --- ERP 스타일 심플/모던 사이드바 --- */
+body {
+  background: #f4f6fa;
+  font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+  margin: 0;
+}
+
+.sidebar {
+  width: 220px;
+  background: #23304e;
+  color: #fff;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  box-shadow: 2px 0 8px rgba(30,40,60,0.06);
+  z-index: 1000;
+  transition: left 0.3s ease;
+}
+.sidebar.collapsed {
+  left: -220px;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 18px;
+  border-bottom: 1px solid #2e3a55;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: #1b253a;
+}
+.erp-logo {
+  color: #38bdf8;
+  font-weight: 900;
+  font-size: 1.2em;
+  margin-left: 4px;
+}
+a.sidebar-title {
+  color: #fff;
+  margin-left: 2px;
+  white-space: nowrap;
+  flex: 1;
+  transition: opacity 0.2s;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+a.sidebar-title:hover {
+  background: none !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+a.sidebar-title:active,
+a.sidebar-title:focus {
+  background: none !important;
+  color: #fff !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.sidebar.collapsed .sidebar-title {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+.sidebar-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.3s;
+}
+.sidebar-toggle:hover {
+  opacity: 0.8;
+}
+.sidebar.collapsed .sidebar-toggle {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  background: #23304e;
+  padding: 10px;
+  z-index: 1001;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.sidebar.collapsed .sidebar-toggle:hover {
+  background: #2e3a55;
+  opacity: 1;
+}
+.toggle-icon {
+  width: 22px;
+  height: 2px;
+  background: #fff;
+  display: block;
+  transition: all 0.3s;
+  border-radius: 2px;
+}
+.sidebar-toggle:hover .toggle-icon {
+  background: #38bdf8;
+}
+.sidebar nav {
+  margin-top: 8px;
+}
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar-menu > li {
+  margin: 0;
+}
+.sidebar a, .sidebar .menu-label {
+  display: block;
+  color: #e0e7ef;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 9px 18px 9px 18px;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.sidebar a:hover, .sidebar .menu-label:hover {
+  background: #38bdf8;
+  color: #ffffff;
+}
+.sidebar .has-sub > .menu-label {
+  font-weight: 600;
+  background: #22304a;
+  border-left: 3px solid #38bdf8;
+  margin-top: 2px;
+}
+.sidebar .has-sub > .menu-label:after {
+  content: '\25B6';
+  float: right;
+  font-size: 0.85em;
+  margin-left: 8px;
+  transition: transform 0.2s;
+}
+.sidebar .has-sub.open > .menu-label:after {
+  transform: rotate(90deg);
+}
+.sidebar .has-sub > ul {
+  display: none;
+  background: #27375a;
+  margin: 0;
+  padding: 0;
+}
+.sidebar .has-sub.open > ul {
+  display: block;
+}
+.sidebar .has-sub > ul > li > a, .sidebar .has-sub > ul > li > .menu-label {
+  font-weight: 400;
+  background: #27375a;
+  color: #c7d2e5;
+  padding-left: 36px;
+  border-left: 3px solid transparent;
+}
+.sidebar .has-sub > ul > li > a:hover, .sidebar .has-sub > ul > li > .menu-label:hover {
+  background: #38bdf8;
+  color: #ffffff;
+  border-left: 3px solid #38bdf8;
+}
+.sidebar .has-sub > ul > li > ul > li > a {
+  background: #334d73;
+  color: #c7d2e5;
+  padding-left: 54px;
+  font-size: 0.97rem;
+  border-left: 3px solid transparent;
+}
+.sidebar .has-sub > ul > li > ul > li > a:hover {
+  background: #38bdf8;
+  color: #ffffff;
+  border-left: 3px solid #38bdf8;
+}
+
+/* 현재 페이지 강조 */
+.sidebar a.active:not(.sidebar-title) {
+  background: #ffffff !important;
+  color: #1b253a !important;
+  font-weight: 700 !important;
+  border-left: 3px solid #38bdf8 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar .has-sub > ul > li > a.active {
+  background: #ffffff !important;
+  color: #1b253a !important;
+  font-weight: 700 !important;
+  border-left: 3px solid #38bdf8 !important;
+}
+
+.sidebar .has-sub > ul > li > ul > li > a.active {
+  background: #ffffff !important;
+  color: #1b253a !important;
+  font-weight: 700 !important;
+  border-left: 3px solid #38bdf8 !important;
+}
+
+
+/* --- 상단 네비게이션 --- */
+.main-header {
+  margin-left: 220px;
+  height: 54px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  transition: margin-left 0.2s;
+}
+.sidebar-collapsed .main-header {
+  margin-left: 56px;
+}
+.main-nav {
+  display: flex;
+  gap: 24px;
+  margin-left: 24px;
+}
+.main-link {
+  color: #1e293b;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 1.08rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+.main-link:hover {
+  background: #38bdf8;
+  color: #fff;
+}
+
+/* 모바일 스타일 */
+@media (max-width: 768px) {
+  .sidebar {
+    left: -220px;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: #23304e;
+    padding: 10px;
+    z-index: 1002;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: left 0.3s ease;
+  }
+
+  .sidebar.open .sidebar-toggle {
+    left: 235px;
+  }
+
+  .sidebar.open + .sidebar-overlay {
+    display: block;
+  }
+
+  .content-wrapper {
+    margin-left: 0 !important;
+  }
+}
+
+/* 사이드바 오버레이 (모바일용) */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 220px;
+  }
+}
+
+.main-header {
+  margin-left: 220px;
+}
+.sidebar-collapsed .main-header {
+  margin-left: 0;
+}
