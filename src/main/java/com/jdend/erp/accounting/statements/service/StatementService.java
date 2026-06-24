@@ -21,6 +21,14 @@ public class StatementService {
 
   private static final Set<String> CREDIT_NORMAL_CATEGORIES = Set.of("LIABILITY", "EQUITY", "REVENUE");
 
+  private static final Map<String, String> CATEGORY_LABEL = Map.of(
+      "ASSET", "자산",
+      "LIABILITY", "부채",
+      "EQUITY", "자본",
+      "REVENUE", "수익",
+      "EXPENSE", "비용"
+  );
+
   // ==========================
   // 재무상태표
   // ==========================
@@ -131,12 +139,23 @@ public class StatementService {
       Map<String, Long> debit,
       Map<String, Long> credit
   ) {
-    FinancialStatementAccount root = all.stream()
+    Optional<FinancialStatementAccount> root = all.stream()
         .filter(a -> a.getParentId() == null && category.equals(a.getCategory()))
-        .findFirst()
-        .orElseThrow(() -> new IllegalStateException(category + " 대분류 계정이 시드되어 있지 않습니다."));
+        .findFirst();
 
-    return buildNode(root, byParent, debit, credit);
+    // 신규 회사(테넌트) DB는 재무제표관리에서 계정을 등록하기 전까지 대분류 자체가 없을 수 있다.
+    // 이 경우 에러 대신 금액 0인 빈 대분류 노드를 내려준다(재무제표관리에서 계정을 등록하면 채워짐).
+    if (root.isEmpty()) {
+      return StatementNodeResponse.builder()
+          .accountCode(null)
+          .accountName(CATEGORY_LABEL.get(category))
+          .level(1)
+          .amount(0L)
+          .children(List.of())
+          .build();
+    }
+
+    return buildNode(root.get(), byParent, debit, credit);
   }
 
   private StatementNodeResponse buildNode(

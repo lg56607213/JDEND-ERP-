@@ -30,6 +30,14 @@ public class FinancialStatementAccountService {
       "EXPENSE", "50"
   );
 
+  private static final Map<String, String> CATEGORY_LABEL = Map.of(
+      "ASSET", "자산",
+      "LIABILITY", "부채",
+      "EQUITY", "자본",
+      "REVENUE", "수익",
+      "EXPENSE", "비용"
+  );
+
   private FinancialStatementAccountResponse toRes(FinancialStatementAccount e) {
     return toRes(e, null);
   }
@@ -160,11 +168,45 @@ public class FinancialStatementAccountService {
     return toRes(saved);
   }
 
+  private void ensureRoot(String category) {
+    String rootCode = ROOT_CODE.get(category);
+    if (rootCode == null) {
+      throw new IllegalArgumentException("지원하지 않는 카테고리입니다: " + category);
+    }
+    if (repo.existsByAccountCode(rootCode)) {
+      return;
+    }
+
+    String statementType = ("ASSET".equals(category) || "LIABILITY".equals(category) || "EQUITY".equals(category))
+        ? "bs" : "is";
+    String label = CATEGORY_LABEL.get(category);
+
+    repo.save(
+        FinancialStatementAccount.builder()
+            .statementType(statementType)
+            .category(category)
+            .level(1)
+            .parentId(null)
+            .accountCode(rootCode)
+            .accountName(label)
+            .accountType(label)
+            .displayOrder(Integer.parseInt(rootCode) / 10)
+            .isActive("사용")
+            .isPostable("미사용")
+            .build()
+    );
+  }
+
   // ==========================
   // 계층 구조: 카테고리별 트리 조회
   // ==========================
-  @Transactional(readOnly = true)
+  // 신규 회사(테넌트) DB는 테이블 구조만 복제되고 데이터가 비어있어 대분류 자체가 없을 수 있다.
+  // 그 상태로는 화면에 "하위분류추가"를 누를 노드가 하나도 없어 막히므로, 조회 시점에 표준 대분류를
+  // 자동으로 만들어준다(자산/부채/자본/수익/비용, 코드 10/20/30/40/50 고정).
+  @Transactional
   public List<FinancialStatementAccountTreeResponse> tree(String category) {
+    ensureRoot(category);
+
     List<FinancialStatementAccount> all = repo.findByCategoryOrderByAccountCodeAsc(category);
 
     Map<Long, List<FinancialStatementAccount>> byParent = all.stream()
