@@ -87,6 +87,30 @@ public class TenantDatabaseService {
                     "LIKE `" + templateDb + "`.`" + table + "`"
             );
         }
+
+        seedDefaultFinancialStatementAccounts(targetDb, templateDb);
+    }
+
+    // 새 회사(테넌트) DB가 처음 만들어질 때, 템플릿 DB(erp)에 현재 등록되어 있는
+    // 재무제표관리 계정구조(대/중/소/소소분류 전체)를 그대로 복제해 기본값으로 넣어준다.
+    // id를 그대로 복제해야 parent_id 트리 연결이 깨지지 않는다.
+    private void seedDefaultFinancialStatementAccounts(String targetDb, String templateDb) {
+        jdbcTemplate.execute(
+                "INSERT INTO `" + targetDb + "`.`financial_statement_accounts` " +
+                "(id, statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable) " +
+                "SELECT id, statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable " +
+                "FROM `" + templateDb + "`.`financial_statement_accounts` " +
+                "ORDER BY level ASC, id ASC"
+        );
+
+        Long maxId = jdbcTemplate.queryForObject(
+                "SELECT IFNULL(MAX(id), 0) FROM `" + targetDb + "`.`financial_statement_accounts`",
+                Long.class
+        );
+
+        jdbcTemplate.execute(
+                "ALTER TABLE `" + targetDb + "`.`financial_statement_accounts` AUTO_INCREMENT = " + (maxId + 1)
+        );
     }
 
     private void registerDataSourceIfMissing(String targetDb) {
