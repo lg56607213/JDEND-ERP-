@@ -4,6 +4,7 @@ import com.jdend.erp.management.financial.entity.FinancialStatementAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface FinancialStatementAccountRepository extends JpaRepository<FinancialStatementAccount, Long> {
   List<FinancialStatementAccount> findByStatementTypeOrderByDisplayOrderAsc(String statementType);
@@ -14,4 +15,5 @@ public interface FinancialStatementAccountRepository extends JpaRepository<Finan
   long countByParentId(Long parentId);
   boolean existsByParentId(Long parentId);
   boolean existsByAccountCode(String accountCode);
+  Optional<FinancialStatementAccount> findByAccountCode(String accountCode);
 }

@@ -83,9 +83,12 @@
   <div id="sidebar-container"></div>
 
   <div class="content-wrapper">
-    <div class="page-header">
-      <h1>일일전표등록</h1>
-      <p>회계관리 &gt; 전표등록 &gt; 일일전표등록</p>
+    <div class="page-header" style="display:flex; align-items:flex-end; justify-content:space-between;">
+      <div>
+        <h1>일일전표등록</h1>
+        <p>회계관리 &gt; 전표등록 &gt; 일일전표등록</p>
+      </div>
+      <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
     </div>
 
     <div class="erp-card">
@@ -295,6 +298,16 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/excel-upload.js"></script>
+  <script>
+    document.getElementById('excelUploadBtn').addEventListener('click', () => {
+      openExcelUploadModal({
+        title: '전표 엑셀 업로드 (계정코드 기준)',
+        templateUrl: '/api/vouchers/bulk-upload/template',
+        uploadUrl: '/api/vouchers/bulk-upload',
+      });
+    });
+  </script>
 
   <script>
     const API_BASE = (typeof API_BASE_URL !== "undefined" && API_BASE_URL)

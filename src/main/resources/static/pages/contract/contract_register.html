@@ -78,7 +78,10 @@
     <div class="erp-card" id="contractListSection">
       <div class="card-header">
         <h2>계약 목록</h2>
-        <button type="button" class="btn btn-primary" id="addContractBtn"><span>+ 계약 추가</span></button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+          <button type="button" class="btn btn-primary" id="addContractBtn"><span>+ 계약 추가</span></button>
+        </div>
       </div>
 
       <div class="card-body">
@@ -431,6 +434,17 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/excel-upload.js"></script>
+  <script>
+    document.getElementById('excelUploadBtn').addEventListener('click', () => {
+      openExcelUploadModal({
+        title: '계약 엑셀 업로드',
+        templateUrl: '/api/contracts/bulk-upload/template',
+        uploadUrl: '/api/contracts/bulk-upload',
+        onSuccess: () => loadContracts(),
+      });
+    });
+  </script>
 
   <script>
     const API_BASE = `${API_BASE_URL}/api`;

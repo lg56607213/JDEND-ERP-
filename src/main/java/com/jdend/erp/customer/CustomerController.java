@@ -1,7 +1,11 @@
 package com.jdend.erp.customer;
 
+import com.jdend.erp.common.excel.ExcelUploadResultResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,9 +16,11 @@ import java.util.List;
 public class CustomerController {
 
     private final CustomerRepository repo;
+    private final CustomerBulkUploadService bulkUploadService;
 
-    public CustomerController(CustomerRepository repo) {
+    public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService) {
         this.repo = repo;
+        this.bulkUploadService = bulkUploadService;
     }
 
     @GetMapping
@@ -89,5 +95,18 @@ public class CustomerController {
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/bulk-upload/template")
+    public ResponseEntity<byte[]> bulkUploadTemplate() {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customer_template.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(bulkUploadService.template());
+    }
+
+    @PostMapping("/bulk-upload")
+    public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
+        return bulkUploadService.upload(file);
     }
 }

@@ -1,9 +1,15 @@
 package com.jdend.erp.vehicle.controller;
 
+import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import com.jdend.erp.vehicle.dto.*;
+import com.jdend.erp.vehicle.service.VehicleOrderBulkUploadService;
 import com.jdend.erp.vehicle.service.VehicleOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +21,7 @@ import java.util.List;
 public class VehicleOrderController {
 
     private final VehicleOrderService service;
+    private final VehicleOrderBulkUploadService bulkUploadService;
 
     // 목록/검색
     @GetMapping
@@ -59,5 +66,18 @@ public class VehicleOrderController {
     @GetMapping("/by-vehicle-no/{vehicleNo}")
     public VehicleLookupResponse lookupByVehicleNo(@PathVariable String vehicleNo) {
         return service.lookupByVehicleNo(vehicleNo);
+    }
+
+    @GetMapping("/bulk-upload/template")
+    public ResponseEntity<byte[]> bulkUploadTemplate() {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vehicle_order_template.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(bulkUploadService.template());
+    }
+
+    @PostMapping("/bulk-upload")
+    public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
+        return bulkUploadService.upload(file);
     }
 }

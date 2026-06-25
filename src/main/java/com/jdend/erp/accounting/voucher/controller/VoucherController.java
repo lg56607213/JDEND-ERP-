@@ -1,9 +1,15 @@
 package com.jdend.erp.accounting.voucher.controller;
 
 import com.jdend.erp.accounting.voucher.dto.*;
+import com.jdend.erp.accounting.voucher.service.VoucherBulkUploadService;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
+import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +21,7 @@ import java.util.List;
 public class VoucherController {
 
     private final VoucherService voucherService;
+    private final VoucherBulkUploadService bulkUploadService;
 
     /** GET /api/vouchers/next-no?date=2026-03-02 */
     @GetMapping("/next-no")
@@ -55,5 +62,18 @@ public class VoucherController {
     public BulkResultResponse delete(@RequestBody IdListRequest req) {
         int affected = voucherService.deleteByIds(req.getIds());
         return BulkResultResponse.builder().affected(affected).build();
+    }
+
+    @GetMapping("/bulk-upload/template")
+    public ResponseEntity<byte[]> bulkUploadTemplate() {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=voucher_template.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(bulkUploadService.template());
+    }
+
+    @PostMapping("/bulk-upload")
+    public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
+        return bulkUploadService.upload(file);
     }
 }

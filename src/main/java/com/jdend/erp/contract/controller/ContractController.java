@@ -1,9 +1,15 @@
 package com.jdend.erp.contract.controller;
 
+import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import com.jdend.erp.contract.dto.*;
+import com.jdend.erp.contract.service.ContractBulkUploadService;
 import com.jdend.erp.contract.service.ContractService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,6 +20,7 @@ import java.util.List;
 public class ContractController {
 
   private final ContractService service;
+  private final ContractBulkUploadService bulkUploadService;
 
   @GetMapping
   public List<ContractResponse> list() {
@@ -60,5 +67,18 @@ public class ContractController {
   @DeleteMapping("/{id:\\d+}")
   public void delete(@PathVariable Long id) {
     service.delete(id);
+  }
+
+  @GetMapping("/bulk-upload/template")
+  public ResponseEntity<byte[]> bulkUploadTemplate() {
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_template.xlsx")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .body(bulkUploadService.template());
+  }
+
+  @PostMapping("/bulk-upload")
+  public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
+    return bulkUploadService.upload(file);
   }
 }

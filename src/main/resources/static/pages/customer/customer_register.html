@@ -20,9 +20,12 @@
     <div class="erp-card" id="customerListSection">
       <div class="card-header">
         <h2>고객 목록</h2>
-        <button type="button" class="btn btn-primary" id="addCustomerBtn">
-          <span>+ 고객 추가</span>
-        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+          <button type="button" class="btn btn-primary" id="addCustomerBtn">
+            <span>+ 고객 추가</span>
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <!-- 필터 섹션 -->
@@ -203,6 +206,17 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/excel-upload.js"></script>
+  <script>
+    document.getElementById('excelUploadBtn').addEventListener('click', () => {
+      openExcelUploadModal({
+        title: '고객 엑셀 업로드',
+        templateUrl: '/api/customers/bulk-upload/template',
+        uploadUrl: '/api/customers/bulk-upload',
+        onSuccess: () => loadCustomers(),
+      });
+    });
+  </script>
 
   <script>
     const API_BASE = `${API_BASE_URL}/api`;

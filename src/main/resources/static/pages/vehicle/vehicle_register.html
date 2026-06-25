@@ -11,9 +11,12 @@
 <body>
   <div id="sidebar-container"></div>
   <div class="content-wrapper">
-    <div class="page-header">
-      <h1>등록</h1>
-      <p>차량등록 &gt; 차량현황 &gt; 등록</p>
+    <div class="page-header" style="display:flex; align-items:flex-end; justify-content:space-between;">
+      <div>
+        <h1>등록</h1>
+        <p>차량등록 &gt; 차량현황 &gt; 등록</p>
+      </div>
+      <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
     </div>
 
     <div class="erp-card">
@@ -182,6 +185,16 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/excel-upload.js"></script>
+  <script>
+    document.getElementById('excelUploadBtn').addEventListener('click', () => {
+      openExcelUploadModal({
+        title: '차량 엑셀 업로드',
+        templateUrl: '/api/vehicle-orders/bulk-upload/template',
+        uploadUrl: '/api/vehicle-orders/bulk-upload',
+      });
+    });
+  </script>
 
   <script>
     const API_BASE = '';
