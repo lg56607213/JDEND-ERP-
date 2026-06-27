@@ -103,7 +103,10 @@
       <input type="password" id="userPassword">
     </div>
 
-    <div class="hint">운영자(JDEND ERP) 계정은 사용자 아이디/비밀번호를 비워두고 로그인하세요.</div>
+    <div class="hint">
+      운영자(JDEND ERP) 또는 회사 첫 가입 시 받은 통합 계정으로 로그인할 때는 사용자 아이디/비밀번호를 비워두세요.
+      회사에서 따로 만든 책임자/실무자 계정이라면 4칸을 모두 입력하세요.
+    </div>
 
     <button type="submit" id="loginBtn">로그인</button>
     <div class="msg" id="msg"></div>
@@ -142,6 +145,8 @@
 
       if (data.role === 'ADMIN') {
         location.href = '/admin_users.html';
+      } else if (data.role === 'COMPANY_ADMIN') {
+        location.href = '/pages/management/company_users.html';
       } else {
         location.href = '/index.html';
       }

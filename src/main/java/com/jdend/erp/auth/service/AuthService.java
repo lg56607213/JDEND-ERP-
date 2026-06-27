@@ -60,17 +60,28 @@ public class AuthService {
           .build();
     }
 
-    if (isBlank(req.getUserLoginId())) throw new IllegalArgumentException("사용자 아이디를 입력해주세요.");
-    if (isBlank(req.getUserPassword())) throw new IllegalArgumentException("사용자 비밀번호를 입력해주세요.");
+    CompanyUser user;
 
-    CompanyUser user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), req.getUserLoginId().trim())
-        .orElseThrow(() -> new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다."));
+    if (isBlank(req.getUserLoginId()) && isBlank(req.getUserPassword())) {
+      // 사용자 아이디/비밀번호를 비워두면 통합 계정과 같은 아이디/비밀번호로 자동 생성된
+      // 그 회사의 첫 사용자(회사관리자)로 바로 로그인한다(운영자 로그인과 동일한 편의).
+      user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), company.getLoginId())
+          .filter(u -> u.getUserPassword().equals(company.getLoginPassword()))
+          .orElseThrow(() -> new IllegalArgumentException("사용자 아이디를 입력해주세요."));
+    } else {
+      if (isBlank(req.getUserLoginId())) throw new IllegalArgumentException("사용자 아이디를 입력해주세요.");
+      if (isBlank(req.getUserPassword())) throw new IllegalArgumentException("사용자 비밀번호를 입력해주세요.");
+
+      user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), req.getUserLoginId().trim())
+          .orElseThrow(() -> new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다."));
+
+      if (!user.getUserPassword().equals(req.getUserPassword().trim())) {
+        throw new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
+    }
 
     if (!Boolean.TRUE.equals(user.getIsActive())) {
       throw new IllegalArgumentException("비활성화된 사용자입니다.");
-    }
-    if (!user.getUserPassword().equals(req.getUserPassword().trim())) {
-      throw new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다.");
     }
 
     String role = normalizeUserRole(user.getRole());
