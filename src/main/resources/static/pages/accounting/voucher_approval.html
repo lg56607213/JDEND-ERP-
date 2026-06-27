@@ -84,8 +84,8 @@
             <span class="selected-count" id="selectedCount">0건 선택</span>
           </div>
           <div class="action-buttons">
-            <button type="button" class="btn btn-approve" onclick="approveSelected()">승인</button>
-            <button type="button" class="btn btn-delete" onclick="deleteSelected()">삭제</button>
+            <button type="button" class="btn btn-approve" id="approveBtn" onclick="approveSelected()">승인</button>
+            <button type="button" class="btn btn-delete" id="deleteBtn" onclick="deleteSelected()">삭제</button>
           </div>
         </div>
 
@@ -116,6 +116,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/role.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
 
@@ -150,6 +151,8 @@
     window.addEventListener("load", async () => {
       $("searchStartDate").value = ymdMonthStart();
       $("searchEndDate").value = ymdToday();
+
+      disableForStaff([$("approveBtn"), $("deleteBtn")], "책임자만 전표를 승인/삭제할 수 있습니다.");
 
       $("voucherTableBody").addEventListener("change", (e) => {
         if(e.target && e.target.classList.contains("voucher-checkbox")){

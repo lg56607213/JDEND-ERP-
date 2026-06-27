@@ -3,7 +3,9 @@ package com.jdend.erp.accounting.voucher.controller;
 import com.jdend.erp.accounting.voucher.dto.*;
 import com.jdend.erp.accounting.voucher.service.VoucherBulkUploadService;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ public class VoucherController {
 
     private final VoucherService voucherService;
     private final VoucherBulkUploadService bulkUploadService;
+    private final PermissionService permissionService;
 
     /** GET /api/vouchers/next-no?date=2026-03-02 */
     @GetMapping("/next-no")
@@ -52,14 +55,16 @@ public class VoucherController {
 
     // POST /api/vouchers/approve  { "ids":[1,2,3] }
     @PostMapping("/approve")
-    public BulkResultResponse approve(@RequestBody IdListRequest req) {
+    public BulkResultResponse approve(@RequestBody IdListRequest req, HttpSession session) {
+        permissionService.requireManager(session);
         int affected = voucherService.approveByIds(req.getIds());
         return BulkResultResponse.builder().affected(affected).build();
     }
 
     // POST /api/vouchers/delete  { "ids":[1,2,3] }
     @PostMapping("/delete")
-    public BulkResultResponse delete(@RequestBody IdListRequest req) {
+    public BulkResultResponse delete(@RequestBody IdListRequest req, HttpSession session) {
+        permissionService.requireManager(session);
         int affected = voucherService.deleteByIds(req.getIds());
         return BulkResultResponse.builder().affected(affected).build();
     }

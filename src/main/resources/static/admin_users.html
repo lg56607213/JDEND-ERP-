@@ -22,6 +22,7 @@
     th { background:#f8fafc; }
     .badge { padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; }
     .admin { background:#fee2e2; color:#991b1b; }
+    .manager { background:#fef3c7; color:#92400e; }
     .user { background:#dbeafe; color:#1e40af; }
     .hint { font-size:12px; color:#64748b; margin-top:4px; }
   </style>
@@ -60,8 +61,9 @@
       <div class="form-group">
         <label>권한</label>
         <select id="role">
-          <option value="USER">USER</option>
-          <option value="ADMIN">ADMIN</option>
+          <option value="STAFF">실무자(등록만)</option>
+          <option value="MANAGER">책임자(등록/수정/삭제/승인)</option>
+          <option value="ADMIN">ADMIN(운영사)</option>
         </select>
       </div>
 
@@ -200,7 +202,7 @@
     document.getElementById('loginPassword').value = '';
     document.getElementById('companyName').value = u.companyName;
     document.getElementById('targetDb').value = u.targetDb;
-    document.getElementById('role').value = u.role === 'ADMIN' ? 'ADMIN' : 'USER';
+    document.getElementById('role').value = ['ADMIN', 'MANAGER', 'STAFF'].includes(u.role) ? u.role : 'STAFF';
     document.getElementById('isActive').value = String(u.isActive);
   }
 
@@ -229,7 +231,7 @@
     document.getElementById('loginPassword').value = '';
     document.getElementById('companyName').value = '';
     document.getElementById('targetDb').value = '';
-    document.getElementById('role').value = 'USER';
+    document.getElementById('role').value = 'STAFF';
     document.getElementById('isActive').value = 'true';
   }
 
@@ -242,9 +244,10 @@
   }
 
   function roleBadge(role) {
-    const r = role === 'ADMIN' ? 'ADMIN' : 'USER';
-    const cls = r === 'ADMIN' ? 'admin' : 'user';
-    return `<span class="badge ${cls}">${r}</span>`;
+    const labels = { ADMIN: 'ADMIN', MANAGER: '책임자', STAFF: '실무자' };
+    const classes = { ADMIN: 'admin', MANAGER: 'manager', STAFF: 'user' };
+    const r = ['ADMIN', 'MANAGER', 'STAFF'].includes(role) ? role : 'STAFF';
+    return `<span class="badge ${classes[r]}">${labels[r]}</span>`;
   }
 
   function esc(s) {

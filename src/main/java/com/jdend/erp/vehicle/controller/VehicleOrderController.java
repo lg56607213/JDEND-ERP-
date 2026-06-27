@@ -1,9 +1,11 @@
 package com.jdend.erp.vehicle.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.service.VehicleOrderBulkUploadService;
 import com.jdend.erp.vehicle.service.VehicleOrderService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ public class VehicleOrderController {
 
     private final VehicleOrderService service;
     private final VehicleOrderBulkUploadService bulkUploadService;
+    private final PermissionService permissionService;
 
     // 목록/검색
     @GetMapping
@@ -49,7 +52,8 @@ public class VehicleOrderController {
 
     // 수정
     @PutMapping("/{mgmtNo}")
-    public VehicleOrderResponse update(@PathVariable String mgmtNo, @RequestBody VehicleOrderRequest req) {
+    public VehicleOrderResponse update(@PathVariable String mgmtNo, @RequestBody VehicleOrderRequest req, HttpSession session) {
+        permissionService.requireManager(session);
         return service.update(mgmtNo, req);
     }
 

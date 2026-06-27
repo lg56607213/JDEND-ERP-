@@ -435,6 +435,7 @@
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
   <script src="../../assets/js/excel-upload.js"></script>
+  <script src="../../assets/js/role.js"></script>
   <script>
     document.getElementById('excelUploadBtn').addEventListener('click', () => {
       openExcelUploadModal({
@@ -558,6 +559,8 @@
           }
         });
       });
+
+      disableForStaff(tbody.querySelectorAll('.btn-edit, .btn-delete'), '책임자만 계약을 수정/삭제할 수 있습니다.');
 
       tbody.querySelectorAll('.btn-print').forEach(btn => {
         btn.addEventListener('click', (e) => {

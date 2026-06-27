@@ -1,9 +1,11 @@
 package com.jdend.erp.contract.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import com.jdend.erp.contract.dto.*;
 import com.jdend.erp.contract.service.ContractBulkUploadService;
 import com.jdend.erp.contract.service.ContractService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ public class ContractController {
 
   private final ContractService service;
   private final ContractBulkUploadService bulkUploadService;
+  private final PermissionService permissionService;
 
   @GetMapping
   public List<ContractResponse> list() {
@@ -60,12 +63,14 @@ public class ContractController {
   }
 
   @PutMapping("/{id:\\d+}")
-  public ContractResponse update(@PathVariable Long id, @RequestBody ContractRequest req) {
+  public ContractResponse update(@PathVariable Long id, @RequestBody ContractRequest req, HttpSession session) {
+    permissionService.requireManager(session);
     return service.update(id, req);
   }
 
   @DeleteMapping("/{id:\\d+}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 

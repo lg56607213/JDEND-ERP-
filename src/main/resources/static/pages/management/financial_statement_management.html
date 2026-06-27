@@ -387,6 +387,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/role.js"></script>
 
 <script>
   function buildUrl(path) {
@@ -512,6 +513,7 @@
         return;
       }
       body.innerHTML = roots.map(r => renderNode(r, 0)).join("");
+      disableForStaff(body.querySelectorAll(".btn-mini.danger"), "책임자만 계정을 삭제할 수 있습니다.");
     } catch (e) {
       console.error(e);
       alert("계정 트리 조회 실패: " + e.message);

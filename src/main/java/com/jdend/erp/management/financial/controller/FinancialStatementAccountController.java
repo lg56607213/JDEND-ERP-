@@ -1,10 +1,12 @@
 package com.jdend.erp.management.financial.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.management.financial.dto.FinancialStatementAccountRequest;
 import com.jdend.erp.management.financial.dto.FinancialStatementAccountResponse;
 import com.jdend.erp.management.financial.dto.FinancialStatementAccountTreeResponse;
 import com.jdend.erp.management.financial.dto.FinancialStatementVoucherRowResponse;
 import com.jdend.erp.management.financial.service.FinancialStatementAccountService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,7 @@ import java.util.List;
 public class FinancialStatementAccountController {
 
   private final FinancialStatementAccountService service;
+  private final PermissionService permissionService;
 
   @GetMapping
   public List<FinancialStatementAccountResponse> list(@RequestParam String statementType) {
@@ -32,13 +35,16 @@ public class FinancialStatementAccountController {
   @PutMapping("/{id}")
   public FinancialStatementAccountResponse update(
       @PathVariable Long id,
-      @RequestBody FinancialStatementAccountRequest req
+      @RequestBody FinancialStatementAccountRequest req,
+      HttpSession session
   ) {
+    permissionService.requireManager(session);
     return service.update(id, req);
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 

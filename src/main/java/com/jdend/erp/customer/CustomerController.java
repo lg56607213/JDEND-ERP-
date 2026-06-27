@@ -1,6 +1,8 @@
 package com.jdend.erp.customer;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +19,12 @@ public class CustomerController {
 
     private final CustomerRepository repo;
     private final CustomerBulkUploadService bulkUploadService;
+    private final PermissionService permissionService;
 
-    public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService) {
+    public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService, PermissionService permissionService) {
         this.repo = repo;
         this.bulkUploadService = bulkUploadService;
+        this.permissionService = permissionService;
     }
 
     @GetMapping
@@ -67,7 +71,8 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer req) {
+    public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer req, HttpSession session) {
+        permissionService.requireManager(session);
         return repo.findById(id).map(c -> {
             // customerNumber는 수정 못하게 유지(원하면 req로 받게 바꿀 수 있음)
             // c.setCustomerNumber(req.getCustomerNumber());
@@ -91,7 +96,8 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id, HttpSession session) {
+        permissionService.requireManager(session);
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
         repo.deleteById(id);
         return ResponseEntity.noContent().build();

@@ -200,14 +200,17 @@ public class AuthService {
         .build();
   }
 
+  // ADMIN(운영사) / MANAGER(책임자: 등록+수정+삭제+승인) / STAFF(실무자: 등록만).
+  // 인식 못하는 값(과거 "USER" 포함)은 안전한 기본값인 STAFF로 취급한다.
   private String normalizeRole(String role) {
-    if (role == null || role.isBlank()) return "USER";
+    if (role == null || role.isBlank()) return "STAFF";
 
     String r = role.trim().toUpperCase();
 
     if ("ADMIN".equals(r)) return "ADMIN";
+    if ("MANAGER".equals(r)) return "MANAGER";
 
-    return "USER";
+    return "STAFF";
   }
 
   private boolean isBlank(String s) {
