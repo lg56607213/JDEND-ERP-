@@ -1,7 +1,9 @@
 package com.jdend.erp.auth.service;
 
 import com.jdend.erp.auth.dto.*;
+import com.jdend.erp.auth.entity.CompanyUser;
 import com.jdend.erp.auth.entity.LoginUser;
+import com.jdend.erp.auth.repository.CompanyUserRepository;
 import com.jdend.erp.auth.repository.LoginUserRepository;
 import com.jdend.erp.config.TenantDatabaseService;
 import jakarta.servlet.http.HttpSession;
@@ -19,43 +21,72 @@ public class AuthService {
   public static final String SESSION_COMPANY_NAME = "COMPANY_NAME";
   public static final String SESSION_TARGET_DB = "TARGET_DB";
   public static final String SESSION_ROLE = "ROLE";
+  public static final String SESSION_COMPANY_ID = "COMPANY_ID";
 
   private final LoginUserRepository loginUserRepository;
+  private final CompanyUserRepository companyUserRepository;
   private final TenantDatabaseService tenantDatabaseService;
 
+  // 2단계 로그인: ① 통합 아이디/비밀번호로 회사(또는 운영자) 확인 ② 회사면 사용자 아이디/비밀번호까지 확인.
   @Transactional
   public LoginResponse login(LoginRequest req, HttpSession session) {
     if (req == null) throw new IllegalArgumentException("로그인 요청값이 없습니다.");
-    if (isBlank(req.getLoginId())) throw new IllegalArgumentException("아이디를 입력해주세요.");
-    if (isBlank(req.getLoginPassword())) throw new IllegalArgumentException("비밀번호를 입력해주세요.");
+    if (isBlank(req.getCompanyLoginId())) throw new IllegalArgumentException("통합 아이디를 입력해주세요.");
+    if (isBlank(req.getCompanyPassword())) throw new IllegalArgumentException("통합 비밀번호를 입력해주세요.");
 
-    LoginUser user = loginUserRepository.findByLoginId(req.getLoginId().trim())
-        .orElseThrow(() -> new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다."));
+    LoginUser company = loginUserRepository.findByLoginId(req.getCompanyLoginId().trim())
+        .orElseThrow(() -> new IllegalArgumentException("통합 아이디 또는 비밀번호가 올바르지 않습니다."));
 
-    if (!Boolean.TRUE.equals(user.getIsActive())) {
+    if (!Boolean.TRUE.equals(company.getIsActive())) {
       throw new IllegalArgumentException("비활성화된 계정입니다.");
     }
-
-    if (!user.getLoginPassword().equals(req.getLoginPassword().trim())) {
-      throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
+    if (!company.getLoginPassword().equals(req.getCompanyPassword().trim())) {
+      throw new IllegalArgumentException("통합 아이디 또는 비밀번호가 올바르지 않습니다.");
     }
 
-    String role = normalizeRole(user.getRole());
-    String targetDb = user.getTargetDb();
+    if ("PLATFORM_ADMIN".equals(company.getRole())) {
+      session.setAttribute(SESSION_LOGIN_ID, company.getLoginId());
+      session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
+      session.setAttribute(SESSION_TARGET_DB, "auth");
+      session.setAttribute(SESSION_ROLE, "ADMIN");
+      session.removeAttribute(SESSION_COMPANY_ID);
 
-    if (!"ADMIN".equals(role)) {
-      tenantDatabaseService.ensureTenantDatabase(targetDb);
+      return LoginResponse.builder()
+          .success(true)
+          .loginId(company.getLoginId())
+          .companyName(company.getCompanyName())
+          .role("ADMIN")
+          .message("로그인 성공")
+          .build();
     }
 
-    session.setAttribute(SESSION_LOGIN_ID, user.getLoginId());
-    session.setAttribute(SESSION_COMPANY_NAME, user.getCompanyName());
+    if (isBlank(req.getUserLoginId())) throw new IllegalArgumentException("사용자 아이디를 입력해주세요.");
+    if (isBlank(req.getUserPassword())) throw new IllegalArgumentException("사용자 비밀번호를 입력해주세요.");
+
+    CompanyUser user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), req.getUserLoginId().trim())
+        .orElseThrow(() -> new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다."));
+
+    if (!Boolean.TRUE.equals(user.getIsActive())) {
+      throw new IllegalArgumentException("비활성화된 사용자입니다.");
+    }
+    if (!user.getUserPassword().equals(req.getUserPassword().trim())) {
+      throw new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다.");
+    }
+
+    String role = normalizeUserRole(user.getRole());
+    String targetDb = company.getTargetDb();
+    tenantDatabaseService.ensureTenantDatabase(targetDb);
+
+    session.setAttribute(SESSION_LOGIN_ID, user.getUserLoginId());
+    session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
     session.setAttribute(SESSION_TARGET_DB, targetDb);
     session.setAttribute(SESSION_ROLE, role);
+    session.setAttribute(SESSION_COMPANY_ID, company.getId());
 
     return LoginResponse.builder()
         .success(true)
-        .loginId(user.getLoginId())
-        .companyName(user.getCompanyName())
+        .loginId(user.getUserLoginId())
+        .companyName(company.getCompanyName())
         .role(role)
         .message("로그인 성공")
         .build();
@@ -86,6 +117,9 @@ public class AuthService {
     session.invalidate();
   }
 
+  // ==========================
+  // 운영자 전용: 회사(통합 계정) CRUD
+  // ==========================
   @Transactional(readOnly = true)
   public List<LoginUserAdminResponse> adminList(String kw, HttpSession session) {
     requireAdmin(session);
@@ -102,11 +136,12 @@ public class AuthService {
     requireAdmin(session);
 
     if (req == null) throw new RuntimeException("요청값이 없습니다.");
-    if (isBlank(req.getLoginId())) throw new RuntimeException("아이디를 입력해주세요.");
-    if (isBlank(req.getLoginPassword())) throw new RuntimeException("비밀번호를 입력해주세요.");
+    if (isBlank(req.getLoginId())) throw new RuntimeException("통합 아이디를 입력해주세요.");
+    if (isBlank(req.getLoginPassword())) throw new RuntimeException("통합 비밀번호를 입력해주세요.");
     if (isBlank(req.getCompanyName())) throw new RuntimeException("회사명을 입력해주세요.");
 
     String loginId = req.getLoginId().trim();
+    String loginPassword = req.getLoginPassword().trim();
 
     if (loginUserRepository.existsByLoginId(loginId)) {
       throw new RuntimeException("이미 존재하는 아이디입니다.");
@@ -120,11 +155,23 @@ public class AuthService {
     LoginUser saved = loginUserRepository.save(
         LoginUser.builder()
             .loginId(loginId)
-            .loginPassword(req.getLoginPassword().trim())
+            .loginPassword(loginPassword)
             .companyName(companyName)
             .targetDb(targetDb)
-            .role(normalizeRole(req.getRole()))
+            .role("COMPANY")
             .isActive(req.getIsActive() == null ? true : req.getIsActive())
+            .build()
+    );
+
+    // 통합 계정과 같은 아이디/비밀번호로 그 회사의 첫 사용자(회사관리자)를 자동 생성해
+    // 운영자가 추가 작업 없이 바로 첫 로그인을 회사에 넘겨줄 수 있게 한다.
+    companyUserRepository.save(
+        CompanyUser.builder()
+            .companyId(saved.getId())
+            .userLoginId(loginId)
+            .userPassword(loginPassword)
+            .role("COMPANY_ADMIN")
+            .isActive(true)
             .build()
     );
 
@@ -154,10 +201,6 @@ public class AuthService {
       user.setTargetDb(targetDb);
     }
 
-    if (!isBlank(req.getRole())) {
-      user.setRole(normalizeRole(req.getRole()));
-    }
-
     if (req.getIsActive() != null) {
       user.setIsActive(req.getIsActive());
     }
@@ -178,10 +221,11 @@ public class AuthService {
       throw new RuntimeException("현재 로그인한 운영자 계정은 삭제할 수 없습니다.");
     }
 
+    companyUserRepository.findByCompanyIdOrderByIdAsc(user.getId()).forEach(companyUserRepository::delete);
     loginUserRepository.delete(user);
   }
 
-  private void requireAdmin(HttpSession session) {
+  public void requireAdmin(HttpSession session) {
     String role = (String) session.getAttribute(SESSION_ROLE);
 
     if (!"ADMIN".equals(role)) {
@@ -195,19 +239,19 @@ public class AuthService {
         .loginId(u.getLoginId())
         .companyName(u.getCompanyName())
         .targetDb(u.getTargetDb())
-        .role(normalizeRole(u.getRole()))
+        .role(u.getRole())
         .isActive(u.getIsActive())
         .build();
   }
 
-  // ADMIN(운영사) / MANAGER(책임자: 등록+수정+삭제+승인) / STAFF(실무자: 등록만).
-  // 인식 못하는 값(과거 "USER" 포함)은 안전한 기본값인 STAFF로 취급한다.
-  private String normalizeRole(String role) {
+  // 회사 내부 사용자 역할: COMPANY_ADMIN(회사관리자) / MANAGER(책임자) / STAFF(실무자).
+  // 인식 못하는 값은 안전한 기본값인 STAFF로 취급한다.
+  private String normalizeUserRole(String role) {
     if (role == null || role.isBlank()) return "STAFF";
 
     String r = role.trim().toUpperCase();
 
-    if ("ADMIN".equals(r)) return "ADMIN";
+    if ("COMPANY_ADMIN".equals(r)) return "COMPANY_ADMIN";
     if ("MANAGER".equals(r)) return "MANAGER";
 
     return "STAFF";

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>운영자 계정관리 | JDEND ERP</title>
+  <title>회사 계정관리 | JDEND ERP</title>
   <link rel="stylesheet" href="assets/css/sidebar.css">
   <link rel="stylesheet" href="assets/css/pages.css">
   <style>
@@ -29,21 +29,25 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>운영자 계정관리</h1>
+  <h1>회사 계정관리</h1>
+  <p style="color:#64748b; font-size:13px; margin-top:-8px;">
+    회사마다 통합 아이디/비밀번호를 1개씩 발급합니다. 회사 내부 직원 계정(사용자 아이디/비밀번호, 권한)은
+    그 회사가 통합 계정으로 로그인한 뒤 "사용자관리" 화면에서 직접 만들고 관리합니다.
+  </p>
 
   <div class="card">
-    <h3>계정 등록 / 수정</h3>
+    <h3>회사 등록 / 수정</h3>
 
     <input type="hidden" id="editId">
 
     <div class="form-grid">
       <div class="form-group">
-        <label>아이디</label>
+        <label>통합 아이디</label>
         <input type="text" id="loginId">
       </div>
 
       <div class="form-group">
-        <label>비밀번호</label>
+        <label>통합 비밀번호</label>
         <input type="password" id="loginPassword">
       </div>
 
@@ -56,15 +60,6 @@
         <label>회사코드</label>
         <input type="text" id="targetDb" placeholder="예: test">
         <div class="hint">저장 시 erp_company_회사코드 DB가 자동 생성됩니다.</div>
-      </div>
-
-      <div class="form-group">
-        <label>권한</label>
-        <select id="role">
-          <option value="STAFF">실무자(등록만)</option>
-          <option value="MANAGER">책임자(등록/수정/삭제/승인)</option>
-          <option value="ADMIN">ADMIN(운영사)</option>
-        </select>
       </div>
 
       <div class="form-group">
@@ -82,9 +77,9 @@
       <button class="btn-gray" onclick="logout()">로그아웃</button>
     </div>
 
-    <h3>계정 목록</h3>
+    <h3>회사 목록</h3>
     <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <input type="text" id="kw" placeholder="아이디/회사명/권한 검색" style="flex:1;">
+      <input type="text" id="kw" placeholder="아이디/회사명 검색" style="flex:1;">
       <button class="btn-primary" onclick="loadUsers()">조회</button>
     </div>
 
@@ -92,10 +87,9 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>아이디</th>
+          <th>통합 아이디</th>
           <th>회사명</th>
           <th>전용 DB</th>
-          <th>권한</th>
           <th>상태</th>
           <th>관리</th>
         </tr>
@@ -137,7 +131,7 @@
     const tbody = document.getElementById('userBody');
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">계정이 없습니다.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">회사가 없습니다.</td></tr>`;
       return;
     }
 
@@ -147,7 +141,6 @@
         <td>${esc(u.loginId)}</td>
         <td>${esc(u.companyName)}</td>
         <td>${esc(u.targetDb)}</td>
-        <td>${roleBadge(u.role)}</td>
         <td>${u.isActive ? '활성' : '비활성'}</td>
         <td>
           <button class="btn-gray" onclick='editUser(${JSON.stringify(u)})'>수정</button>
@@ -165,7 +158,6 @@
       loginPassword: document.getElementById('loginPassword').value.trim(),
       companyName: document.getElementById('companyName').value.trim(),
       targetDb: document.getElementById('targetDb').value.trim(),
-      role: document.getElementById('role').value,
       isActive: document.getElementById('isActive').value === 'true'
     };
 
@@ -202,7 +194,6 @@
     document.getElementById('loginPassword').value = '';
     document.getElementById('companyName').value = u.companyName;
     document.getElementById('targetDb').value = u.targetDb;
-    document.getElementById('role').value = ['ADMIN', 'MANAGER', 'STAFF'].includes(u.role) ? u.role : 'STAFF';
     document.getElementById('isActive').value = String(u.isActive);
   }
 
@@ -231,7 +222,6 @@
     document.getElementById('loginPassword').value = '';
     document.getElementById('companyName').value = '';
     document.getElementById('targetDb').value = '';
-    document.getElementById('role').value = 'STAFF';
     document.getElementById('isActive').value = 'true';
   }
 
@@ -241,13 +231,6 @@
       credentials:'include'
     });
     location.href = '/login.html';
-  }
-
-  function roleBadge(role) {
-    const labels = { ADMIN: 'ADMIN', MANAGER: '책임자', STAFF: '실무자' };
-    const classes = { ADMIN: 'admin', MANAGER: 'manager', STAFF: 'user' };
-    const r = ['ADMIN', 'MANAGER', 'STAFF'].includes(role) ? role : 'STAFF';
-    return `<span class="badge ${classes[r]}">${labels[r]}</span>`;
   }
 
   function esc(s) {

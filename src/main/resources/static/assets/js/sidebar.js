@@ -197,6 +197,9 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/accounting/account_management.html">기타계정관리</a></li>
                 </ul>
               </li>
+              <li id="companyUsersMenuItem" style="display:none;">
+                <a href="${basePath}pages/management/company_users.html">사용자관리</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -204,6 +207,20 @@ function loadSidebar() {
     </aside>
   `;
   document.getElementById('sidebar-container').innerHTML = sidebarHTML + '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
+
+  // 회사관리자(또는 운영자)일 때만 "사용자관리" 메뉴 노출. 페이지별로 role.js를 따로 안 넣어도
+  // 항상 동작하게 sidebar.js 자체에서 직접 /api/auth/me를 조회한다.
+  (function () {
+    const base = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? String(API_BASE_URL).replace(/\/+$/, '') : '';
+    fetch(base + '/api/auth/me', { credentials: 'include' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        const role = data && data.success ? data.role : null;
+        const item = document.getElementById('companyUsersMenuItem');
+        if (item && (role === 'ADMIN' || role === 'COMPANY_ADMIN')) item.style.display = '';
+      })
+      .catch(function (e) { console.error('권한 조회 실패', e); });
+  })();
 
   // 서브메뉴 접기/펼치기 (아코디언 방식)
   document.querySelectorAll('.sidebar .has-sub > .menu-label').forEach(function(label) {

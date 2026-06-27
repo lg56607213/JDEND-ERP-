@@ -14,8 +14,17 @@ public class PermissionService {
   public void requireManager(HttpSession session) {
     String role = session == null ? null : (String) session.getAttribute(AuthService.SESSION_ROLE);
 
-    if (!"ADMIN".equals(role) && !"MANAGER".equals(role)) {
+    if (!"ADMIN".equals(role) && !"COMPANY_ADMIN".equals(role) && !"MANAGER".equals(role)) {
       throw new RuntimeException("책임자 권한이 필요합니다. 등록만 가능한 계정입니다.");
+    }
+  }
+
+  // 회사 자체의 사용자관리(사용자 등록/수정/삭제) 화면 보호용 — 운영자 또는 그 회사의 회사관리자만 통과.
+  public void requireCompanyAdmin(HttpSession session) {
+    String role = session == null ? null : (String) session.getAttribute(AuthService.SESSION_ROLE);
+
+    if (!"ADMIN".equals(role) && !"COMPANY_ADMIN".equals(role)) {
+      throw new RuntimeException("회사관리자 권한이 필요합니다.");
     }
   }
 }

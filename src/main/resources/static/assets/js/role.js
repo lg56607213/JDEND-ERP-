@@ -27,7 +27,13 @@
 
   window.isManager = async function () {
     const role = await window.getCurrentRole();
-    return role === "ADMIN" || role === "MANAGER";
+    return role === "ADMIN" || role === "COMPANY_ADMIN" || role === "MANAGER";
+  };
+
+  // 회사관리자(또는 운영자) 여부 — "사용자관리" 화면/메뉴 노출 판단용.
+  window.isCompanyAdmin = async function () {
+    const role = await window.getCurrentRole();
+    return role === "ADMIN" || role === "COMPANY_ADMIN";
   };
 
   // 실무자(STAFF)일 때 지정한 엘리먼트들을 비활성화 처리(숨기지 않고 disabled + 안내).

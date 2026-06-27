@@ -78,7 +78,7 @@ public class TenantDatabaseService {
         );
 
         for (String table : tables) {
-            if ("login_users".equalsIgnoreCase(table)) {
+            if ("login_users".equalsIgnoreCase(table) || "company_users".equalsIgnoreCase(table)) {
                 continue;
             }
 

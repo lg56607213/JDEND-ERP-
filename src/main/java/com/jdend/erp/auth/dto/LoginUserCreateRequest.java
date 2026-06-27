@@ -12,6 +12,5 @@ public class LoginUserCreateRequest {
   private String loginPassword;
   private String companyName;
   private String targetDb;
-  private String role;
   private Boolean isActive;
 }
