@@ -18,9 +18,9 @@ import static com.jdend.erp.common.excel.ExcelRowParsers.*;
 /**
  * 전표 엑셀 일괄 업로드. 한 행에는 계정 1개와 차변/대변 중 한쪽 금액만 들어가므로, 차변 1줄 + 대변
  * 여러 줄(또는 그 반대)처럼 한 전표가 여러 줄로 나뉠 수 있다. "전표번호" 열이 같은 행들을 하나의 전표로
- * 묶으며, 전표번호를 비워두면 그 행은 혼자 묶여 항상 차변/대변 한쪽만 채워진 미균형 그룹이 되어 오류로
- * 보고된다(즉 모든 전표는 전표번호로 최소 2줄 이상을 묶어야 한다). 묶은 그룹 안에서 차변 합계와 대변
- * 합계가 같으면 정상, 다르면 그 그룹 전체를 오류로 보고한다.
+ * 묶고, 전표번호를 비워두면 같은 "전표일자"를 가진 행들끼리 묶인다(일일전표등록처럼 전표번호 없이
+ * 그날짜 거래를 모아 올리는 경우를 위한 기본 동작). 묶은 그룹 안에서 차변 합계와 대변 합계가 같으면
+ * 정상, 다르면 그 그룹 전체를 오류로 보고한다.
  * 계정은 계정명이 아니라 재무제표관리 계정코드로 지정하며, 행마다 코드 → 계정명으로 변환한 뒤
  * 기존 {@link VoucherService#create}를 그대로 재사용한다.
  */
@@ -33,13 +33,14 @@ public class VoucherBulkUploadService {
   );
 
   // 부가세가 섞인 매출 1건이 3줄(차변 1 + 대변 2)로 나뉘는 예시 — 같은 전표번호(G001)로 묶인다.
-  // 단순히 차변/대변이 1:1인 경우도 행이 2개로 나뉘므로 전표번호(G002)는 필수로 채워야 한다.
+  // 전표번호를 비워둔 두 행은 전표일자(2026-06-26)가 같아서 자동으로 한 전표로 묶이는 예시.
   private static final List<List<String>> SAMPLE_ROWS = List.of(
       List.of("G001", "2026-06-25", "R00001001", "12가3456", "100101", "100000", "", "매출대금 입금", ""),
       List.of("G001", "2026-06-25", "R00001001", "12가3456", "400101", "", "90909", "렌트수익", ""),
       List.of("G001", "2026-06-25", "R00001001", "12가3456", "200103", "", "9091", "부가세예수금", ""),
-      List.of("G002", "2026-06-25", "R00001002", "11가1111", "100101", "50000", "", "", ""),
-      List.of("G002", "2026-06-25", "R00001002", "11가1111", "3001", "", "50000", "", "")
+      List.of("", "2026-06-26", "", "", "100101", "100000", "", "", ""),
+      List.of("", "2026-06-26", "", "", "200101", "", "50000", "", "미지급금"),
+      List.of("", "2026-06-26", "", "", "200104", "", "50000", "", "미지급비용(법인카드)")
   );
 
   private final VoucherService voucherService;
@@ -57,13 +58,28 @@ public class VoucherBulkUploadService {
       throw new IllegalArgumentException("엑셀 파일을 읽을 수 없습니다: " + e.getMessage());
     }
 
-    // 행 번호(엑셀 기준, 헤더=1행)를 보존하면서 "전표번호"로 그룹핑.
-    // 전표번호가 비어있으면 그 행 하나만 들어가는 단독 그룹으로 취급(기존 1행=1전표와 동일하게 동작).
+    // "전표번호"가 있으면 그 값으로 그룹핑. 전표번호가 비어있으면 같은 "전표일자"를 가진 행들을
+    // 한 전표로 묶는다(일일전표등록처럼 전표번호 없이 그날짜 거래를 모아 올리는 경우의 기본 동작).
+    // 전표일자 형식이 잘못돼 날짜로도 묶을 수 없으면 그 행 혼자 그룹으로 두어 오류를 그 행에만 보고한다.
     LinkedHashMap<String, List<Integer>> groups = new LinkedHashMap<>();
     for (int i = 0; i < rows.size(); i++) {
       int rowNumber = i + 2;
-      String groupNo = str(rows.get(i), "전표번호");
-      String key = (groupNo != null) ? "G:" + groupNo : "R:" + rowNumber;
+      Map<String, String> row = rows.get(i);
+      String groupNo = str(row, "전표번호");
+
+      String key;
+      if (groupNo != null) {
+        key = "G:" + groupNo;
+      } else {
+        LocalDate rowDate = null;
+        try {
+          rowDate = dateVal(row, "전표일자");
+        } catch (Exception ignored) {
+          // 형식이 잘못된 날짜는 아래에서 단독 그룹으로 처리되어 같은 오류가 그 행에만 보고된다.
+        }
+        key = (rowDate != null) ? "D:" + rowDate : "R:" + rowNumber;
+      }
+
       groups.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
     }
 
