@@ -155,19 +155,27 @@ public class StatementService {
           .build();
     }
 
-    return buildNode(root.get(), byParent, debit, credit);
+    return buildNode(root.get(), byParent, debit, credit, new java.util.HashSet<>());
   }
 
   private StatementNodeResponse buildNode(
       FinancialStatementAccount node,
       Map<Long, List<FinancialStatementAccount>> byParent,
       Map<String, Long> debit,
-      Map<String, Long> credit
+      Map<String, Long> credit,
+      java.util.Set<Long> visiting
   ) {
+    // parentId가 순환을 이루면 무한 재귀로 서버가 죽으므로, 방문 중인 노드를 추적해 끊는다.
+    if (!visiting.add(node.getId())) {
+      throw new IllegalStateException("계정 트리에 순환 참조가 있습니다. id=" + node.getId());
+    }
+
     List<FinancialStatementAccount> childEntities = byParent.getOrDefault(node.getId(), List.of());
     List<StatementNodeResponse> children = childEntities.stream()
-        .map(c -> buildNode(c, byParent, debit, credit))
+        .map(c -> buildNode(c, byParent, debit, credit, visiting))
         .toList();
+
+    visiting.remove(node.getId());
 
     long ownAmount = signedNetAmount(node.getCategory(), node.getAccountName(), debit, credit);
     long childrenSum = children.stream().mapToLong(StatementNodeResponse::getAmount).sum();

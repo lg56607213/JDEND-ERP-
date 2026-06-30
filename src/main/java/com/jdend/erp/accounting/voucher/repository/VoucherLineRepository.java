@@ -37,4 +37,6 @@ public interface VoucherLineRepository extends JpaRepository<VoucherLine, Long> 
       @Param("startDate") LocalDate startDate,
       @Param("endDate") LocalDate endDate
   );
+
+  boolean existsByAccountName(String accountName);
 }

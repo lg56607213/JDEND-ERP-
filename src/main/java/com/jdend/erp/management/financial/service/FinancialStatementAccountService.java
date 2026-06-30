@@ -99,6 +99,17 @@ public class FinancialStatementAccountService {
     if (repo.existsByParentId(id)) {
       throw new IllegalArgumentException("하위 분류가 있는 계정은 삭제할 수 없습니다.");
     }
+
+    FinancialStatementAccount account = repo.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 계정 ID: " + id));
+
+    // 이미 전표에서 사용 중인 계정을 지우면 그 전표들이 존재하지 않는 계정을 참조하게 되어
+    // 재무제표 집계에서 누락된다. 사용 이력이 있으면 삭제 대신 미사용 처리를 안내한다.
+    if (voucherLineRepository.existsByAccountName(account.getAccountName())) {
+      throw new IllegalArgumentException(
+          "이미 전표에서 사용된 계정은 삭제할 수 없습니다. 더 이상 쓰지 않으려면 전기가능을 '미사용'으로 변경해주세요.");
+    }
+
     repo.deleteById(id);
   }
 
@@ -215,18 +226,26 @@ public class FinancialStatementAccountService {
 
     return all.stream()
         .filter(a -> a.getParentId() == null)
-        .map(root -> buildNode(root, byParent))
+        .map(root -> buildNode(root, byParent, new java.util.HashSet<>()))
         .toList();
   }
 
   private FinancialStatementAccountTreeResponse buildNode(
       FinancialStatementAccount node,
-      Map<Long, List<FinancialStatementAccount>> byParent
+      Map<Long, List<FinancialStatementAccount>> byParent,
+      java.util.Set<Long> visiting
   ) {
+    // parentId가 순환을 이루면 무한 재귀로 서버가 죽으므로, 방문 중인 노드를 추적해 끊는다.
+    if (!visiting.add(node.getId())) {
+      throw new IllegalStateException("계정 트리에 순환 참조가 있습니다. id=" + node.getId());
+    }
+
     List<FinancialStatementAccount> childEntities = byParent.getOrDefault(node.getId(), List.of());
     List<FinancialStatementAccountTreeResponse> children = childEntities.stream()
-        .map(c -> buildNode(c, byParent))
+        .map(c -> buildNode(c, byParent, visiting))
         .toList();
+
+    visiting.remove(node.getId());
 
     return FinancialStatementAccountTreeResponse.builder()
         .id(node.getId())
