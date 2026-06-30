@@ -41,8 +41,13 @@ public class PaymentScheduleAutoGeneratorService {
 
     List<PaymentSchedule> batch = new ArrayList<>();
 
+    // 회차마다 원래 계약시작일에서 다시 계산하면(contractStart.plusMonths(i-1)) 말일 시작
+    // 계약에서 윤년/월말 클램핑 때문에 회차 사이에 공백·겹침이 생긴다(예: 1/31 시작 계약의
+    // 2회차가 2/28에 끝나는데 3회차는 클램핑 전 원래 날짜인 3/31부터 시작해버림).
+    // 그래서 각 회차의 시작일을 직전 회차 종료일 다음날로 이어붙여 기간이 끊기지 않게 한다.
+    LocalDate billStart = contractStart;
+
     for (int i = 1; i <= billingCount; i++) {
-      LocalDate billStart = contractStart.plusMonths(i - 1L);
       LocalDate billEnd = billStart.plusMonths(1).minusDays(1);
 
       LocalDate taxDate = withDaySafe(billStart, (taxDay != null && taxDay > 0) ? taxDay : billStart.getDayOfMonth());
@@ -69,6 +74,8 @@ public class PaymentScheduleAutoGeneratorService {
           .build();
 
       batch.add(ps);
+
+      billStart = billEnd.plusDays(1);
     }
 
     scheduleRepo.saveAll(batch);
