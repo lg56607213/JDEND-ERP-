@@ -144,8 +144,8 @@ public class VehicleMaintenanceService {
 
   private String resolveCreditAccount(String paymentMethod) {
     return switch (paymentMethod) {
-      case "미지급금" -> "미지급금(렌트)";
-      case "법인카드" -> "미지급비용(법인카드)";
+      case "미지급금" -> "미지급금";
+      case "법인카드" -> "미지급비용";
       case "보통예금" -> "보통예금";
       default -> throw new IllegalArgumentException("대변 계정 매핑 불가: " + paymentMethod);
     };

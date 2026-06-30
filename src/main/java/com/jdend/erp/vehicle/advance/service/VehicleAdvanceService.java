@@ -196,8 +196,8 @@ public class VehicleAdvanceService {
     }
 
     return switch (paymentMethod) {
-      case "미지급금" -> "미지급금(렌트)";
-      case "법인카드" -> "미지급비용(법인카드)";
+      case "미지급금" -> "미지급금";
+      case "법인카드" -> "미지급비용";
       case "보통예금" -> "보통예금";
       default -> throw new RuntimeException("지원하지 않는 지급방법입니다: " + paymentMethod);
     };
