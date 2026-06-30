@@ -5,6 +5,7 @@ import com.jdend.erp.contract.maturity.dto.*;
 import com.jdend.erp.contract.maturity.entity.MaturityManagement;
 import com.jdend.erp.contract.maturity.repository.MaturityManagementRepository;
 import com.jdend.erp.contract.repository.ContractRepository;
+import com.jdend.erp.contract.service.ContractService;
 import com.jdend.erp.customer.Customer;
 import com.jdend.erp.customer.CustomerRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class MaturityManagementService {
   private final MaturityManagementRepository repo;
   private final ContractRepository contractRepository;
   private final CustomerRepository customerRepository;
+  private final ContractService contractService;
 
   @Transactional(readOnly = true)
   public Page<MaturityRowDto> list(String status, int page, int size) {
@@ -47,8 +49,8 @@ public class MaturityManagementService {
 
     String customerName = resolveCustomerName(old);
 
-    // 신규 계약번호는 "contracts의 max 계약번호" 기준으로 자동 생성
-    String newContractNumber = nextContractNumber(contractRepository.findMaxContractNumber());
+    // 신규 계약번호는 ContractService와 동일한 채번 규칙(동시성 보호 포함)을 그대로 재사용한다.
+    String newContractNumber = contractService.generateNextContractNumber();
 
     MaturityManagement mm = MaturityManagement.builder()
         .oldContractId(old.getId())
@@ -122,18 +124,4 @@ public class MaturityManagementService {
     return (v == null) ? 0L : v;
   }
 
-  /**
-   * max 계약번호를 R00001001 같은 형태로 가정하고 +1 해서 생성
-   */
-  private String nextContractNumber(String max) {
-    if (max == null || max.isBlank()) {
-      return "R00000001";
-    }
-    String prefix = max.substring(0, 1); // "R"
-    String digits = max.substring(1).replaceAll("[^0-9]", "");
-    long n = 0L;
-    try { n = Long.parseLong(digits); } catch (Exception ignored) {}
-    n = n + 1;
-    return prefix + String.format("%08d", n);
-  }
 }

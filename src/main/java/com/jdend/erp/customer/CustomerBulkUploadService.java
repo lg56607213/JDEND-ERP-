@@ -33,6 +33,7 @@ public class CustomerBulkUploadService {
   );
 
   private final CustomerRepository repo;
+  private final CustomerNumberGenerator numberGenerator;
 
   public byte[] template() {
     return ExcelTemplateWriter.write(HEADERS, SAMPLE_ROW);
@@ -80,7 +81,7 @@ public class CustomerBulkUploadService {
     if (registrationNumber == null) throw new IllegalArgumentException("사업자등록번호는 필수입니다.");
 
     Customer c = Customer.builder()
-        .customerNumber(nextCustomerNumber())
+        .customerNumber(numberGenerator.next())
         .customerType(customerType)
         .customerName(customerName)
         .registrationNumber(registrationNumber)
@@ -96,21 +97,5 @@ public class CustomerBulkUploadService {
         .build();
 
     repo.save(c);
-  }
-
-  private String nextCustomerNumber() {
-    String max = repo.findMaxCustomerNumber();
-    int next = 1;
-
-    if (max != null && max.startsWith("C")) {
-      String num = max.substring(1).replaceAll("[^0-9]", "");
-      if (!num.isBlank()) {
-        try {
-          next = Integer.parseInt(num) + 1;
-        } catch (Exception ignored) {}
-      }
-    }
-
-    return String.format("C%03d", next);
   }
 }

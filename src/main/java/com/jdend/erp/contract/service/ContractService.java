@@ -59,10 +59,13 @@ public class ContractService {
 
   @Transactional(readOnly = true)
   public String nextNumberPreview() {
-    return nextContractNumber();
+    return generateNextContractNumber();
   }
 
-  private String nextContractNumber() {
+  // synchronized: 동시에 두 계약이 등록되면 둘 다 같은 max값을 읽어 같은 번호를 만들 수
+  // 있다(DB에 unique 제약은 있지만 그러면 한쪽이 그냥 오류로 실패한다). 만기관리(재계약)
+  // 화면도 같은 채번 규칙을 써야 하므로 이 메서드를 공유한다.
+  public synchronized String generateNextContractNumber() {
     String max = contractRepo.findMaxContractNumber();
     int next = 1001;
 
@@ -89,7 +92,7 @@ public class ContractService {
     Long totalRent = (req.totalRent != null ? req.totalRent : monthlyRent * billingCount);
 
     Contract c = Contract.builder()
-        .contractNumber(nextContractNumber())
+        .contractNumber(generateNextContractNumber())
         .customer(customer)
         .customerNumber(req.customerNumber)
         .vehicleOrder(vo)

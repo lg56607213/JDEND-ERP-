@@ -20,11 +20,14 @@ public class CustomerController {
     private final CustomerRepository repo;
     private final CustomerBulkUploadService bulkUploadService;
     private final PermissionService permissionService;
+    private final CustomerNumberGenerator numberGenerator;
 
-    public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService, PermissionService permissionService) {
+    public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService,
+                               PermissionService permissionService, CustomerNumberGenerator numberGenerator) {
         this.repo = repo;
         this.bulkUploadService = bulkUploadService;
         this.permissionService = permissionService;
+        this.numberGenerator = numberGenerator;
     }
 
     @GetMapping
@@ -38,24 +41,6 @@ public class CustomerController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ✅ 고객번호 자동 채번: C001, C002 ...
-    private String nextCustomerNumber() {
-        String max = repo.findMaxCustomerNumber(); // 예: "C012" 또는 null
-        int next = 1;
-
-        if (max != null && max.startsWith("C")) {
-            String num = max.substring(1).replaceAll("[^0-9]", "");
-            if (!num.isBlank()) {
-                try {
-                    next = Integer.parseInt(num) + 1;
-                } catch (Exception ignored) {}
-            }
-        }
-
-        // 자리수는 필요하면 늘려도 됨 (C0001 등)
-        return String.format("C%03d", next);
-    }
-
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Customer c) {
         // ✅ registerDate 기본값
@@ -63,7 +48,7 @@ public class CustomerController {
 
         // ✅ customerNumber가 비어있으면 서버가 자동 채번해서 넣어준다
         if (c.getCustomerNumber() == null || c.getCustomerNumber().isBlank()) {
-            c.setCustomerNumber(nextCustomerNumber());
+            c.setCustomerNumber(numberGenerator.next());
         }
 
         // ✅ customerNumber는 DB에서 NOT NULL + UNIQUE니까 무조건 있어야 함
