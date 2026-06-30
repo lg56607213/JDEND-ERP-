@@ -167,10 +167,14 @@ public class ContractService {
     c.setTaxInvoiceDay(req.taxInvoiceDay);
     c.setPaymentDueDay(req.paymentDueDay);
 
+    if (req.billingCount == null || req.billingCount <= 0) {
+      throw new RuntimeException("청구횟수는 1 이상이어야 합니다. 청구횟수가 0이면 청구 스케줄이 생성되지 않아 청구생성에서 누락됩니다.");
+    }
+
     c.setAdvancePayment(nvl(req.advancePayment));
     c.setMonthlyRent(nvl(req.monthlyRent));
     c.setBillingDay(req.billingDay);
-    c.setBillingCount(req.billingCount == null ? 0 : req.billingCount);
+    c.setBillingCount(req.billingCount);
     c.setTotalRent(req.totalRent != null ? req.totalRent : c.getMonthlyRent() * c.getBillingCount());
 
     c.setDeposit(nvl(req.deposit));
@@ -210,6 +214,9 @@ public class ContractService {
     if (req.contractCategory == null || req.contractCategory.isBlank()) throw new RuntimeException("계약유형 필수");
     if (req.startDate == null) throw new RuntimeException("계약시작일 필수");
     if (req.endDate == null) throw new RuntimeException("계약종료일 필수");
+    if (req.billingCount == null || req.billingCount <= 0) {
+      throw new RuntimeException("청구횟수는 1 이상이어야 합니다. 청구횟수가 0이면 청구 스케줄이 생성되지 않아 청구생성에서 누락됩니다.");
+    }
   }
 
   private Long nvl(Long v) {

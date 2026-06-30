@@ -748,7 +748,8 @@
         return;
       }
 
-      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      if(end.getDate() >= start.getDate()) months += 1;
       const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24));
       document.getElementById('contractPeriod').value = `${months}개월 ${diffDays}일`;
 

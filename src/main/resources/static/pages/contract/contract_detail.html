@@ -726,6 +726,7 @@
       const ed = new Date(e);
       if (!isNaN(sd.getTime()) && !isNaN(ed.getTime())) {
         let months = (ed.getFullYear() - sd.getFullYear()) * 12 + (ed.getMonth() - sd.getMonth());
+        if (ed.getDate() >= sd.getDate()) months += 1;
         if (months < 0) months = 0;
         $("editBillingCount").value = months;
         calculateEditTotalRent();
