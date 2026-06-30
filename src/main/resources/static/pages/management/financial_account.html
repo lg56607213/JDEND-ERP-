@@ -134,6 +134,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 
 <script>
   // ====== 공통 fetch 유틸 ======
@@ -193,8 +194,8 @@
   function rowHtml(item) {
     return `
       <tr ondblclick="editAccount(${item.id})">
-        <td>${item.accountCode ?? ""}</td>
-        <td>${item.accountName ?? ""}</td>
+        <td>${escHtml(item.accountCode ?? "")}</td>
+        <td>${escHtml(item.accountName ?? "")}</td>
         <td>${item.accountType ?? ""}</td>
         <td>${item.displayOrder ?? ""}</td>
         <td>${item.isActive ?? ""}</td>

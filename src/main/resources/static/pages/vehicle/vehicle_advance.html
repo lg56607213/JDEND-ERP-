@@ -171,6 +171,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 <script>
   const API_BASE = `${API_BASE_URL}/api/vehicle-orders`;
   let rowCount = 0;
@@ -527,9 +528,9 @@
     (list || []).forEach(v => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="padding:10px; border-bottom:1px solid #eee;">${v.vehicleMgmtNo ?? ''}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;">${v.carModel ?? ''}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;">${v.vehicleNo ?? ''}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleMgmtNo ?? '')}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.carModel ?? '')}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleNo ?? '')}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${v.orderDate ?? ''}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">
           <button type="button" onclick="selectVehicle('${v.vehicleMgmtNo ?? ''}')">선택</button>

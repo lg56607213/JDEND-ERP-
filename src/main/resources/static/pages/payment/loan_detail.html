@@ -231,6 +231,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script>
    const API_BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
 
@@ -303,7 +304,7 @@
             <td>${idx + 1}</td>
             <td>${v.voucherDate || "-"}</td>
             <td class="amount-cell">${v.amount != null ? fmtMoney(v.amount) : "-"}</td>
-            <td>${v.memo || "-"}</td>
+            <td>${escHtml(v.memo || "-")}</td>
           </tr>
         `).join('');
       }

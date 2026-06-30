@@ -252,6 +252,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script>
     function mustOk(res){
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -397,9 +398,9 @@
           const tr = document.createElement('tr');
           tr.className = 'row-pick';
           tr.innerHTML = `
-            <td><span class="badge">${row.contractNumber ?? '-'}</span></td>
-            <td>${row.customerName ?? '-'}</td>
-            <td>${row.vehicleNo ?? '-'}</td>
+            <td><span class="badge">${escHtml(row.contractNumber ?? '-')}</span></td>
+            <td>${escHtml(row.customerName ?? '-')}</td>
+            <td>${escHtml(row.vehicleNo ?? '-')}</td>
             <td>${row.startDate ?? '-'}</td>
             <td>${row.endDate ?? '-'}</td>
             <td>${(row.monthlyRent ?? 0).toLocaleString()} 원</td>

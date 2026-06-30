@@ -79,6 +79,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 <!-- ❌ 여기 http.js 제거 -->
 <!-- <script src="../../assets/js/common/http.js"></script> -->
 
@@ -119,17 +120,17 @@
 
     tbody.innerHTML = list.map(row => `
       <tr onclick="viewContractDetail('${row.contractNumber || ""}')" class="clickable-row">
-        <td>${row.vehicleNumber || "-"}</td>
-        <td>${row.contractNumber || "-"}</td>
+        <td>${escHtml(row.vehicleNumber || "-")}</td>
+        <td>${escHtml(row.contractNumber || "-")}</td>
         <td>${statusBadge(row.status)}</td>
-        <td>${row.customerName || "-"}</td>
+        <td>${escHtml(row.customerName || "-")}</td>
         <td>${fmtDate(row.contractStart)}</td>
         <td>${fmtDate(row.contractEnd)}</td>
         <td class="amount-cell">${fmtAmount(row.monthlyRent)}</td>
         <td class="amount-cell">${fmtAmount(row.totalRent)}</td>
         <td class="receivable-cell">${fmtAmount(row.receivable)}</td>
         <td class="advance-cell">${fmtAmount(row.advance)}</td>
-        <td>${row.vehicleType || "-"}</td>
+        <td>${escHtml(row.vehicleType || "-")}</td>
       </tr>
     `).join("");
   }

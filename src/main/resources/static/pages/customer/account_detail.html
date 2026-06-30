@@ -200,8 +200,8 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
-  
-  
+  <script src="../../assets/js/html-escape.js"></script>
+
 <script>
 const API_BASE = `${API_BASE_URL}/api`; // config.js의 API_BASE_URL 사용
 
@@ -279,7 +279,7 @@ function updateEditFilePreview() {
   editFilePreview.classList.add('active');
   editFilePreview.innerHTML = uploadedFiles.map((file, index) => `
     <div class="file-preview-item">
-      <span class="file-name">${file.name}</span>
+      <span class="file-name">${escHtml(file.name)}</span>
       <span class="file-remove" onclick="removeEditFile(${index})">×</span>
     </div>
   `).join('');
@@ -324,7 +324,7 @@ function renderSavedFilesHtml(files, withDelete) {
   }
   return files.map(f => `
     <div class="file-preview-item">
-      <a href="${API_BASE}/accounts/files/${f.id}/download" target="_blank">${f.originalName}</a>
+      <a href="${API_BASE}/accounts/files/${f.id}/download" target="_blank">${escHtml(f.originalName)}</a>
       ${withDelete ? `<span class="file-remove" onclick="deleteSavedFile(${f.id})">×</span>` : ``}
     </div>
   `).join("");

@@ -206,6 +206,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script src="../../assets/js/excel-upload.js"></script>
   <script src="../../assets/js/role.js"></script>
   <script>
@@ -407,18 +408,18 @@
 
         tr.innerHTML = `
           <td>${no}</td>
-          <td>${c.customerNumber ?? ''}</td>
-          <td>${c.customerType ?? ''}</td>
-          <td>${c.customerName ?? ''}</td>
-          <td>${c.registrationNumber ?? ''}</td>
-          <td>${c.ceo ?? '-'}</td>
-          <td>${c.phone ?? ''}</td>
-          <td>${c.address ?? ''}</td>
-          <td>${c.billAddress ?? ''}</td>
-          <td>${c.manager ?? ''}</td>
-          <td>${c.managerPhone ?? ''}</td>
-          <td>${c.managerEmail ?? ''}</td>
-          <td>${c.registerDate ?? ''}</td>
+          <td>${escHtml(c.customerNumber ?? '')}</td>
+          <td>${escHtml(c.customerType ?? '')}</td>
+          <td>${escHtml(c.customerName ?? '')}</td>
+          <td>${escHtml(c.registrationNumber ?? '')}</td>
+          <td>${escHtml(c.ceo ?? '-')}</td>
+          <td>${escHtml(c.phone ?? '')}</td>
+          <td>${escHtml(c.address ?? '')}</td>
+          <td>${escHtml(c.billAddress ?? '')}</td>
+          <td>${escHtml(c.manager ?? '')}</td>
+          <td>${escHtml(c.managerPhone ?? '')}</td>
+          <td>${escHtml(c.managerEmail ?? '')}</td>
+          <td>${escHtml(c.registerDate ?? '')}</td>
           <td>
             <button class="btn-small btn-edit" data-id="${c.id}">수정</button>
             <button class="btn-small btn-delete" data-id="${c.id}">삭제</button>

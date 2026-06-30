@@ -66,6 +66,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script>
     const API_BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
 
@@ -121,9 +122,9 @@
         return `
           <tr>
             <td>${idx + 1}</td>
-            <td>${contractNo}</td>
-            <td>${vehicleNo}</td>
-            <td>${lender}</td>
+            <td>${escHtml(contractNo)}</td>
+            <td>${escHtml(vehicleNo)}</td>
+            <td>${escHtml(lender)}</td>
             <td class="amount-cell">${loanAmount}</td>
             <td>${rate}</td>
             <td>${period}</td>

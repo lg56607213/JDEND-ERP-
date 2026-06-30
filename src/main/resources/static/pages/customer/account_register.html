@@ -300,6 +300,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
 
   <script>
     // ✅ API 주소
@@ -412,13 +413,13 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${no}</td>
-          <td>${acc.customerNumber ?? ""}</td>
-          <td>${acc.bankName ?? ""}</td>
-          <td>${acc.bankCode ?? ""}</td>
-          <td>${acc.accountNumber ?? ""}</td>
-          <td>${acc.accountHolder ?? ""}</td>
-          <td>${acc.relationship ?? ""}</td>
-          <td>${acc.registrationNumber ?? ""}</td>
+          <td>${escHtml(acc.customerNumber ?? "")}</td>
+          <td>${escHtml(acc.bankName ?? "")}</td>
+          <td>${escHtml(acc.bankCode ?? "")}</td>
+          <td>${escHtml(acc.accountNumber ?? "")}</td>
+          <td>${escHtml(acc.accountHolder ?? "")}</td>
+          <td>${escHtml(acc.relationship ?? "")}</td>
+          <td>${escHtml(acc.registrationNumber ?? "")}</td>
           <td>${acc.registerDate ?? ""}</td>
           <td>
             <button class="btn-small btn-edit" data-id="${acc.id}">수정</button>
@@ -558,7 +559,7 @@
       filePreview.classList.add('active');
       filePreview.innerHTML = uploadedFiles.map((file, index) => `
         <div class="file-preview-item">
-          <span class="file-name">${file.name}</span>
+          <span class="file-name">${escHtml(file.name)}</span>
           <span class="file-remove" onclick="removeFile(${index})">×</span>
         </div>
       `).join('');
@@ -664,11 +665,11 @@
         const tr = document.createElement("tr");
         tr.className = "pick-row";
         tr.innerHTML = `
-          <td>${c.customerNumber ?? ""}</td>
-          <td>${c.customerType ?? ""}</td>
-          <td>${c.customerName ?? ""}</td>
-          <td>${c.registrationNumber ?? ""}</td>
-          <td>${c.phone ?? ""}</td>
+          <td>${escHtml(c.customerNumber ?? "")}</td>
+          <td>${escHtml(c.customerType ?? "")}</td>
+          <td>${escHtml(c.customerName ?? "")}</td>
+          <td>${escHtml(c.registrationNumber ?? "")}</td>
+          <td>${escHtml(c.phone ?? "")}</td>
         `;
 
         // ✅ 클릭하면 customerNumber + customerName 같이 세팅

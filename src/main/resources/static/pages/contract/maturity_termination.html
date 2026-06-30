@@ -230,6 +230,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
 
   <script>
     const BASE = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
@@ -285,9 +286,9 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${startNo + idx + 1}</td>
-          <td>${r.contractNumber || '-'}</td>
-          <td>${r.customerName || '-'}</td>
-          <td>${r.vehicleNo || '-'}</td>
+          <td>${escHtml(r.contractNumber || '-')}</td>
+          <td>${escHtml(r.customerName || '-')}</td>
+          <td>${escHtml(r.vehicleNo || '-')}</td>
           <td>${r.terminationMethod || '-'}</td>
           <td>${ymd(r.terminationDate)}</td>
           <td>${formatWon(r.unpaidAmount)}</td>
@@ -419,10 +420,10 @@
       list.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${c.contractNumber || '-'}</td>
-          <td>${c.customerName || '-'}</td>
-          <td>${c.vehicleNo || '-'}</td>
-          <td>${c.contractType || '-'}</td>
+          <td>${escHtml(c.contractNumber || '-')}</td>
+          <td>${escHtml(c.customerName || '-')}</td>
+          <td>${escHtml(c.vehicleNo || '-')}</td>
+          <td>${escHtml(c.contractType || '-')}</td>
           <td>${ymd(c.startDate)} ~ ${ymd(c.endDate)}</td>
           <td>${formatWon(c.monthlyRent)}</td>
         `;

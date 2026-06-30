@@ -319,6 +319,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
 
   <script>
     const BASE = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
@@ -346,10 +347,20 @@
       document.getElementById('terminationDate').value = new Date().toISOString().slice(0,10);
     }
 
+    // 경과 개월(계약시작일 ~ 임의의 기준일)은 일 단위로 끝까지 채워지지 않은 달은
+    // 세지 않는 게 맞으므로 내림(floor) 그대로 둔다.
     function diffMonthsFloor(d1, d2){
       const y1 = d1.getFullYear(), m1 = d1.getMonth();
       const y2 = d2.getFullYear(), m2 = d2.getMonth();
       return Math.max(0, (y2 - y1) * 12 + (m2 - m1));
+    }
+
+    // 계약 총 개월수(계약시작일 ~ 계약종료일)는 계약등록 화면의 청구횟수 자동계산과
+    // 같은 기준이어야 한다(예: 1/1~12/31은 12개월). 종료일의 일(day)이 시작일의
+    // 일보다 같거나 크면 그 달도 온전히 포함되므로 1을 더한다.
+    function diffMonthsInclusive(d1, d2){
+      const base = diffMonthsFloor(d1, d2);
+      return d2.getDate() >= d1.getDate() ? base + 1 : base;
     }
 
     addTerminationBtn.addEventListener('click', () => {
@@ -397,15 +408,15 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${startNo + idx + 1}</td>
-          <td>${r.contractNumber || '-'}</td>
-          <td>${r.customerName || '-'}</td>
-          <td>${r.vehicleNo || '-'}</td>
-          <td>${r.terminationMethod || '-'}</td>
+          <td>${escHtml(r.contractNumber || '-')}</td>
+          <td>${escHtml(r.customerName || '-')}</td>
+          <td>${escHtml(r.vehicleNo || '-')}</td>
+          <td>${escHtml(r.terminationMethod || '-')}</td>
           <td>${ymd(r.terminationDate) || '-'}</td>
           <td>${formatWon(r.terminationAmount)}</td>
           <td>${formatWon(r.uncollectedRent)}</td>
           <td>${formatWon(r.totalAmount)}</td>
-          <td>${r.status || '-'}</td>
+          <td>${escHtml(r.status || '-')}</td>
           <td>
             <button class="btn-small btn-edit" type="button">수정</button>
             <button class="btn-small btn-delete" type="button">삭제</button>
@@ -544,10 +555,10 @@
       list.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${c.contractNumber || '-'}</td>
-          <td>${c.customerName || '-'}</td>
-          <td>${c.vehicleNo || '-'}</td>
-          <td>${c.contractType || '-'}</td>
+          <td>${escHtml(c.contractNumber || '-')}</td>
+          <td>${escHtml(c.customerName || '-')}</td>
+          <td>${escHtml(c.vehicleNo || '-')}</td>
+          <td>${escHtml(c.contractType || '-')}</td>
           <td>${ymd(c.startDate)} ~ ${ymd(c.endDate)}</td>
           <td>${formatWon(c.monthlyRent)}</td>
         `;
@@ -575,7 +586,7 @@
       const tVal = document.getElementById('terminationDate').value || new Date().toISOString().slice(0,10);
       const t = new Date(tVal);
 
-      const totalMonths = diffMonthsFloor(start, end);
+      const totalMonths = diffMonthsInclusive(start, end);
       const elapsedMonths = diffMonthsFloor(start, t);
       const remainingMonths = Math.max(0, totalMonths - elapsedMonths);
 

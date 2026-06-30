@@ -190,6 +190,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 <script>
   const API_BASE = API_BASE_URL;
   let originalSchedule = [];
@@ -252,7 +253,7 @@
           <td class="amount">${fmtMoney(r.principalAmount)}</td>
           <td class="amount">${fmtMoney(r.interestAmount)}</td>
           <td class="amount">${fmtMoney(r.remainingPrincipal)}</td>
-          <td>${r.repaymentAccount ?? '-'}</td>
+          <td>${escHtml(r.repaymentAccount ?? '-')}</td>
         </tr>
       `);
     });
@@ -407,10 +408,10 @@
 
       body.innerHTML = list.map(v => `
         <tr>
-          <td>${v.vehicleMgmtNo || ''}</td>
-          <td>${v.vehicleNo || ''}</td>
-          <td>${v.carModel || ''}</td>
-          <td>${v.financeName || ''}</td>
+          <td>${escHtml(v.vehicleMgmtNo || '')}</td>
+          <td>${escHtml(v.vehicleNo || '')}</td>
+          <td>${escHtml(v.carModel || '')}</td>
+          <td>${escHtml(v.financeName || '')}</td>
           <td><button type="button" class="btn-search-small" onclick="selectVehicle('${String(v.vehicleNo || '').replace(/'/g, "\\'")}')">선택</button></td>
         </tr>
       `).join('');

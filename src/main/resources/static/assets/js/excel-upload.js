@@ -107,7 +107,7 @@
           <table class="xu-error-table">
             <thead><tr><th style="width:70px;">행번호</th><th>실패 이유</th></tr></thead>
             <tbody>
-              ${data.errors.map(err => `<tr><td>${err.rowNumber}</td><td>${escapeHtml(err.message)}</td></tr>`).join("")}
+              ${data.errors.map(err => `<tr><td>${escapeHtml(err.rowNumber)}</td><td>${escapeHtml(err.message)}</td></tr>`).join("")}
             </tbody>
           </table>
         `;

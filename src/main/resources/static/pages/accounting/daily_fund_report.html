@@ -164,6 +164,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script>
     let lastDaily = null;
 
@@ -205,7 +206,7 @@
       (data.banks || []).forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.bankName || '(미지정)'}</td>
+          <td>${escHtml(r.bankName || '(미지정)')}</td>
           <td class="amount-cell income">${fmt(r.income)}</td>
           <td class="amount-cell expense">${fmt(r.expense)}</td>
         `;
@@ -221,10 +222,10 @@
       (data.voucherIncomes || []).forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.accountCode || ''}</td>
-          <td>${r.accountName || ''}</td>
+          <td>${escHtml(r.accountCode || '')}</td>
+          <td>${escHtml(r.accountName || '')}</td>
           <td class="amount-cell income">${fmt(r.amount)}</td>
-          <td>${r.memo || ''}</td>
+          <td>${escHtml(r.memo || '')}</td>
         `;
         vInBody.appendChild(tr);
       });
@@ -235,10 +236,10 @@
       (data.voucherExpenses || []).forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.accountCode || ''}</td>
-          <td>${r.accountName || ''}</td>
+          <td>${escHtml(r.accountCode || '')}</td>
+          <td>${escHtml(r.accountName || '')}</td>
           <td class="amount-cell expense">${fmt(r.amount)}</td>
-          <td>${r.memo || ''}</td>
+          <td>${escHtml(r.memo || '')}</td>
         `;
         vOutBody.appendChild(tr);
       });

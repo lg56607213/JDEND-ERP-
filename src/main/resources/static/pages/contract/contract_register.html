@@ -434,6 +434,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script src="../../assets/js/excel-upload.js"></script>
   <script src="../../assets/js/role.js"></script>
   <script>
@@ -518,13 +519,13 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${start + idx + 1}</td>
-          <td>${c.contractNumber || ''}</td>
-          <td>${c.customerName || ''}</td>
-          <td>${c.vehicleNo || ''}</td>
-          <td>${c.vehicleModel || ''}</td>
-          <td>${c.contractType || ''}</td>
-          <td>${c.contractCategory || ''}</td>
-          <td>${c.status || ''}</td>
+          <td>${escHtml(c.contractNumber || '')}</td>
+          <td>${escHtml(c.customerName || '')}</td>
+          <td>${escHtml(c.vehicleNo || '')}</td>
+          <td>${escHtml(c.vehicleModel || '')}</td>
+          <td>${escHtml(c.contractType || '')}</td>
+          <td>${escHtml(c.contractCategory || '')}</td>
+          <td>${escHtml(c.status || '')}</td>
           <td>${c.startDate || ''}</td>
           <td>${c.endDate || ''}</td>
           <td>${c.billingCount ?? ''}</td>
@@ -940,10 +941,10 @@
         (list || []).forEach(c => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${c.customerNumber || ''}</td>
-            <td>${c.customerName || ''}</td>
-            <td>${c.phone || ''}</td>
-            <td>${c.address || ''}</td>
+            <td>${escHtml(c.customerNumber || '')}</td>
+            <td>${escHtml(c.customerName || '')}</td>
+            <td>${escHtml(c.phone || '')}</td>
+            <td>${escHtml(c.address || '')}</td>
             <td><button type="button" class="select-btn">선택</button></td>
           `;
           tr.querySelector('.select-btn').addEventListener('click', () => {
@@ -995,9 +996,9 @@
         (list || []).forEach(v => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${v.vehicleNo || ''}</td>
-            <td>${v.vehicleModel || ''}</td>
-            <td>${v.vehicleMgmtNo || ''}</td>
+            <td>${escHtml(v.vehicleNo || '')}</td>
+            <td>${escHtml(v.vehicleModel || '')}</td>
+            <td>${escHtml(v.vehicleMgmtNo || '')}</td>
             <td><button type="button" class="select-btn">선택</button></td>
           `;
           tr.querySelector('.select-btn').addEventListener('click', () => {

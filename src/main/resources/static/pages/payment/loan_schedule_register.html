@@ -229,6 +229,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
   <script>
     const API_BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
     let lookedUp = null;
@@ -331,9 +332,9 @@
           const tr = document.createElement('tr');
           const safeVehicleNo = String(v.vehicleNo ?? '').replace(/'/g, "\\\\'");
           tr.innerHTML = `
-            <td style="padding:10px; border-bottom:1px solid #eee;">${v.vehicleNo ?? ''}</td>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${v.vehicleMgmtNo ?? ''}</td>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${v.carModel ?? ''}</td>
+            <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleNo ?? '')}</td>
+            <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleMgmtNo ?? '')}</td>
+            <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.carModel ?? '')}</td>
             <td style="padding:10px; border-bottom:1px solid #eee;">${v.orderStatus ?? '-'}</td>
             <td style="padding:10px; border-bottom:1px solid #eee;">
               <button type="button" onclick="selectVehicleNo('${safeVehicleNo}')">선택</button>

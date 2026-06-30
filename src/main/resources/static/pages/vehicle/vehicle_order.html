@@ -206,6 +206,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 <script>
   const API_BASE = '/api/vehicle-orders';
   let currentVehicleRows = [];
@@ -334,18 +335,18 @@
           </td>
           <td>${index + 1}</td>
           <td><span class="status-badge ${getStatusClass(item.orderStatus)}">${item.orderStatus ?? '-'}</span></td>
-          <td>${item.vehicleMgmtNo ?? '-'}</td>
-          <td>${item.makerContractNo ?? '-'}</td>
-          <td>${item.carModel ?? '-'}</td>
-          <td>${item.optionName ?? '-'}</td>
+          <td>${escHtml(item.vehicleMgmtNo ?? '-')}</td>
+          <td>${escHtml(item.makerContractNo ?? '-')}</td>
+          <td>${escHtml(item.carModel ?? '-')}</td>
+          <td>${escHtml(item.optionName ?? '-')}</td>
           <td class="amount-cell">${formatAmount(vehiclePrice)}</td>
           <td class="amount-cell">${optionPrice ? formatAmount(optionPrice) : '-'}</td>
           <td class="amount-cell">${formatAmount(totalPrice)}</td>
           <td>${item.orderDate ?? '-'}</td>
-          <td>${item.chassisNo ?? '-'}</td>
+          <td>${escHtml(item.chassisNo ?? '-')}</td>
           <td class="amount-cell">${item.releasePrice ? formatAmount(item.releasePrice) : '-'}</td>
           <td class="amount-cell">${item.totalAdvancePrice ? formatAmount(item.totalAdvancePrice) : '-'}</td>
-          <td>${item.vehicleNo ?? '-'}</td>
+          <td>${escHtml(item.vehicleNo ?? '-')}</td>
           <td>${item.registerDate ?? '-'}</td>
         </tr>
       `;

@@ -290,6 +290,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/html-escape.js"></script>
 <script>
   const API_BASE = `${API_BASE_URL}/api/vehicle-orders`;
   
@@ -415,7 +416,7 @@
             <td>${idx + 1}</td>
             <td><span class="status-badge ${getStatusClass(h.status)}">${h.status}</span></td>
             <td>${String(h.changedAt ?? '').replace('T',' ').substring(0,16)}</td>
-            <td>${h.note ?? '-'}</td>
+            <td>${escHtml(h.note ?? '-')}</td>
           </tr>
         `).join('')
       : `<tr><td colspan="4">이력이 없습니다.</td></tr>`;
