@@ -345,6 +345,16 @@ public class DepreciationService {
       long amount = baseMonthlyAmount;
       String note = "";
 
+      boolean isFinalPlainPeriod = (i == totalMonths)
+          && (changeType == null || changeDate == null || depDate.isBefore(changeDate));
+
+      if (isFinalPlainPeriod) {
+        // 월 상각액은 취득원가/개월수를 반올림한 값이라 매달 곱하면 취득원가와 몇 원씩
+        // 어긋난다. 마지막 회차에는 남은 잔액을 전부 상각해 합계가 취득원가와 정확히
+        // 일치하도록 맞춘다(매각/조기종료 등 변경 이벤트가 없을 때만 적용).
+        amount = balance;
+      }
+
       if (changeType != null && changeDate != null) {
         if (!depDate.isBefore(changeDate)) {
           if ("sale".equals(changeType)) {
