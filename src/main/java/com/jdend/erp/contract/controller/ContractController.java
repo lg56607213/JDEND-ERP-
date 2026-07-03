@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -78,15 +79,24 @@ public class ContractController {
   }
 
   @GetMapping("/export")
-  public ResponseEntity<byte[]> export() {
+  public ResponseEntity<byte[]> export(
+          @RequestParam(required = false) LocalDate startDate,
+          @RequestParam(required = false) LocalDate endDate
+  ) {
     String[] headers = {"계약번호", "고객번호", "고객명", "차량번호", "차종",
             "계약유형", "계약구분", "상태", "시작일", "종료일", "청구횟수", "월렌트료"};
-    List<Object[]> rows = service.list().stream().map(c -> new Object[]{
-            c.getContractNumber(), c.getCustomerNumber(), c.getCustomerName(),
-            c.getVehicleNo(), c.getVehicleModel(),
-            c.getContractType(), c.getContractCategory(), c.getStatus(),
-            c.getStartDate(), c.getEndDate(), c.getBillingCount(), c.getMonthlyRent()
-    }).collect(Collectors.toList());
+    List<Object[]> rows = service.list().stream()
+            .filter(c -> {
+                if (startDate != null && (c.getStartDate() == null || c.getStartDate().isBefore(startDate))) return false;
+                if (endDate != null && (c.getStartDate() == null || c.getStartDate().isAfter(endDate))) return false;
+                return true;
+            })
+            .map(c -> new Object[]{
+                    c.getContractNumber(), c.getCustomerNumber(), c.getCustomerName(),
+                    c.getVehicleNo(), c.getVehicleModel(),
+                    c.getContractType(), c.getContractCategory(), c.getStatus(),
+                    c.getStartDate(), c.getEndDate(), c.getBillingCount(), c.getMonthlyRent()
+            }).collect(Collectors.toList());
     byte[] data = excelExportService.build("계약목록", headers, rows);
     return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''contracts.xlsx")

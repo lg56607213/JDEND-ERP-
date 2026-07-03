@@ -20,7 +20,11 @@
     <div class="erp-card" id="customerListSection">
       <div class="card-header">
         <h2>고객 목록</h2>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <span style="font-size:13px; color:#666; white-space:nowrap;">등록일</span>
+          <input type="date" id="exportStartDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
+          <span style="font-size:13px; color:#666;">~</span>
+          <input type="date" id="exportEndDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
           <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
           <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
           <button type="button" class="btn btn-primary" id="addCustomerBtn">
@@ -212,7 +216,13 @@
   <script src="../../assets/js/role.js"></script>
   <script>
     document.getElementById('excelDownloadBtn').addEventListener('click', () => {
-      window.location.href = '/api/customers/export';
+      const params = new URLSearchParams();
+      const s = document.getElementById('exportStartDate').value;
+      const e = document.getElementById('exportEndDate').value;
+      if (s) params.set('startDate', s);
+      if (e) params.set('endDate', e);
+      const qs = params.toString();
+      window.location.href = '/api/customers/export' + (qs ? '?' + qs : '');
     });
 
     document.getElementById('excelUploadBtn').addEventListener('click', () => {

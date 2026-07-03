@@ -40,7 +40,7 @@ public class CustomerController {
         return repo.findAll();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<Customer> detail(@PathVariable Long id) {
         return repo.findById(id).map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -60,7 +60,7 @@ public class CustomerController {
         return ResponseEntity.ok(repo.save(c));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer req, HttpSession session) {
         permissionService.requireManager(session);
         return repo.findById(id).map(c -> {
@@ -85,7 +85,7 @@ public class CustomerController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<Void> delete(@PathVariable Long id, HttpSession session) {
         permissionService.requireManager(session);
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
@@ -94,16 +94,25 @@ public class CustomerController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<byte[]> export() {
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+    ) {
         String[] headers = {"고객번호", "고객유형", "고객명", "주민/사업자번호", "연락처", "대표자",
                 "업종", "업태", "주소", "청구지주소", "담당자", "담당자연락처", "담당자이메일", "청구이메일", "등록일"};
-        List<Object[]> rows = repo.findAll().stream().map(c -> new Object[]{
-                c.getCustomerNumber(), c.getCustomerType(), c.getCustomerName(),
-                c.getRegistrationNumber(), c.getPhone(), c.getCeo(),
-                c.getBusinessType(), c.getBusinessItem(), c.getAddress(), c.getBillAddress(),
-                c.getManager(), c.getManagerPhone(), c.getManagerEmail(), c.getBillEmail(),
-                c.getRegisterDate()
-        }).collect(Collectors.toList());
+        List<Object[]> rows = repo.findAll().stream()
+                .filter(c -> {
+                    if (startDate != null && (c.getRegisterDate() == null || c.getRegisterDate().isBefore(startDate))) return false;
+                    if (endDate != null && (c.getRegisterDate() == null || c.getRegisterDate().isAfter(endDate))) return false;
+                    return true;
+                })
+                .map(c -> new Object[]{
+                        c.getCustomerNumber(), c.getCustomerType(), c.getCustomerName(),
+                        c.getRegistrationNumber(), c.getPhone(), c.getCeo(),
+                        c.getBusinessType(), c.getBusinessItem(), c.getAddress(), c.getBillAddress(),
+                        c.getManager(), c.getManagerPhone(), c.getManagerEmail(), c.getBillEmail(),
+                        c.getRegisterDate()
+                }).collect(Collectors.toList());
         byte[] data = excelExportService.build("고객목록", headers, rows);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''customers.xlsx")

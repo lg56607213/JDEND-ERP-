@@ -16,7 +16,11 @@
         <h1>등록</h1>
         <p>차량등록 &gt; 차량현황 &gt; 등록</p>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:13px; color:#666; white-space:nowrap;">발주일</span>
+        <input type="date" id="exportStartDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
+        <span style="font-size:13px; color:#666;">~</span>
+        <input type="date" id="exportEndDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
         <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
         <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
       </div>
@@ -192,7 +196,13 @@
   <script src="../../assets/js/excel-upload.js"></script>
   <script>
     document.getElementById('excelDownloadBtn').addEventListener('click', () => {
-      window.location.href = '/api/vehicle-orders/export';
+      const params = new URLSearchParams();
+      const s = document.getElementById('exportStartDate').value;
+      const e = document.getElementById('exportEndDate').value;
+      if (s) params.set('startDate', s);
+      if (e) params.set('endDate', e);
+      const qs = params.toString();
+      window.location.href = '/api/vehicle-orders/export' + (qs ? '?' + qs : '');
     });
 
     document.getElementById('excelUploadBtn').addEventListener('click', () => {
