@@ -300,3 +300,26 @@ a.sidebar-title:focus {
 .sidebar-collapsed .main-header {
   margin-left: 0;
 }
+
+.sidebar-footer {
+  padding: 12px 14px;
+  border-top: 1px solid #2e3a55;
+}
+.sidebar-logout-btn {
+  width: 100%;
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid #3d4f70;
+  border-radius: 6px;
+  color: #a0aec0;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-logout-btn:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}

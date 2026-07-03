@@ -204,9 +204,24 @@ function loadSidebar() {
           </li>
         </ul>
       </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout-btn" id="sidebarLogoutBtn">&#x2192; 로그아웃</button>
+      </div>
     </aside>
   `;
   document.getElementById('sidebar-container').innerHTML = sidebarHTML + '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
+
+  // 로그아웃 버튼
+  const logoutBtn = document.getElementById('sidebarLogoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      const base = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) ? String(API_BASE_URL).replace(/\/+$/, '') : '';
+      fetch(base + '/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() {
+          window.location.href = base + '/login.html';
+        });
+    });
+  }
 
   // 회사관리자(또는 운영자)일 때만 "사용자관리" 메뉴 노출. 페이지별로 role.js를 따로 안 넣어도
   // 항상 동작하게 sidebar.js 자체에서 직접 /api/auth/me를 조회한다.
