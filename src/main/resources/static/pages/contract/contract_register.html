@@ -83,6 +83,7 @@
           <input type="date" id="exportStartDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
           <span style="font-size:13px; color:#666;">~</span>
           <input type="date" id="exportEndDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
+          <button type="button" class="btn btn-primary" id="searchBtn">조회</button>
           <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
           <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
           <button type="button" class="btn btn-primary" id="addContractBtn"><span>+ 계약 추가</span></button>
@@ -474,6 +475,7 @@
     const itemsPerPage = 15;
     let currentPage = 1;
     let allContracts = [];
+    let filteredContracts = [];
 
     function money(n){ return Number(n||0).toLocaleString() + '원'; }
     function onlyDigits(str){ return String(str||'').replace(/[^0-9]/g,''); }
@@ -517,20 +519,40 @@
 
     async function loadContracts(){
       allContracts = await apiGet('/contracts');
+      filteredContracts = [...allContracts];
       renderContractPage(1);
     }
+
+    function applyContractFilter() {
+      const startStr = document.getElementById('exportStartDate').value;
+      const endStr = document.getElementById('exportEndDate').value;
+      const startDate = startStr ? new Date(startStr) : null;
+      const endDate = endStr ? new Date(endStr) : null;
+
+      filteredContracts = allContracts.filter(c => {
+        if (!startDate && !endDate) return true;
+        if (!c.startDate) return false;
+        const d = new Date(c.startDate);
+        if (startDate && d < startDate) return false;
+        if (endDate && d > endDate) return false;
+        return true;
+      });
+      renderContractPage(1);
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', applyContractFilter);
 
     function renderContractPage(page){
       currentPage = page;
       const tbody = document.getElementById('contractTableBody');
       tbody.innerHTML = '';
 
-      const total = allContracts.length;
+      const total = filteredContracts.length;
       const totalPages = Math.ceil(total / itemsPerPage);
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
 
-      allContracts.slice(start, end).forEach((c, idx) => {
+      filteredContracts.slice(start, end).forEach((c, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${start + idx + 1}</td>
@@ -608,7 +630,7 @@
     });
 
     document.getElementById('nextBtn').addEventListener('click', () => {
-      const totalPages = Math.ceil(allContracts.length / itemsPerPage);
+      const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
       if(currentPage < totalPages) renderContractPage(currentPage + 1);
     });
 

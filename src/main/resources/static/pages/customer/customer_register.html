@@ -25,6 +25,7 @@
           <input type="date" id="exportStartDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
           <span style="font-size:13px; color:#666;">~</span>
           <input type="date" id="exportEndDate" style="height:34px; border:1px solid #ddd; border-radius:6px; padding:0 8px; font-size:13px;">
+          <button type="button" class="btn btn-primary" id="searchBtn">조회</button>
           <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
           <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
           <button type="button" class="btn btn-primary" id="addCustomerBtn">
@@ -390,12 +391,25 @@
 
     // 필터
     customerTypeFilter.addEventListener('change', () => applyFilterAndRender());
+    document.getElementById('searchBtn').addEventListener('click', () => applyFilterAndRender());
 
     function applyFilterAndRender() {
       const v = customerTypeFilter.value;
-      filteredCustomers = (v === 'all')
-        ? [...allCustomers]
-        : allCustomers.filter(c => c.customerType === v);
+      const startStr = document.getElementById('exportStartDate').value;
+      const endStr = document.getElementById('exportEndDate').value;
+      const startDate = startStr ? new Date(startStr) : null;
+      const endDate = endStr ? new Date(endStr) : null;
+
+      filteredCustomers = allCustomers.filter(c => {
+        if (v !== 'all' && c.customerType !== v) return false;
+        if (startDate || endDate) {
+          if (!c.registerDate) return false;
+          const d = new Date(c.registerDate);
+          if (startDate && d < startDate) return false;
+          if (endDate && d > endDate) return false;
+        }
+        return true;
+      });
 
       filteredCustomers.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
 
