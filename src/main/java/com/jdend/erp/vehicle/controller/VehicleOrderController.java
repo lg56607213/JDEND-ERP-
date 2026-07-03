@@ -1,6 +1,7 @@
 package com.jdend.erp.vehicle.controller;
 
 import com.jdend.erp.auth.service.PermissionService;
+import com.jdend.erp.common.excel.ExcelExportService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.service.VehicleOrderBulkUploadService;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class VehicleOrderController {
     private final VehicleOrderService service;
     private final VehicleOrderBulkUploadService bulkUploadService;
     private final PermissionService permissionService;
+    private final ExcelExportService excelExportService;
 
     // 목록/검색
     @GetMapping
@@ -70,6 +73,30 @@ public class VehicleOrderController {
     @GetMapping("/by-vehicle-no/{vehicleNo}")
     public VehicleLookupResponse lookupByVehicleNo(@PathVariable String vehicleNo) {
         return service.lookupByVehicleNo(vehicleNo);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String status
+    ) {
+        LocalDate s = (startDate == null || startDate.isBlank()) ? null : LocalDate.parse(startDate);
+        LocalDate e = (endDate == null || endDate.isBlank()) ? null : LocalDate.parse(endDate);
+        String[] headers = {"차량관리번호", "발주상태", "제작사계약번호", "차종", "옵션명",
+                "차량가격", "옵션가격", "총차량가", "발주일자", "차대번호",
+                "출고가", "총선급가액", "차량번호", "등록일자", "연식", "유종", "배기량"};
+        List<Object[]> rows = service.search(s, e, status).stream().map(v -> new Object[]{
+                v.getVehicleMgmtNo(), v.getOrderStatus(), v.getMakerContractNo(), v.getCarModel(), v.getOptionName(),
+                v.getVehiclePrice(), v.getOptionPrice(), v.getTotalPrice(), v.getOrderDate(), v.getChassisNo(),
+                v.getReleasePrice(), v.getTotalAdvancePrice(), v.getVehicleNo(), v.getRegisterDate(),
+                v.getModelYear(), v.getFuelType(), v.getDisplacement()
+        }).collect(Collectors.toList());
+        byte[] data = excelExportService.build("차량목록", headers, rows);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''vehicles.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
     }
 
     @GetMapping("/bulk-upload/template")

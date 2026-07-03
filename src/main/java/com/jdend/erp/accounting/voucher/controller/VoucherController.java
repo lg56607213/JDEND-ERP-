@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.voucher.dto.*;
 import com.jdend.erp.accounting.voucher.service.VoucherBulkUploadService;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.auth.service.PermissionService;
+import com.jdend.erp.common.excel.ExcelExportService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class VoucherController {
     private final VoucherService voucherService;
     private final VoucherBulkUploadService bulkUploadService;
     private final PermissionService permissionService;
+    private final ExcelExportService excelExportService;
 
     /** GET /api/vouchers/next-no?date=2026-03-02 */
     @GetMapping("/next-no")
@@ -80,5 +82,27 @@ public class VoucherController {
     @PostMapping("/bulk-upload")
     public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
         return bulkUploadService.upload(file);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false, defaultValue = "") String status
+    ) {
+        String[] headers = {"전표일자", "전표번호", "차변계정", "차변금액", "차변적요",
+                "대변계정", "대변금액", "대변적요", "상태"};
+        java.util.List<Object[]> rows = voucherService.listForApproval(date, status).stream()
+                .filter(VoucherApprovalRowResponse::isShowMain)
+                .map(v -> new Object[]{
+                        v.getVoucherDate(), v.getVoucherNo(),
+                        v.getDebitAccount(), v.getDebitAmount(), v.getDebitDescription(),
+                        v.getCreditAccount(), v.getCreditAmount(), v.getCreditDescription(),
+                        v.getStatus()
+                }).collect(java.util.stream.Collectors.toList());
+        byte[] data = excelExportService.build("전표목록", headers, rows);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''vouchers.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
     }
 }

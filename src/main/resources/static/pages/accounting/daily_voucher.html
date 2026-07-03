@@ -88,7 +88,10 @@
         <h1>일일전표등록</h1>
         <p>회계관리 &gt; 전표등록 &gt; 일일전표등록</p>
       </div>
-      <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
+        <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+      </div>
     </div>
 
     <div class="erp-card">
@@ -300,6 +303,13 @@
   <script src="../../assets/js/config.js"></script>
   <script src="../../assets/js/excel-upload.js"></script>
   <script>
+    document.getElementById('excelDownloadBtn').addEventListener('click', () => {
+      const date = document.getElementById('voucherDate').value;
+      const params = new URLSearchParams();
+      if (date) params.set('date', date);
+      window.location.href = '/api/vouchers/export?' + params.toString();
+    });
+
     document.getElementById('excelUploadBtn').addEventListener('click', () => {
       openExcelUploadModal({
         title: '전표 엑셀 업로드 (계정코드 기준)',

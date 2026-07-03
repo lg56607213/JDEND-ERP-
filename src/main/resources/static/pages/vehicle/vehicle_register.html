@@ -16,7 +16,10 @@
         <h1>등록</h1>
         <p>차량등록 &gt; 차량현황 &gt; 등록</p>
       </div>
-      <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
+        <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
+      </div>
     </div>
 
     <div class="erp-card">
@@ -188,6 +191,10 @@
   <script src="../../assets/js/html-escape.js"></script>
   <script src="../../assets/js/excel-upload.js"></script>
   <script>
+    document.getElementById('excelDownloadBtn').addEventListener('click', () => {
+      window.location.href = '/api/vehicle-orders/export';
+    });
+
     document.getElementById('excelUploadBtn').addEventListener('click', () => {
       openExcelUploadModal({
         title: '차량 엑셀 업로드',

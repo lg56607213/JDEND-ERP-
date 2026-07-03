@@ -79,6 +79,7 @@
       <div class="card-header">
         <h2>계약 목록</h2>
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" id="excelDownloadBtn">엑셀 다운로드</button>
           <button type="button" class="btn btn-secondary" id="excelUploadBtn">엑셀 업로드</button>
           <button type="button" class="btn btn-primary" id="addContractBtn"><span>+ 계약 추가</span></button>
         </div>
@@ -438,6 +439,10 @@
   <script src="../../assets/js/excel-upload.js"></script>
   <script src="../../assets/js/role.js"></script>
   <script>
+    document.getElementById('excelDownloadBtn').addEventListener('click', () => {
+      window.location.href = '/api/contracts/export';
+    });
+
     document.getElementById('excelUploadBtn').addEventListener('click', () => {
       openExcelUploadModal({
         title: '계약 엑셀 업로드',

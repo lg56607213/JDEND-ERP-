@@ -1,6 +1,7 @@
 package com.jdend.erp.customer;
 
 import com.jdend.erp.auth.service.PermissionService;
+import com.jdend.erp.common.excel.ExcelExportService;
 import com.jdend.erp.common.excel.ExcelUploadResultResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpHeaders;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -21,13 +23,16 @@ public class CustomerController {
     private final CustomerBulkUploadService bulkUploadService;
     private final PermissionService permissionService;
     private final CustomerNumberGenerator numberGenerator;
+    private final ExcelExportService excelExportService;
 
     public CustomerController(CustomerRepository repo, CustomerBulkUploadService bulkUploadService,
-                               PermissionService permissionService, CustomerNumberGenerator numberGenerator) {
+                               PermissionService permissionService, CustomerNumberGenerator numberGenerator,
+                               ExcelExportService excelExportService) {
         this.repo = repo;
         this.bulkUploadService = bulkUploadService;
         this.permissionService = permissionService;
         this.numberGenerator = numberGenerator;
+        this.excelExportService = excelExportService;
     }
 
     @GetMapping
@@ -86,6 +91,24 @@ public class CustomerController {
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export() {
+        String[] headers = {"고객번호", "고객유형", "고객명", "주민/사업자번호", "연락처", "대표자",
+                "업종", "업태", "주소", "청구지주소", "담당자", "담당자연락처", "담당자이메일", "청구이메일", "등록일"};
+        List<Object[]> rows = repo.findAll().stream().map(c -> new Object[]{
+                c.getCustomerNumber(), c.getCustomerType(), c.getCustomerName(),
+                c.getRegistrationNumber(), c.getPhone(), c.getCeo(),
+                c.getBusinessType(), c.getBusinessItem(), c.getAddress(), c.getBillAddress(),
+                c.getManager(), c.getManagerPhone(), c.getManagerEmail(), c.getBillEmail(),
+                c.getRegisterDate()
+        }).collect(Collectors.toList());
+        byte[] data = excelExportService.build("고객목록", headers, rows);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''customers.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
     }
 
     @GetMapping("/bulk-upload/template")

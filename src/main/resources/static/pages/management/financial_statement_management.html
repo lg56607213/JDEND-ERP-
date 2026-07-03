@@ -357,6 +357,7 @@
         <div class="voucher-search-actions">
           <button type="button" class="btn-primary" onclick="searchVoucherHistory()">조회</button>
           <button type="button" onclick="resetVoucherHistoryDates()">초기화</button>
+          <button type="button" onclick="exportVoucherHistory()" style="background:#059669;color:#fff;border-color:#059669;">엑셀 다운로드</button>
         </div>
       </div>
 
@@ -621,6 +622,17 @@
   function typeBadge(type) {
     if (type === "DEBIT") return `<span class="badge-debit">차변</span>`;
     return `<span class="badge-credit">대변</span>`;
+  }
+
+  function exportVoucherHistory() {
+    if (!selectedVoucherAccountId) return;
+    const startDate = document.getElementById("voucherStartDate").value;
+    const endDate = document.getElementById("voucherEndDate").value;
+    const params = new URLSearchParams();
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    params.set("accountName", selectedVoucherAccountName);
+    window.location.href = `/api/financial-statement-accounts/${selectedVoucherAccountId}/voucher-rows/export?` + params.toString();
   }
 
   async function searchVoucherHistory() {
