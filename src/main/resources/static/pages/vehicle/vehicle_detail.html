@@ -203,7 +203,7 @@
               </div>
               <div class="form-group">
                 <label for="editModelYear">연식</label>
-                <input type="text" id="editModelYear" name="modelYear">
+                <input type="text" id="editModelYear" name="modelYear" maxlength="4" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
               </div>
               <div class="form-group">
                 <label for="editFuelType">유종</label>

@@ -401,3 +401,75 @@ function loadSidebar() {
   });
 }
 window.addEventListener('DOMContentLoaded', loadSidebar);
+
+// ── 날짜 입력 연도 4자리 제한 ──────────────────────────────────────────
+// Chrome의 <input type="date"> 연도 섹션은 4자리 입력 후 자동으로 월로 이동해야
+// 하지만 이동이 안 될 경우 5~6자리 입력이 가능해지는 버그가 있음.
+// 각 섹션(연4/월2/일2)을 추적하여 최대 자릿수 초과 시 입력 차단 + 섹션 자동 이동.
+(function () {
+  var SEC_MAX = [4, 2, 2]; // year, month, day
+
+  function applyYearFix(el) {
+    if (el._yrFixed) return;
+    el._yrFixed = true;
+    if (!el.hasAttribute('max')) el.setAttribute('max', '9999-12-31');
+
+    var sec = 0, cnt = 0;
+
+    function resetState() { sec = 0; cnt = 0; }
+
+    el.addEventListener('focus', resetState);
+    el.addEventListener('blur', resetState);
+    el.addEventListener('click', resetState);
+
+    el.addEventListener('keydown', function (e) {
+      if (/^\d$/.test(e.key)) {
+        cnt++;
+        if (cnt > SEC_MAX[sec]) {
+          // 해당 섹션 최대 자릿수 초과 → 차단
+          e.preventDefault();
+          return;
+        }
+        if (cnt === SEC_MAX[sec] && sec < 2) {
+          // 섹션 꽉 참 → 다음 섹션으로 자동 이동
+          var me = this;
+          setTimeout(function () {
+            sec++;
+            cnt = 0;
+            // Chrome date input에서 '/' 키가 섹션을 전진시킴
+            me.dispatchEvent(new KeyboardEvent('keydown', {
+              key: '/', code: 'Slash', keyCode: 191,
+              bubbles: true, cancelable: false
+            }));
+          }, 0);
+        }
+      } else if (e.key === '/' || e.key === 'ArrowRight') {
+        sec = Math.min(2, sec + 1); cnt = 0;
+      } else if (e.key === 'ArrowLeft') {
+        sec = Math.max(0, sec - 1); cnt = 0;
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        cnt = Math.max(0, cnt - 1);
+      }
+    });
+  }
+
+  function init() {
+    document.querySelectorAll('input[type="date"]').forEach(applyYearFix);
+    // 동적으로 추가된 date input에도 적용
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        m.addedNodes.forEach(function (n) {
+          if (!n || n.nodeType !== 1) return;
+          if (n.type === 'date') applyYearFix(n);
+          if (n.querySelectorAll) n.querySelectorAll('input[type="date"]').forEach(applyYearFix);
+        });
+      });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
