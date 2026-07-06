@@ -2,80 +2,105 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>세무상담</title>
+  <title>세무상담 문의하기</title>
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <style>
-    .content-wrapper { margin-left: 220px; padding: 32px 32px 32px 32px; }
-    h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; color: #1b253a; }
+    .content-wrapper { margin-left: 220px; padding: 32px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; color: #1b253a; }
+    .page-desc { font-size: 0.88rem; color: #6b7280; margin-bottom: 24px; }
     .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 24px; }
     .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; }
     .btn-primary { background: #23304e; color: #fff; }
     .btn-primary:hover { background: #1b253a; }
     .btn-secondary { background: #e5e7eb; color: #374151; }
     .btn-secondary:hover { background: #d1d5db; }
+
+    /* 게시판 헤더 */
+    .board-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .board-title { font-size: 1rem; font-weight: 700; color: #1b253a; }
+    .board-count { font-size: 0.88rem; color: #6b7280; }
+
+    /* 게시판 테이블 */
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
-    th { background: #f4f6fa; font-weight: 600; color: #374151; }
-    tr:hover td { background: #f9fafb; cursor: pointer; }
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 11px 12px; text-align: center; font-size: 0.88rem; font-weight: 700; color: #374151; background: #f8fafc; }
+    td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.93rem; color: #374151; }
+    td.num { text-align: center; color: #9ca3af; font-size: 0.85rem; }
+    td.title-cell { cursor: pointer; }
+    td.title-cell:hover { color: #23304e; text-decoration: underline; }
+    td.center { text-align: center; }
+    tr:hover td { background: #f9fafb; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
     .badge-pending { background: #fef3c7; color: #92400e; }
     .badge-answered { background: #d1fae5; color: #065f46; }
+
+    /* 등록 폼 */
     .form-group { margin-bottom: 16px; }
     label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.93rem; color: #374151; }
     input[type=text], textarea { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.95rem; box-sizing: border-box; }
-    textarea { resize: vertical; min-height: 120px; }
+    textarea { resize: vertical; min-height: 140px; }
     .file-hint { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+    /* 상세 모달 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: #fff; border-radius: 10px; padding: 28px; max-width: 680px; width: 95%; max-height: 85vh; overflow-y: auto; }
-    .modal h3 { margin: 0 0 16px; font-size: 1.1rem; }
-    .modal-section { background: #f4f6fa; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
-    .modal-answer { background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px; border-radius: 0 6px 6px 0; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
-    .modal-footer { margin-top: 16px; text-align: right; }
-    .empty { text-align: center; color: #9ca3af; padding: 40px 0; }
-    .btn-new { float: right; margin-bottom: 16px; }
-    .clearfix::after { content: ''; display: table; clear: both; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; max-width: 680px; width: 95%; max-height: 88vh; overflow-y: auto; }
+    .modal-num { font-size: 0.82rem; color: #9ca3af; margin-bottom: 2px; }
+    .modal h3 { margin: 0 0 6px; font-size: 1.1rem; color: #1b253a; }
+    .modal-meta { font-size: 0.82rem; color: #6b7280; margin-bottom: 16px; display: flex; gap: 16px; }
+    .section-label { font-weight: 700; font-size: 0.88rem; color: #374151; margin-bottom: 6px; }
+    .modal-section { background: #f4f6fa; border-radius: 6px; padding: 14px; margin-bottom: 16px; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+    .modal-answer { background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px; border-radius: 0 6px 6px 0; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+    .modal-pending { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 0 6px 6px 0; font-size: 0.9rem; color: #92400e; }
+    .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; }
+    .empty { text-align: center; color: #9ca3af; padding: 48px 0; font-size: 0.95rem; }
   </style>
 </head>
 <body>
 <div id="sidebar-container"></div>
 <div class="content-wrapper">
-  <div class="clearfix">
-    <h2>세무상담</h2>
-    <button class="btn btn-primary btn-new" onclick="openForm()">+ 문의 등록</button>
-  </div>
+  <h2>세무상담 문의하기</h2>
+  <p class="page-desc">세무 관련 궁금한 내용을 등록하시면 세무대리인이 답변 드립니다.</p>
 
-  <!-- 등록 폼 -->
+  <!-- 등록 폼 (작성하기 클릭 시 표시) -->
   <div class="card" id="formCard" style="display:none;">
-    <h3 style="margin:0 0 18px;font-size:1rem;">문의 등록</h3>
+    <div style="font-size:1rem;font-weight:700;color:#1b253a;margin-bottom:18px;">문의 작성</div>
     <div class="form-group">
-      <label>제목 *</label>
+      <label>제목 <span style="color:#ef4444;">*</span></label>
       <input type="text" id="fTitle" placeholder="문의 제목을 입력하세요">
     </div>
     <div class="form-group">
-      <label>내용 *</label>
+      <label>내용 <span style="color:#ef4444;">*</span></label>
       <textarea id="fContent" placeholder="문의 내용을 상세히 입력해주세요"></textarea>
     </div>
     <div class="form-group">
-      <label>첨부파일 (선택)</label>
+      <label>첨부파일 <span style="color:#9ca3af;font-weight:400;">(선택)</span></label>
       <input type="file" id="fFile" accept="image/*,application/pdf">
       <div class="file-hint">이미지(JPG, PNG 등) 또는 PDF 파일, 최대 10MB</div>
     </div>
-    <div style="text-align:right; gap:8px; display:flex; justify-content:flex-end;">
+    <div class="form-actions">
       <button class="btn btn-secondary" onclick="closeForm()">취소</button>
       <button class="btn btn-primary" onclick="submitForm()">등록</button>
     </div>
   </div>
 
-  <!-- 목록 -->
+  <!-- 게시판 목록 -->
   <div class="card">
+    <div class="board-header">
+      <span class="board-title">문의 목록</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="board-count" id="boardCount"></span>
+        <button class="btn btn-primary" onclick="openForm()">작성하기</button>
+      </div>
+    </div>
     <table>
       <thead>
         <tr>
-          <th style="width:50px">#</th>
-          <th>제목</th>
-          <th style="width:100px">상태</th>
-          <th style="width:130px">등록일</th>
+          <th style="width:52px;">번호</th>
+          <th style="text-align:left;">제목</th>
+          <th style="width:90px;">상태</th>
+          <th style="width:120px;">등록일</th>
         </tr>
       </thead>
       <tbody id="listBody">
@@ -88,18 +113,27 @@
 <!-- 상세 모달 -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
+    <div class="modal-num" id="modalNum"></div>
     <h3 id="modalTitle"></h3>
-    <div style="font-size:0.83rem; color:#6b7280; margin-bottom:12px;" id="modalMeta"></div>
+    <div class="modal-meta">
+      <span id="modalDate"></span>
+      <span id="modalStatus"></span>
+    </div>
+
+    <div class="section-label">문의 내용</div>
     <div class="modal-section" id="modalContent"></div>
-    <div id="modalFileArea" style="margin-bottom:12px;display:none;">
-      <a id="modalFileLink" href="#" style="color:#2563eb;font-size:0.9rem;">첨부파일 다운로드</a>
+
+    <div id="modalFileArea" style="margin-bottom:14px;display:none;">
+      <a id="modalFileLink" href="#" style="color:#2563eb;font-size:0.9rem;text-decoration:none;">
+        📎 <span id="modalFileName"></span>
+      </a>
     </div>
-    <div id="modalAnswerArea" style="display:none;">
-      <div style="font-weight:600;margin-bottom:8px;font-size:0.93rem;color:#065f46;">답변</div>
-      <div class="modal-answer" id="modalAnswer"></div>
-      <div style="font-size:0.82rem; color:#6b7280; margin-top:6px;" id="modalAnsweredBy"></div>
-    </div>
-    <div id="modalPending" style="color:#92400e;font-size:0.9rem;display:none;">답변 대기 중입니다.</div>
+
+    <div class="section-label" id="answerLabel" style="display:none;color:#065f46;">답변</div>
+    <div class="modal-answer" id="modalAnswer" style="display:none;"></div>
+    <div style="font-size:0.82rem;color:#6b7280;margin-top:6px;" id="modalAnsweredBy"></div>
+    <div class="modal-pending" id="modalPending" style="display:none;">답변 준비 중입니다. 답변이 등록되면 이 화면에서 확인하실 수 있습니다.</div>
+
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">닫기</button>
     </div>
@@ -109,27 +143,41 @@
 <script src="../../assets/js/sidebar.js"></script>
 <script>
   const BASE = '';
+  let totalCount = 0;
 
   function fmt(dt) {
     if (!dt) return '-';
     return dt.replace('T', ' ').substring(0, 16);
   }
 
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
   function loadList() {
     fetch(BASE + '/api/tax-consultations', { credentials: 'include' })
       .then(r => r.json())
       .then(list => {
+        totalCount = list.length;
+        document.getElementById('boardCount').textContent = '총 ' + totalCount + '건';
         const tbody = document.getElementById('listBody');
         if (!list.length) {
-          tbody.innerHTML = '<tr><td colspan="4" class="empty">등록된 문의가 없습니다.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" class="empty">등록된 문의가 없습니다.<br><small style="color:#d1d5db;">위의 [작성하기] 버튼을 눌러 첫 문의를 등록해보세요.</small></td></tr>';
           return;
         }
         tbody.innerHTML = list.map((item, i) => `
-          <tr onclick="openDetail(${item.id})">
-            <td>${list.length - i}</td>
-            <td>${escHtml(item.title)}</td>
-            <td><span class="badge ${item.status === 'ANSWERED' ? 'badge-answered' : 'badge-pending'}">${item.status === 'ANSWERED' ? '답변완료' : '답변대기'}</span></td>
-            <td>${fmt(item.createdAt)}</td>
+          <tr onclick="openDetail(${item.id}, ${totalCount - i})">
+            <td class="num">${totalCount - i}</td>
+            <td class="title-cell">
+              ${escHtml(item.title)}
+              ${item.hasFile ? ' <span style="font-size:0.78rem;color:#9ca3af;">📎</span>' : ''}
+            </td>
+            <td class="center">
+              <span class="badge ${item.status === 'ANSWERED' ? 'badge-answered' : 'badge-pending'}">
+                ${item.status === 'ANSWERED' ? '답변완료' : '답변대기'}
+              </span>
+            </td>
+            <td class="center" style="font-size:0.88rem;color:#6b7280;">${fmt(item.createdAt)}</td>
           </tr>`).join('');
       });
   }
@@ -139,8 +187,13 @@
     document.getElementById('fTitle').value = '';
     document.getElementById('fContent').value = '';
     document.getElementById('fFile').value = '';
+    document.getElementById('fTitle').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function closeForm() { document.getElementById('formCard').style.display = 'none'; }
+
+  function closeForm() {
+    document.getElementById('formCard').style.display = 'none';
+  }
 
   function submitForm() {
     const title = document.getElementById('fTitle').value.trim();
@@ -163,42 +216,52 @@
       });
   }
 
-  function openDetail(id) {
+  function openDetail(id, num) {
     fetch(BASE + '/api/tax-consultations/' + id, { credentials: 'include' })
       .then(r => r.json())
       .then(item => {
+        document.getElementById('modalNum').textContent = '번호 ' + num;
         document.getElementById('modalTitle').textContent = item.title;
-        document.getElementById('modalMeta').textContent = '등록일: ' + fmt(item.createdAt);
+        document.getElementById('modalDate').textContent = '등록일: ' + fmt(item.createdAt);
+        document.getElementById('modalStatus').innerHTML =
+          item.status === 'ANSWERED'
+            ? '<span class="badge badge-answered">답변완료</span>'
+            : '<span class="badge badge-pending">답변대기</span>';
         document.getElementById('modalContent').textContent = item.content;
 
         const fileArea = document.getElementById('modalFileArea');
         if (item.hasFile) {
           fileArea.style.display = '';
           document.getElementById('modalFileLink').href = BASE + '/api/tax-consultations/' + id + '/file';
-          document.getElementById('modalFileLink').textContent = '첨부파일 다운로드: ' + (item.fileOriginalName || '파일');
+          document.getElementById('modalFileName').textContent = item.fileOriginalName || '첨부파일 다운로드';
         } else {
           fileArea.style.display = 'none';
         }
 
-        const answerArea = document.getElementById('modalAnswerArea');
-        const pending = document.getElementById('modalPending');
+        const answerLabel = document.getElementById('answerLabel');
+        const answerEl = document.getElementById('modalAnswer');
+        const answeredByEl = document.getElementById('modalAnsweredBy');
+        const pendingEl = document.getElementById('modalPending');
+
         if (item.status === 'ANSWERED') {
-          answerArea.style.display = '';
-          pending.style.display = 'none';
-          document.getElementById('modalAnswer').textContent = item.answer;
-          document.getElementById('modalAnsweredBy').textContent = item.answeredBy ? '답변자: ' + item.answeredBy + ' · ' + fmt(item.answeredAt) : '';
+          answerLabel.style.display = '';
+          answerEl.style.display = '';
+          pendingEl.style.display = 'none';
+          answerEl.textContent = item.answer;
+          answeredByEl.textContent = item.answeredBy ? '답변자: ' + item.answeredBy + '  ·  ' + fmt(item.answeredAt) : '';
         } else {
-          answerArea.style.display = 'none';
-          pending.style.display = '';
+          answerLabel.style.display = 'none';
+          answerEl.style.display = 'none';
+          answeredByEl.textContent = '';
+          pendingEl.style.display = '';
         }
 
         document.getElementById('detailModal').classList.add('open');
       });
   }
-  function closeModal() { document.getElementById('detailModal').classList.remove('open'); }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function closeModal() {
+    document.getElementById('detailModal').classList.remove('open');
   }
 
   document.getElementById('detailModal').addEventListener('click', function(e) {

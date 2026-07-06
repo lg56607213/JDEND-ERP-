@@ -200,11 +200,16 @@ function loadSidebar() {
               <li id="companyUsersMenuItem" style="display:none;">
                 <a href="${basePath}pages/management/company_users.html">사용자관리</a>
               </li>
-              <li id="taxConsultationMenuItem" style="display:none;">
-                <a href="${basePath}pages/consultation/tax_consultation.html">세무상담</a>
-              </li>
-              <li id="taxConsultationAdminMenuItem" style="display:none;">
-                <a href="${basePath}pages/consultation/tax_consultation_admin.html">세무상담관리</a>
+              <li id="taxConsultationMenu" class="has-sub" style="display:none;">
+                <span class="menu-label">세무상담</span>
+                <ul>
+                  <li id="taxConsultationUserItem" style="display:none;">
+                    <a href="${basePath}pages/consultation/tax_consultation.html">문의하기</a>
+                  </li>
+                  <li id="taxConsultationAdminItem" style="display:none;">
+                    <a href="${basePath}pages/consultation/tax_consultation_admin.html">문의관리</a>
+                  </li>
+                </ul>
               </li>
             </ul>
           </li>
@@ -240,12 +245,15 @@ function loadSidebar() {
         const taxEnabled = data && data.taxConsultationEnabled;
         const item = document.getElementById('companyUsersMenuItem');
         if (item && (role === 'ADMIN' || role === 'COMPANY_ADMIN')) item.style.display = '';
-        const taxItem = document.getElementById('taxConsultationMenuItem');
-        const taxAdminItem = document.getElementById('taxConsultationAdminMenuItem');
+        const taxMenu = document.getElementById('taxConsultationMenu');
+        const taxUserItem = document.getElementById('taxConsultationUserItem');
+        const taxAdminItem = document.getElementById('taxConsultationAdminItem');
         if (role === 'ADMIN' || role === 'TAX_AGENT') {
+          if (taxMenu) taxMenu.style.display = '';
           if (taxAdminItem) taxAdminItem.style.display = '';
         } else if (taxEnabled) {
-          if (taxItem) taxItem.style.display = '';
+          if (taxMenu) taxMenu.style.display = '';
+          if (taxUserItem) taxUserItem.style.display = '';
         }
       })
       .catch(function (e) { console.error('권한 조회 실패', e); });
