@@ -36,6 +36,16 @@ public class VoucherLine {
     @Column(name = "sort_order")
     private Integer sortOrder;
 
+    @Column(name = "paid", nullable = false)
+    @Builder.Default
+    private boolean paid = false;
+
+    @Column(name = "paid_at")
+    private java.time.LocalDate paidAt;
+
+    @Column(name = "paid_voucher_no", length = 50)
+    private String paidVoucherNo;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

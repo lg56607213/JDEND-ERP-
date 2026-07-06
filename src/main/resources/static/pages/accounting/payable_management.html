@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미지급관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .content-wrapper { margin-left: 220px; padding: 32px; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1b253a; margin-bottom: 4px; }
+    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 24px; }
+
+    /* 검색 영역 */
+    .search-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 18px 24px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fg label { font-size: 0.82rem; font-weight: 700; color: #374151; }
+    .fg input, .fg select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.9rem; }
+    .date-row { display: flex; align-items: center; gap: 6px; }
+    .date-row input { width: 130px; }
+
+    /* 버튼 */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+    .btn-search { background: #23304e; color: #fff; }
+    .btn-search:hover { background: #1b253a; }
+    .btn-pay { background: #10b981; color: #fff; }
+    .btn-pay:hover:not(:disabled) { background: #059669; }
+    .btn-pay:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+
+    /* 목록 카드 */
+    .list-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 20px 24px; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .list-info { font-size: 0.88rem; color: #6b7280; }
+    .list-info strong { color: #1b253a; }
+
+    /* 테이블 */
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 10px 12px; font-size: 0.85rem; font-weight: 700; color: #374151; background: #f8fafc; text-align: center; }
+    th.left { text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; color: #374151; }
+    td.center { text-align: center; }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover td { background: #f9fafb; }
+    .empty { text-align: center; color: #9ca3af; padding: 48px 0; }
+
+    .checkbox-cell { width: 42px; text-align: center; }
+    .checkbox-cell input { width: 15px; height: 15px; cursor: pointer; }
+
+    .acct-badge { display: inline-block; background: #ede9fe; color: #5b21b6; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 700; }
+
+    /* 합계 행 */
+    .sum-row td { background: #f0fdf4; font-weight: 700; border-top: 2px solid #10b981; }
+
+    /* 모달 */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; width: 460px; max-width: 95%; }
+    .modal h3 { margin: 0 0 20px; font-size: 1.1rem; color: #1b253a; }
+    .mfg { margin-bottom: 14px; }
+    .mfg label { display: block; font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+    .mfg input { width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.93rem; box-sizing: border-box; }
+    .modal-summary { background: #f0fdf4; border-radius: 6px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.9rem; }
+    .modal-summary .label { color: #6b7280; }
+    .modal-summary .val { font-weight: 700; color: #065f46; font-size: 1rem; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <h1>미지급관리</h1>
+  <p class="page-sub">전표에 등록된 미지급금·미지급비용·법인카드 등 미결제 항목을 조회하고 일괄 지급 처리합니다.</p>
+
+  <!-- 검색 -->
+  <div class="search-card">
+    <div class="fg">
+      <label>기간</label>
+      <div class="date-row">
+        <input type="date" id="startDate">
+        <span style="color:#9ca3af;">~</span>
+        <input type="date" id="endDate">
+      </div>
+    </div>
+    <div class="fg">
+      <label>계정 항목</label>
+      <select id="accountFilter" style="min-width:160px;">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <button class="btn btn-search" onclick="loadList()">조회</button>
+  </div>
+
+  <!-- 목록 -->
+  <div class="list-card">
+    <div class="list-header">
+      <div class="list-info">
+        미지급 <strong id="totalCount">0</strong>건 &nbsp;|&nbsp; 합계 <strong id="totalAmount">0</strong> 원
+      </div>
+      <button class="btn btn-pay" id="btnPay" onclick="openPayModal()" disabled>
+        일괄지급 처리 <span id="selectedCount"></span>
+      </button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="checkbox-cell">
+            <input type="checkbox" id="checkAll" onchange="toggleAll(this)">
+          </th>
+          <th>전표일자</th>
+          <th class="left">계정 항목</th>
+          <th class="left">적요</th>
+          <th class="left">계약번호</th>
+          <th class="left">메모</th>
+          <th>금액</th>
+        </tr>
+      </thead>
+      <tbody id="listBody">
+        <tr><td colspan="7" class="empty">조회 버튼을 눌러 미지급 항목을 불러오세요.</td></tr>
+      </tbody>
+      <tfoot id="listFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- 지급 처리 모달 -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <h3>일괄 지급 처리</h3>
+    <div class="modal-summary">
+      <div class="label">선택 항목</div>
+      <div class="val" id="modalSummary"></div>
+    </div>
+    <div class="mfg">
+      <label>지급일자 <span style="color:#ef4444;">*</span></label>
+      <input type="date" id="payDate">
+    </div>
+    <div class="mfg">
+      <label>지급 계정 (대변)</label>
+      <input type="text" id="bankAccount" value="보통예금" placeholder="보통예금">
+    </div>
+    <div class="mfg">
+      <label>메모</label>
+      <input type="text" id="payMemo" placeholder="예: 3월 미지급금 일괄지급">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePayModal()">취소</button>
+      <button class="btn btn-pay" onclick="submitPay()">전표 생성 및 지급</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script>
+  const BASE = '/api/payables';
+  let allItems = [];
+
+  function fmt(n) {
+    return Number(n || 0).toLocaleString();
+  }
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // 계정 항목 드롭다운 로드
+  async function loadAccountNames() {
+    try {
+      const res = await fetch(BASE + '/account-names', { credentials: 'include' });
+      const names = await res.json();
+      const sel = document.getElementById('accountFilter');
+      sel.innerHTML = '<option value="">전체</option>' +
+        names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+    } catch (e) { /* 무시 */ }
+  }
+
+  async function loadList() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const accountName = document.getElementById('accountFilter').value;
+
+    const url = new URL(BASE, location.origin);
+    if (startDate) url.searchParams.set('startDate', startDate);
+    if (endDate)   url.searchParams.set('endDate', endDate);
+    if (accountName) url.searchParams.set('accountName', accountName);
+
+    document.getElementById('listBody').innerHTML =
+      '<tr><td colspan="7" class="empty">조회 중...</td></tr>';
+
+    const res = await fetch(url.toString(), { credentials: 'include' });
+    allItems = await res.json();
+
+    // 계정명 드롭다운 갱신 (전체 조회 후 동기화)
+    await loadAccountNames();
+
+    renderList();
+    updateSummary();
+  }
+
+  function renderList() {
+    const tbody = document.getElementById('listBody');
+    const tfoot = document.getElementById('listFoot');
+
+    document.getElementById('totalCount').textContent = allItems.length;
+    const total = allItems.reduce((s, i) => s + (i.amount || 0), 0);
+    document.getElementById('totalAmount').textContent = fmt(total);
+
+    if (!allItems.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">미지급 항목이 없습니다.</td></tr>';
+      tfoot.innerHTML = '';
+      return;
+    }
+
+    tbody.innerHTML = allItems.map(item => `
+      <tr>
+        <td class="checkbox-cell" onclick="event.stopPropagation()">
+          <input type="checkbox" class="row-check" value="${item.id}" onchange="updateSummary()">
+        </td>
+        <td class="center">${item.voucherDate ?? '-'}</td>
+        <td><span class="acct-badge">${escHtml(item.accountName)}</span></td>
+        <td>${escHtml(item.description ?? '')}</td>
+        <td>${escHtml(item.contractNumber ?? '')}</td>
+        <td>${escHtml(item.memo ?? '')}</td>
+        <td class="amount">${fmt(item.amount)}</td>
+      </tr>`).join('');
+
+    tfoot.innerHTML = `
+      <tr class="sum-row">
+        <td colspan="6" class="center">합  계</td>
+        <td class="amount">${fmt(total)}</td>
+      </tr>`;
+  }
+
+  function toggleAll(src) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = src.checked);
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const checks = document.querySelectorAll('.row-check');
+    const checked = document.querySelectorAll('.row-check:checked');
+
+    // 전체선택 체크박스 상태
+    const ca = document.getElementById('checkAll');
+    if (checks.length === 0) { ca.checked = false; ca.indeterminate = false; }
+    else if (checked.length === 0) { ca.checked = false; ca.indeterminate = false; }
+    else if (checked.length === checks.length) { ca.checked = true; ca.indeterminate = false; }
+    else { ca.checked = false; ca.indeterminate = true; }
+
+    // 일괄지급 버튼
+    const btnPay = document.getElementById('btnPay');
+    const selCount = document.getElementById('selectedCount');
+    btnPay.disabled = checked.length === 0;
+    selCount.textContent = checked.length > 0 ? `(${checked.length}건)` : '';
+  }
+
+  function openPayModal() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length === 0) { alert('지급할 항목을 선택해주세요.'); return; }
+
+    const ids = Array.from(checked).map(c => Number(c.value));
+    const selectedItems = allItems.filter(i => ids.includes(i.id));
+    const total = selectedItems.reduce((s, i) => s + (i.amount || 0), 0);
+
+    document.getElementById('modalSummary').textContent =
+      `${checked.length}건 · 합계 ${fmt(total)} 원`;
+    document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('bankAccount').value = '보통예금';
+    document.getElementById('payMemo').value = '';
+
+    document.getElementById('payModal').classList.add('open');
+  }
+
+  function closePayModal() {
+    document.getElementById('payModal').classList.remove('open');
+  }
+
+  async function submitPay() {
+    const payDate = document.getElementById('payDate').value;
+    if (!payDate) { alert('지급일자를 입력해주세요.'); return; }
+
+    const checked = document.querySelectorAll('.row-check:checked');
+    const lineIds = Array.from(checked).map(c => Number(c.value));
+
+    const payload = {
+      lineIds,
+      payDate,
+      bankAccount: document.getElementById('bankAccount').value.trim() || '보통예금',
+      memo: document.getElementById('payMemo').value.trim()
+    };
+
+    const res = await fetch(BASE + '/pay', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (data.message) {
+      alert('오류: ' + data.message);
+      return;
+    }
+
+    closePayModal();
+    alert(`지급 완료!\n생성된 전표번호: ${data.voucherNo}`);
+    await loadList();
+  }
+
+  document.getElementById('payModal').addEventListener('click', function(e) {
+    if (e.target === this) closePayModal();
+  });
+
+  // 초기화
+  (async function init() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    await loadAccountNames();
+    await loadList();
+  })();
+
+  loadSidebar();
+</script>
+</body>
+</html>

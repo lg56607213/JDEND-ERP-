@@ -185,6 +185,12 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/accounting/daily_fund_report.html">일일자금일보</a></li>
                 </ul>
               </li>
+              <li class="has-sub">
+                <span class="menu-label">미지급관리</span>
+                <ul>
+                  <li><a href="${basePath}pages/accounting/payable_management.html">미지급현황</a></li>
+                </ul>
+              </li>
             </ul>
           </li>
           <li class="has-sub">

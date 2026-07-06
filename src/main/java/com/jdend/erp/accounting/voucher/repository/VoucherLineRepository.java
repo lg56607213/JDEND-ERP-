@@ -39,4 +39,29 @@ public interface VoucherLineRepository extends JpaRepository<VoucherLine, Long> 
   );
 
   boolean existsByAccountName(String accountName);
+
+  @Query("""
+      select l from VoucherLine l join fetch l.voucher v
+      where l.lineType = 'CREDIT'
+      and (l.accountName like '%미지급%' or l.accountName like '%법인카드%')
+      and l.paid = false
+      and (:startDate is null or v.voucherDate >= :startDate)
+      and (:endDate is null or v.voucherDate <= :endDate)
+      and (:accountName is null or :accountName = '' or l.accountName = :accountName)
+      order by v.voucherDate desc, v.id desc
+  """)
+  List<VoucherLine> findPayables(
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate,
+      @Param("accountName") String accountName
+  );
+
+  @Query("""
+      select distinct l.accountName from VoucherLine l
+      where l.lineType = 'CREDIT'
+      and (l.accountName like '%미지급%' or l.accountName like '%법인카드%')
+      and l.paid = false
+      order by l.accountName
+  """)
+  List<String> findPayableAccountNames();
 }
