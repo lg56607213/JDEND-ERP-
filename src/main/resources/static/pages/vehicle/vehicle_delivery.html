@@ -52,24 +52,28 @@
               <input type="text" id="carModel" readonly>
             </div>
             <div class="form-group">
-              <label>총차량가</label>
-              <input type="text" id="totalVehiclePrice" readonly>
-            </div>
-            <div class="form-group">
               <label>차량번호</label>
               <input type="text" id="vehicleNo" readonly>
             </div>
             <div class="form-group">
-              <label>출고가</label>
-              <input type="text" id="releasePrice" readonly>
+              <label>총차량가</label>
+              <input type="text" id="totalVehiclePrice" readonly>
+            </div>
+            <div class="form-group">
+              <label>차량가격 공급가액 <span style="font-size:11px;color:#6b7280;font-weight:400;">(÷1.1)</span></label>
+              <input type="text" id="vehicleSupplyPrice" readonly>
             </div>
             <div class="form-group">
               <label>총선급금액</label>
               <input type="text" id="totalAdvancePrice" readonly>
             </div>
             <div class="form-group">
-              <label>출고가차액</label>
-              <input type="text" id="priceDiff" readonly>
+              <label>선급 공급가액 <span style="font-size:11px;color:#6b7280;font-weight:400;">(÷1.1)</span></label>
+              <input type="text" id="advanceSupplyPrice" readonly>
+            </div>
+            <div class="form-group">
+              <label>공급가액 차액 <span style="font-size:11px;color:#6b7280;font-weight:400;">(차량 − 선급)</span></label>
+              <input type="text" id="supplyPriceDiff" readonly>
             </div>
           </div>
         </div>
@@ -233,15 +237,24 @@
         }
 
         document.getElementById('carModel').value = vehicle.carModel || '';
-        document.getElementById('totalVehiclePrice').value = ((vehicle.totalPrice ?? 0)).toLocaleString();
         document.getElementById('vehicleNo').value = vehicle.vehicleNo || '';
-        document.getElementById('releasePrice').value = ((vehicle.releasePrice ?? 0)).toLocaleString();
-        document.getElementById('totalAdvancePrice').value = ((vehicle.totalAdvancePrice ?? 0)).toLocaleString();
 
-        const priceDiff = (vehicle.releasePrice ?? 0) - (vehicle.totalPrice ?? 0);
-        const priceDiffEl = document.getElementById('priceDiff');
-        priceDiffEl.value = priceDiff.toLocaleString();
-        priceDiffEl.style.color = priceDiff < 0 ? '#e53e3e' : '#38a169';
+        const totalPrice = vehicle.totalPrice ?? 0;
+        const totalAdvance = vehicle.totalAdvancePrice ?? 0;
+
+        // 공급가액 = 금액 ÷ 1.1 (원 단위 절사)
+        const vehicleSupply = Math.floor(totalPrice / 1.1);
+        const advanceSupply = Math.floor(totalAdvance / 1.1);
+        const supplyDiff = vehicleSupply - advanceSupply;
+
+        document.getElementById('totalVehiclePrice').value = totalPrice.toLocaleString();
+        document.getElementById('vehicleSupplyPrice').value = vehicleSupply.toLocaleString();
+        document.getElementById('totalAdvancePrice').value = totalAdvance.toLocaleString();
+        document.getElementById('advanceSupplyPrice').value = advanceSupply.toLocaleString();
+
+        const diffEl = document.getElementById('supplyPriceDiff');
+        diffEl.value = supplyDiff.toLocaleString();
+        diffEl.style.color = supplyDiff === 0 ? '#38a169' : (supplyDiff < 0 ? '#e53e3e' : '#d97706');
 
         document.getElementById('vehicleInfoSection').style.display = 'block';
         document.getElementById('executeInfoSection').style.display = 'block';
@@ -263,11 +276,12 @@
       if (confirm('조회한 내용을 초기화하시겠습니까?')) {
         document.getElementById('vehicleMgmtNo').value = '';
         document.getElementById('carModel').value = '';
-        document.getElementById('totalVehiclePrice').value = '';
         document.getElementById('vehicleNo').value = '';
-        document.getElementById('releasePrice').value = '';
+        document.getElementById('totalVehiclePrice').value = '';
+        document.getElementById('vehicleSupplyPrice').value = '';
         document.getElementById('totalAdvancePrice').value = '';
-        document.getElementById('priceDiff').value = '';
+        document.getElementById('advanceSupplyPrice').value = '';
+        document.getElementById('supplyPriceDiff').value = '';
         hideAllSections();
       }
     }
