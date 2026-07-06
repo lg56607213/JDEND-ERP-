@@ -203,6 +203,24 @@
                     <label for="paymentNote">비고</label>
                     <input type="text" id="paymentNote" name="paymentNote" placeholder="비고사항을 입력하세요">
                   </div>
+
+                  <div class="form-group" style="grid-column:1 / -1;">
+                    <label>전표발생여부</label>
+                    <div style="display:flex; gap:20px; align-items:center; padding-top:6px;">
+                      <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer;">
+                        <input type="radio" name="payCreateVoucher" id="payVoucherY" value="Y" checked onchange="onPayVoucherFlagChange()"> Y (전표 생성)
+                      </label>
+                      <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; color:#b45309;">
+                        <input type="radio" name="payCreateVoucher" id="payVoucherN" value="N" onchange="onPayVoucherFlagChange()"> N (상태만 변경)
+                      </label>
+                    </div>
+                    <div id="payVoucherNote" style="display:none; margin-top:8px; padding:9px 12px;
+                         background:#fff7ed; border:1px solid #fed7aa; border-radius:6px;
+                         font-size:12px; color:#92400e; line-height:1.6;">
+                      ⚠️ <strong>전표 미발생(N) 모드</strong>: 수납금액이 스케줄에 반영되어 납부상태가 변경되지만, 회계 전표는 생성되지 않습니다.<br>
+                      기존 전표가 이미 발생된 데이터를 ERP로 컨버전할 때 사용합니다.
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -560,16 +578,26 @@
       }
     });
 
+    function onPayVoucherFlagChange() {
+      const isN = document.getElementById('payVoucherN').checked;
+      document.getElementById('payVoucherNote').style.display = isN ? 'block' : 'none';
+      const btn = document.getElementById('btnSubmit');
+      btn.textContent = isN ? '수납 등록 (전표없음)' : '수납 등록';
+      btn.style.background = isN ? '#d97706' : '';
+    }
+
     document.getElementById('paymentForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const createVoucher = document.getElementById('payVoucherY').checked;
       const payload = {
         contractNumber: document.getElementById('contractNumber').value.trim(),
         paymentDate: document.getElementById('paymentDate').value,
         paymentAmount: Number(document.getElementById('paymentAmount').value || 0),
         paymentMethod: document.getElementById('paymentMethod').value || null,
         companyAccount: document.getElementById('companyAccount').value.trim() || null,
-        memo: document.getElementById('paymentNote').value || null
+        memo: document.getElementById('paymentNote').value || null,
+        createVoucher
       };
 
       if (!payload.contractNumber) return alert('계약번호를 입력하세요.');
@@ -589,7 +617,7 @@
 
         mustOk(res);
 
-        alert(isEdit ? '수납 수정 완료' : '수납 등록 완료');
+        alert(isEdit ? '수납 수정 완료' : (createVoucher ? '수납 등록 완료' : '수납 등록 완료 (전표 미생성)'));
 
         resetForm(true);
 
@@ -613,6 +641,9 @@
       document.getElementById('paymentForm').reset();
       document.getElementById('customerInfo').classList.remove('active');
       document.getElementById('paymentDate').value = todayISO();
+      document.getElementById('payVoucherY').checked = true;
+      document.getElementById('payVoucherN').checked = false;
+      onPayVoucherFlagChange();
 
       clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
     }

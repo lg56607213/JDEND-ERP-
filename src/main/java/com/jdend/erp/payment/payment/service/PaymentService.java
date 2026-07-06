@@ -62,7 +62,10 @@ public class PaymentService {
         .memo(req.getMemo())
         .build());
 
-    createVoucherIfNeeded(saved);
+    boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
+    if (shouldCreateVoucher) {
+      createVoucherIfNeeded(saved);
+    }
 
     return toResponse(saved);
   }

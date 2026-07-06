@@ -254,9 +254,9 @@
 
   <!-- 차입금 전표 등록 모달 -->
   <div class="modal-overlay" id="voucherModal" style="display:none;">
-    <div class="modal-content" style="width:min(520px, 92vw);">
+    <div class="modal-content" style="width:min(560px, 92vw);">
       <div class="modal-header">
-        <h3>차입금 전표 등록 처리 중</h3>
+        <h3>차입금 납부 등록</h3>
         <button type="button" class="modal-close" onclick="closeVoucherModal()">&times;</button>
       </div>
       <div class="modal-body">
@@ -267,8 +267,25 @@
           </div>
 
           <div class="form-group">
+            <label for="voucherInstallmentNo">납부회차</label>
+            <input type="number" id="voucherInstallmentNo" placeholder="예: 3" min="1" style="width:100%;">
+          </div>
+
+          <div class="form-group">
             <label for="voucherAmount">상환금액 <span class="required">*</span></label>
             <input type="text" id="voucherAmount" placeholder="0" oninput="formatNumber(this)">
+          </div>
+
+          <div class="form-group">
+            <label>전표발생여부 <span class="required">*</span></label>
+            <div style="display:flex; gap:16px; align-items:center; padding-top:6px;">
+              <label style="display:flex; align-items:center; gap:5px; font-weight:600; cursor:pointer;">
+                <input type="radio" name="voucherCreateFlag" id="voucherCreateY" value="Y" checked onchange="onVoucherFlagChange()"> Y (전표 생성)
+              </label>
+              <label style="display:flex; align-items:center; gap:5px; font-weight:600; cursor:pointer; color:#b45309;">
+                <input type="radio" name="voucherCreateFlag" id="voucherCreateN" value="N" onchange="onVoucherFlagChange()"> N (상태만 변경)
+              </label>
+            </div>
           </div>
 
           <div class="form-group" style="grid-column:1 / -1;">
@@ -276,10 +293,17 @@
             <input type="text" id="voucherMemo" placeholder="차량번호 차입금 상환">
           </div>
         </div>
+
+        <div id="voucherNoCreateNote" style="display:none; margin-top:10px; padding:10px 14px;
+             background:#fff7ed; border:1px solid #fed7aa; border-radius:6px;
+             font-size:12px; color:#92400e; line-height:1.6;">
+          ⚠️ <strong>전표 미발생(N) 모드</strong>: 납부상태(미회수원금 차감)만 변경되고, 회계 전표는 생성되지 않습니다.<br>
+          기존 전표가 이미 발생된 데이터를 ERP로 컨버전할 때 사용합니다.
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeVoucherModal()">취소</button>
-        <button type="button" class="btn btn-primary" onclick="submitVoucher()">전표등록</button>
+        <button type="button" class="btn btn-primary" id="btnSubmitVoucher" onclick="submitVoucher()">납부 등록</button>
       </div>
     </div>
   </div>
@@ -436,6 +460,14 @@
       }).join("");
     }
 
+    function onVoucherFlagChange() {
+      const isN = document.getElementById("voucherCreateN").checked;
+      document.getElementById("voucherNoCreateNote").style.display = isN ? "block" : "none";
+      const btn = document.getElementById("btnSubmitVoucher");
+      btn.textContent = isN ? "납부상태 변경 (전표없음)" : "납부 등록";
+      btn.style.background = isN ? "#d97706" : "";
+    }
+
     function openVoucherModal(ids) {
       selectedVoucherLoanIds = ids;
 
@@ -443,7 +475,7 @@
       const firstLoan = lastList.find(item => Number(item.id) === Number(firstId));
 
       document.getElementById("voucherDate").value = todayYmd();
-
+      document.getElementById("voucherInstallmentNo").value = "";
       document.getElementById("voucherAmount").value =
         firstLoan && firstLoan.monthlyPayment ? String(firstLoan.monthlyPayment).replace(/[^0-9]/g, '') : '';
 
@@ -453,6 +485,9 @@
           : '차입금 상환';
 
       document.getElementById("voucherMemo").value = defaultMemo;
+      document.getElementById("voucherCreateY").checked = true;
+      document.getElementById("voucherCreateN").checked = false;
+      onVoucherFlagChange();
       document.getElementById("voucherModal").style.display = "flex";
     }
 
@@ -460,6 +495,7 @@
       document.getElementById("voucherModal").style.display = "none";
       selectedVoucherLoanIds = [];
       document.getElementById("voucherDate").value = "";
+      document.getElementById("voucherInstallmentNo").value = "";
       document.getElementById("voucherAmount").value = "";
       document.getElementById("voucherMemo").value = "";
     }
@@ -478,29 +514,29 @@
       const voucherDate = document.getElementById("voucherDate").value;
       const amount = moneyToLong(document.getElementById("voucherAmount").value);
       const memo = document.getElementById("voucherMemo").value.trim();
+      const installmentNoRaw = document.getElementById("voucherInstallmentNo").value.trim();
+      const installmentNo = installmentNoRaw ? parseInt(installmentNoRaw, 10) : null;
+      const createVoucher = document.getElementById("voucherCreateY").checked;
 
-      if (!voucherDate) {
-        alert("회계일자를 입력해주세요.");
-        return;
-      }
+      if (!voucherDate) { alert("회계일자를 입력해주세요."); return; }
+      if (!amount || amount <= 0) { alert("상환금액을 입력해주세요."); return; }
 
-      if (!amount || amount <= 0) {
-        alert("상환금액을 입력해주세요.");
-        return;
-      }
+      const confirmMsg = createVoucher
+        ? `선택된 ${selectedVoucherLoanIds.length}건의 차입금 납부를 등록하고 전표를 생성하시겠습니까?`
+        : `선택된 ${selectedVoucherLoanIds.length}건의 납부상태만 변경합니다 (전표 미생성).\n계속하시겠습니까?`;
 
-      if (!confirm(`선택된 ${selectedVoucherLoanIds.length}건의 차입금 전표를 등록하시겠습니까?`)) {
-        return;
-      }
+      if (!confirm(confirmMsg)) return;
 
       await apiJson("POST", "/api/vehicle-loans/vouchers", {
         loanIds: selectedVoucherLoanIds,
         voucherDate,
         amount,
-        memo
+        memo,
+        installmentNo,
+        createVoucher
       });
 
-      alert("차입금 전표가 등록되었습니다.");
+      alert(createVoucher ? "차입금 납부 등록 및 전표가 생성되었습니다." : "납부상태가 변경되었습니다. (전표 미생성)");
       closeVoucherModal();
       clearSelection();
       await loadLoanList();

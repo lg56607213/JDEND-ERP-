@@ -70,6 +70,8 @@ public class VehicleLoanService {
                                 .voucherDate(v.getVoucherDate())
                                 .amount(v.getAmount())
                                 .memo(v.getMemo())
+                                .installmentNo(v.getInstallmentNo())
+                                .voucherCreated(v.isVoucherCreated())
                                 .build())
                         .toList();
 
@@ -313,6 +315,8 @@ public class VehicleLoanService {
                         .orElseThrow(() -> new RuntimeException("차입금 없음 id=" + id)))
                 .toList();
 
+        boolean shouldCreateVoucher = req.createVoucher == null || req.createVoucher;
+
         for (VehicleLoan loan : loans) {
             VehicleOrder order = loan.getVehicleOrder();
             String vehicleNo = order != null ? order.getVehicleNo() : "";
@@ -328,8 +332,18 @@ public class VehicleLoanService {
                             .voucherDate(req.voucherDate)
                             .amount(req.amount)
                             .memo(finalMemo)
+                            .installmentNo(req.installmentNo)
+                            .voucherCreated(shouldCreateVoucher)
                             .build()
             );
+
+            if (!shouldCreateVoucher) {
+                loan.setLastPaymentDate(req.voucherDate);
+                loan.setRemainingPrincipal(
+                        Math.max(0L, safeLong(loan.getRemainingPrincipal()) - req.amount)
+                );
+                continue;
+            }
 
             voucherService.create(
                     VoucherCreateRequest.builder()

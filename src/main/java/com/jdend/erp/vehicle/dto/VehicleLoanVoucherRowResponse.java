@@ -14,4 +14,6 @@ public class VehicleLoanVoucherRowResponse {
   private LocalDate voucherDate;
   private Long amount;
   private String memo;
+  private Integer installmentNo;
+  private boolean voucherCreated;
 }

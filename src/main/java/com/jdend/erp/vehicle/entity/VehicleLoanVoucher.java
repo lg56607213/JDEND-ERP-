@@ -30,6 +30,15 @@ public class VehicleLoanVoucher {
   @Column(name="memo", length=255)
   private String memo;
 
+  /** 납부회차 (컨버전 시 참고용) */
+  @Column(name="installment_no")
+  private Integer installmentNo;
+
+  /** false = 전표 미발생(컨버전 상태변경 전용) */
+  @Column(name="voucher_created", nullable=false)
+  @Builder.Default
+  private boolean voucherCreated = true;
+
   @Column(name="created_at")
   private LocalDateTime createdAt;
 
