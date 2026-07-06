@@ -12,4 +12,5 @@ public class LoginUserUpdateRequest {
   private String companyName;
   private String targetDb;
   private Boolean isActive;
+  private Boolean taxConsultationEnabled;
 }

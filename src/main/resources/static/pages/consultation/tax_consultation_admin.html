@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>세무상담 관리</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <style>
+    .content-wrapper { margin-left: 220px; padding: 32px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; color: #1b253a; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 24px; }
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; }
+    .btn-primary { background: #23304e; color: #fff; }
+    .btn-primary:hover { background: #1b253a; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
+    th { background: #f4f6fa; font-weight: 600; color: #374151; }
+    tr:hover td { background: #f9fafb; cursor: pointer; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-answered { background: #d1fae5; color: #065f46; }
+    .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .filter-bar select, .filter-bar input { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.93rem; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; max-width: 720px; width: 95%; max-height: 88vh; overflow-y: auto; }
+    .modal h3 { margin: 0 0 6px; font-size: 1.1rem; }
+    .modal-section { background: #f4f6fa; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
+    .modal-answer { background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px; border-radius: 0 6px 6px 0; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
+    .answer-form textarea { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.95rem; box-sizing: border-box; resize: vertical; }
+    .modal-footer { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
+    .empty { text-align: center; color: #9ca3af; padding: 40px 0; }
+    .company-tag { display: inline-block; background: #e0e7ff; color: #3730a3; border-radius: 4px; padding: 1px 7px; font-size: 0.82rem; margin-right: 6px; }
+    .section-label { font-weight: 700; margin-bottom: 8px; font-size: 0.93rem; color: #374151; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <h2>세무상담 관리</h2>
+
+  <div class="card">
+    <div class="filter-bar">
+      <select id="filterCompany" onchange="applyFilter()">
+        <option value="">전체 업체</option>
+      </select>
+      <select id="filterStatus" onchange="applyFilter()">
+        <option value="">전체 상태</option>
+        <option value="PENDING">답변대기</option>
+        <option value="ANSWERED">답변완료</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">#</th>
+          <th style="width:130px">업체명</th>
+          <th>제목</th>
+          <th style="width:100px">상태</th>
+          <th style="width:130px">등록일</th>
+        </tr>
+      </thead>
+      <tbody id="listBody">
+        <tr><td colspan="5" class="empty">조회 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 상세/답변 모달 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div style="font-size:0.83rem;color:#6b7280;margin-bottom:4px;" id="modalCompany"></div>
+    <h3 id="modalTitle"></h3>
+    <div style="font-size:0.83rem;color:#6b7280;margin-bottom:14px;" id="modalMeta"></div>
+
+    <div class="section-label">문의 내용</div>
+    <div class="modal-section" id="modalContent"></div>
+
+    <div id="modalFileArea" style="margin-bottom:14px;display:none;">
+      <a id="modalFileLink" href="#" target="_blank" style="color:#2563eb;font-size:0.9rem;"></a>
+    </div>
+
+    <div id="existingAnswerArea" style="display:none;margin-bottom:16px;">
+      <div class="section-label" style="color:#065f46;">기존 답변</div>
+      <div class="modal-answer" id="existingAnswer"></div>
+      <div style="font-size:0.82rem;color:#6b7280;margin-top:6px;" id="existingAnsweredBy"></div>
+    </div>
+
+    <div class="answer-form" id="answerFormArea">
+      <div class="section-label">답변 작성</div>
+      <textarea id="answerText" placeholder="답변 내용을 입력하세요..."></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">닫기</button>
+      <button class="btn btn-success" id="submitAnswerBtn" onclick="submitAnswer()">답변 등록</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script>
+  const BASE = '';
+  let allList = [];
+  let currentId = null;
+
+  function fmt(dt) {
+    if (!dt) return '-';
+    return dt.replace('T', ' ').substring(0, 16);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function loadList() {
+    fetch(BASE + '/api/tax-consultations', { credentials: 'include' })
+      .then(r => r.json())
+      .then(list => {
+        allList = list;
+        buildCompanyFilter(list);
+        renderList(list);
+      });
+  }
+
+  function buildCompanyFilter(list) {
+    const sel = document.getElementById('filterCompany');
+    const names = [...new Set(list.map(i => i.companyName))].sort();
+    sel.innerHTML = '<option value="">전체 업체</option>' +
+      names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  }
+
+  function applyFilter() {
+    const company = document.getElementById('filterCompany').value;
+    const status = document.getElementById('filterStatus').value;
+    const filtered = allList.filter(i =>
+      (!company || i.companyName === company) &&
+      (!status || i.status === status)
+    );
+    renderList(filtered);
+  }
+
+  function renderList(list) {
+    const tbody = document.getElementById('listBody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">문의가 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((item, i) => `
+      <tr onclick="openDetail(${item.id})">
+        <td>${list.length - i}</td>
+        <td><span class="company-tag">${escHtml(item.companyName)}</span></td>
+        <td>${escHtml(item.title)}</td>
+        <td><span class="badge ${item.status === 'ANSWERED' ? 'badge-answered' : 'badge-pending'}">${item.status === 'ANSWERED' ? '답변완료' : '답변대기'}</span></td>
+        <td>${fmt(item.createdAt)}</td>
+      </tr>`).join('');
+  }
+
+  function openDetail(id) {
+    currentId = id;
+    fetch(BASE + '/api/tax-consultations/' + id, { credentials: 'include' })
+      .then(r => r.json())
+      .then(item => {
+        document.getElementById('modalCompany').textContent = '업체: ' + item.companyName;
+        document.getElementById('modalTitle').textContent = item.title;
+        document.getElementById('modalMeta').textContent = '등록일: ' + fmt(item.createdAt);
+        document.getElementById('modalContent').textContent = item.content;
+
+        const fileArea = document.getElementById('modalFileArea');
+        if (item.hasFile) {
+          fileArea.style.display = '';
+          const link = document.getElementById('modalFileLink');
+          link.href = BASE + '/api/tax-consultations/' + id + '/file';
+          link.textContent = '첨부파일 다운로드: ' + (item.fileOriginalName || '파일');
+        } else {
+          fileArea.style.display = 'none';
+        }
+
+        const existingArea = document.getElementById('existingAnswerArea');
+        if (item.status === 'ANSWERED') {
+          existingArea.style.display = '';
+          document.getElementById('existingAnswer').textContent = item.answer;
+          document.getElementById('existingAnsweredBy').textContent =
+            item.answeredBy ? '답변자: ' + item.answeredBy + ' · ' + fmt(item.answeredAt) : '';
+          document.getElementById('answerText').value = item.answer || '';
+        } else {
+          existingArea.style.display = 'none';
+          document.getElementById('answerText').value = '';
+        }
+
+        document.getElementById('detailModal').classList.add('open');
+      });
+  }
+
+  function closeModal() {
+    document.getElementById('detailModal').classList.remove('open');
+    currentId = null;
+  }
+
+  function submitAnswer() {
+    const answer = document.getElementById('answerText').value.trim();
+    if (!answer) { alert('답변 내용을 입력해주세요.'); return; }
+
+    fetch(BASE + '/api/tax-consultations/' + currentId + '/answer', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.message) { alert('오류: ' + res.message); return; }
+      closeModal();
+      loadList();
+    });
+  }
+
+  document.getElementById('detailModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  loadSidebar();
+  loadList();
+</script>
+</body>
+</html>

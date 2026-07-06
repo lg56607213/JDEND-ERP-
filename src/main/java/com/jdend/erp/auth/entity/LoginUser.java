@@ -36,6 +36,9 @@ public class LoginUser {
   @Column(name = "is_active", nullable = false)
   private Boolean isActive;
 
+  @Column(name = "tax_consultation_enabled", nullable = false)
+  private Boolean taxConsultationEnabled;
+
   @Column(name = "created_at", insertable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -46,5 +49,6 @@ public class LoginUser {
   public void prePersist() {
     if (role == null || role.isBlank()) role = "USER";
     if (isActive == null) isActive = true;
+    if (taxConsultationEnabled == null) taxConsultationEnabled = false;
   }
 }

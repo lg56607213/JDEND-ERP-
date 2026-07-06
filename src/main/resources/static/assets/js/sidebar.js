@@ -200,6 +200,12 @@ function loadSidebar() {
               <li id="companyUsersMenuItem" style="display:none;">
                 <a href="${basePath}pages/management/company_users.html">사용자관리</a>
               </li>
+              <li id="taxConsultationMenuItem" style="display:none;">
+                <a href="${basePath}pages/consultation/tax_consultation.html">세무상담</a>
+              </li>
+              <li id="taxConsultationAdminMenuItem" style="display:none;">
+                <a href="${basePath}pages/consultation/tax_consultation_admin.html">세무상담관리</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -231,8 +237,16 @@ function loadSidebar() {
       .then(function (res) { return res.json(); })
       .then(function (data) {
         const role = data && data.success ? data.role : null;
+        const taxEnabled = data && data.taxConsultationEnabled;
         const item = document.getElementById('companyUsersMenuItem');
         if (item && (role === 'ADMIN' || role === 'COMPANY_ADMIN')) item.style.display = '';
+        const taxItem = document.getElementById('taxConsultationMenuItem');
+        const taxAdminItem = document.getElementById('taxConsultationAdminMenuItem');
+        if (role === 'ADMIN' || role === 'TAX_AGENT') {
+          if (taxAdminItem) taxAdminItem.style.display = '';
+        } else if (taxEnabled) {
+          if (taxItem) taxItem.style.display = '';
+        }
       })
       .catch(function (e) { console.error('권한 조회 실패', e); });
   })();

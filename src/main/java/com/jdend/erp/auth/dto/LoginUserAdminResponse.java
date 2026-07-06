@@ -14,4 +14,5 @@ public class LoginUserAdminResponse {
   private String targetDb;
   private String role;
   private Boolean isActive;
+  private Boolean taxConsultationEnabled;
 }

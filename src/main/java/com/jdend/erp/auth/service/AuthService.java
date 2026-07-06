@@ -22,6 +22,7 @@ public class AuthService {
   public static final String SESSION_TARGET_DB = "TARGET_DB";
   public static final String SESSION_ROLE = "ROLE";
   public static final String SESSION_COMPANY_ID = "COMPANY_ID";
+  public static final String SESSION_TAX_CONSULTATION_ENABLED = "TAX_CONSULTATION_ENABLED";
 
   private final LoginUserRepository loginUserRepository;
   private final CompanyUserRepository companyUserRepository;
@@ -49,6 +50,7 @@ public class AuthService {
       session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
       session.setAttribute(SESSION_TARGET_DB, "auth");
       session.setAttribute(SESSION_ROLE, "ADMIN");
+      session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
       session.removeAttribute(SESSION_COMPANY_ID);
 
       return LoginResponse.builder()
@@ -56,6 +58,25 @@ public class AuthService {
           .loginId(company.getLoginId())
           .companyName(company.getCompanyName())
           .role("ADMIN")
+          .taxConsultationEnabled(true)
+          .message("로그인 성공")
+          .build();
+    }
+
+    if ("TAX_AGENT".equals(company.getRole())) {
+      session.setAttribute(SESSION_LOGIN_ID, company.getLoginId());
+      session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
+      session.setAttribute(SESSION_TARGET_DB, "auth");
+      session.setAttribute(SESSION_ROLE, "TAX_AGENT");
+      session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
+      session.removeAttribute(SESSION_COMPANY_ID);
+
+      return LoginResponse.builder()
+          .success(true)
+          .loginId(company.getLoginId())
+          .companyName(company.getCompanyName())
+          .role("TAX_AGENT")
+          .taxConsultationEnabled(true)
           .message("로그인 성공")
           .build();
     }
@@ -88,17 +109,21 @@ public class AuthService {
     String targetDb = company.getTargetDb();
     tenantDatabaseService.ensureTenantDatabase(targetDb);
 
+    boolean taxEnabled = Boolean.TRUE.equals(company.getTaxConsultationEnabled());
+
     session.setAttribute(SESSION_LOGIN_ID, user.getUserLoginId());
     session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
     session.setAttribute(SESSION_TARGET_DB, targetDb);
     session.setAttribute(SESSION_ROLE, role);
     session.setAttribute(SESSION_COMPANY_ID, company.getId());
+    session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, taxEnabled);
 
     return LoginResponse.builder()
         .success(true)
         .loginId(user.getUserLoginId())
         .companyName(company.getCompanyName())
         .role(role)
+        .taxConsultationEnabled(taxEnabled)
         .message("로그인 성공")
         .build();
   }
@@ -115,11 +140,14 @@ public class AuthService {
           .build();
     }
 
+    Boolean taxEnabled = (Boolean) session.getAttribute(SESSION_TAX_CONSULTATION_ENABLED);
+
     return LoginResponse.builder()
         .success(true)
         .loginId(loginId)
         .companyName(companyName)
         .role(role)
+        .taxConsultationEnabled(Boolean.TRUE.equals(taxEnabled))
         .message("로그인 상태")
         .build();
   }
@@ -216,6 +244,10 @@ public class AuthService {
       user.setIsActive(req.getIsActive());
     }
 
+    if (req.getTaxConsultationEnabled() != null) {
+      user.setTaxConsultationEnabled(req.getTaxConsultationEnabled());
+    }
+
     return toAdminResponse(user);
   }
 
@@ -252,6 +284,7 @@ public class AuthService {
         .targetDb(u.getTargetDb())
         .role(u.getRole())
         .isActive(u.getIsActive())
+        .taxConsultationEnabled(Boolean.TRUE.equals(u.getTaxConsultationEnabled()))
         .build();
   }
 

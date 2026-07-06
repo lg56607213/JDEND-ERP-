@@ -13,4 +13,5 @@ public class LoginResponse {
   private String companyName;
   private String role;
   private String message;
+  private Boolean taxConsultationEnabled;
 }
