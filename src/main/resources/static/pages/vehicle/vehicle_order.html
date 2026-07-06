@@ -39,6 +39,21 @@
       cursor: pointer;
     }
 
+    .btn-release {
+      padding: 6px 14px;
+      background: #f59e0b;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-release:hover:not(:disabled) { background: #d97706; }
+    .btn-release:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+
     @media (max-width: 768px) {
       .option-layout-grid {
         grid-template-columns: 1fr;
@@ -89,6 +104,7 @@
             <div class="button-group">
               <button type="button" class="btn-search" onclick="searchVehicle()">조회하기</button>
               <button type="button" class="btn-add" onclick="showRegisterForm()">+ 등록추가</button>
+              <button type="button" class="btn-release" id="btnRelease" onclick="bulkSetReleased()" disabled>출고완료 변경 <span id="releaseCount"></span></button>
             </div>
           </div>
         </div>
@@ -373,10 +389,7 @@
     if (checks.length === 0) {
       checkAll.checked = false;
       checkAll.indeterminate = false;
-      return;
-    }
-
-    if (checked.length === 0) {
+    } else if (checked.length === 0) {
       checkAll.checked = false;
       checkAll.indeterminate = false;
     } else if (checked.length === checks.length) {
@@ -386,6 +399,51 @@
       checkAll.checked = false;
       checkAll.indeterminate = true;
     }
+
+    const releaseBtn = document.getElementById('btnRelease');
+    const releaseCount = document.getElementById('releaseCount');
+    if (releaseBtn) releaseBtn.disabled = checked.length === 0;
+    if (releaseCount) releaseCount.textContent = checked.length > 0 ? `(${checked.length})` : '';
+  }
+
+  async function bulkSetReleased() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length === 0) {
+      alert('출고완료로 변경할 항목을 선택해주세요.');
+      return;
+    }
+
+    if (!confirm(`선택한 ${checked.length}건을 출고완료로 변경하시겠습니까?`)) return;
+
+    const ids = Array.from(checked).map(c => c.value);
+    let successCount = 0;
+    let failItems = [];
+
+    for (const mgmtNo of ids) {
+      try {
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(mgmtNo)}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderStatus: '출고완료' })
+        });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failItems.push(mgmtNo);
+        }
+      } catch {
+        failItems.push(mgmtNo);
+      }
+    }
+
+    if (failItems.length > 0) {
+      alert(`${successCount}건 변경 완료\n실패 ${failItems.length}건: ${failItems.join(', ')}`);
+    } else {
+      alert(`${successCount}건이 출고완료로 변경되었습니다.`);
+    }
+
+    await searchVehicle();
   }
 
   function resetSelectionState() {
