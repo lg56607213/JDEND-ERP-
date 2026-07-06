@@ -54,6 +54,7 @@ function loadSidebar() {
                 <span class="menu-label">계약등록</span>
                 <ul>
                   <li><a href="${basePath}pages/contract/contract_register.html">등록</a></li>
+                  <li><a href="${basePath}pages/contract/contract_overview.html">관리</a></li>
                 </ul>
               </li>
               <li class="has-sub">

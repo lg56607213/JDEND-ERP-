@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계약 총괄관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    /* ── 공통 ── */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+    .btn-primary { background: #23304e; color: #fff; }
+    .btn-primary:hover { background: #1b253a; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-add { background: #3b82f6; color: #fff; }
+    .btn-add:hover { background: #2563eb; }
+    .btn-del { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+    .btn-del:hover { background: #fed7d7; }
+
+    /* ── 검색 카드 ── */
+    .search-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 20px 24px; margin-bottom: 16px;
+      display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+    }
+    .sfg { display: flex; flex-direction: column; gap: 5px; }
+    .sfg label { font-size: 0.82rem; font-weight: 700; color: #374151; }
+    .sfg input {
+      padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 5px;
+      font-size: 0.93rem; width: 180px;
+    }
+    .sfg input:focus { outline: none; border-color: #23304e; }
+    .or-sep { color: #9ca3af; font-size: 0.85rem; padding-bottom: 6px; align-self: flex-end; }
+
+    /* ── 계약 기본정보 카드 ── */
+    .contract-header-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 20px 24px; margin-bottom: 16px;
+    }
+    .contract-top {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;
+    }
+    .contract-top .cn { font-size: 1.1rem; font-weight: 800; color: #1b253a; }
+    .contract-top .customer { font-size: 1rem; color: #374151; }
+    .status-badge {
+      display: inline-block; border-radius: 5px; padding: 3px 10px;
+      font-size: 0.8rem; font-weight: 700;
+    }
+    .st-진행중 { background: #dcfce7; color: #15803d; }
+    .st-만기 { background: #fef3c7; color: #b45309; }
+    .st-종료 { background: #f1f5f9; color: #475569; }
+    .st-반납 { background: #fee2e2; color: #b91c1c; }
+    .st-other { background: #e0f2fe; color: #0369a1; }
+
+    .info-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 20px;
+    }
+    .info-item { display: flex; flex-direction: column; gap: 3px; }
+    .info-item .lbl { font-size: 0.76rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .04em; }
+    .info-item .val { font-size: 0.92rem; color: #1b253a; font-weight: 500; }
+    .info-item .val.accent { color: #2563eb; font-weight: 700; }
+
+    /* ── 탭 ── */
+    .tab-bar {
+      display: flex; gap: 0; border-bottom: 2px solid #23304e;
+      margin-bottom: 0; background: #fff; border-radius: 8px 8px 0 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 12px 22px; border: none; background: none; cursor: pointer;
+      font-size: 0.88rem; font-weight: 600; color: #6b7280; white-space: nowrap;
+      border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color .15s;
+    }
+    .tab-btn.active { color: #23304e; border-bottom-color: #23304e; }
+    .tab-btn .cnt {
+      display: inline-block; background: #e5e7eb; color: #374151;
+      border-radius: 10px; padding: 1px 7px; font-size: 0.75rem; margin-left: 5px;
+    }
+    .tab-btn.active .cnt { background: #dbeafe; color: #1d4ed8; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── 섹션 카드 ── */
+    .section-card {
+      background: #fff; border-radius: 0 0 8px 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 20px 24px;
+    }
+
+    /* ── 테이블 ── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 9px 10px; font-size: 0.8rem; font-weight: 700; color: #374151; background: #f8fafc; white-space: nowrap; }
+    th.l { text-align: left; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.87rem; color: #374151; white-space: nowrap; }
+    td.l { text-align: left; white-space: normal; }
+    td.r { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover td { background: #f9fafb; }
+    .empty-row td { text-align: center; color: #9ca3af; padding: 32px; }
+
+    /* 납부현황 상태 뱃지 */
+    .pay-badge {
+      display: inline-block; border-radius: 4px; padding: 2px 7px;
+      font-size: 0.76rem; font-weight: 700;
+    }
+    .py-완납 { background: #dcfce7; color: #15803d; }
+    .py-부분수납 { background: #fef3c7; color: #b45309; }
+    .py-미납 { background: #fee2e2; color: #b91c1c; }
+    .py-예정 { background: #f1f5f9; color: #64748b; }
+    .py-미수 { background: #ede9fe; color: #5b21b6; }
+
+    /* ── 상담 입력폼 ── */
+    .consult-form {
+      display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+      background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 14px 16px; margin-top: 14px;
+    }
+    .consult-form .cfg { display: flex; flex-direction: column; gap: 4px; }
+    .consult-form .cfg label { font-size: 0.8rem; font-weight: 700; color: #374151; }
+    .consult-form input[type="date"] { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.9rem; }
+    .consult-form textarea {
+      padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px;
+      font-size: 0.9rem; resize: vertical; min-width: 320px; height: 60px; font-family: inherit;
+    }
+    .consult-form textarea:focus, .consult-form input:focus { outline: none; border-color: #23304e; }
+
+    /* ── 스크롤 높이 제한 ── */
+    .scroll-limit { max-height: 420px; overflow-y: auto; }
+
+    /* 로딩 */
+    .loading-text { text-align: center; color: #9ca3af; padding: 32px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <div class="page-header">
+    <h1>계약 총괄관리</h1>
+    <p>계약관리 &gt; 계약등록 &gt; 관리</p>
+  </div>
+
+  <!-- 검색 -->
+  <div class="search-card">
+    <div class="sfg">
+      <label>계약번호</label>
+      <input type="text" id="searchContractNo" placeholder="예: R00001001" onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <span class="or-sep">또는</span>
+    <div class="sfg">
+      <label>차량번호</label>
+      <input type="text" id="searchVehicleNo" placeholder="예: 12가3456" onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <button class="btn btn-primary" onclick="doSearch()">조회</button>
+  </div>
+
+  <!-- 결과 영역 (검색 전 숨김) -->
+  <div id="resultArea" style="display:none;">
+    <!-- 계약 기본정보 -->
+    <div class="contract-header-card">
+      <div class="contract-top">
+        <span class="cn" id="ci_contractNumber">-</span>
+        <span id="ci_statusBadge" class="status-badge st-other">-</span>
+        <span class="customer" id="ci_customerName">-</span>
+        <span style="color:#6b7280; font-size:0.9rem;" id="ci_vehicleNo">-</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-item"><span class="lbl">계약유형</span><span class="val" id="ci_contractType">-</span></div>
+        <div class="info-item"><span class="lbl">계약일</span><span class="val" id="ci_startDate">-</span></div>
+        <div class="info-item"><span class="lbl">만기일</span><span class="val" id="ci_endDate">-</span></div>
+        <div class="info-item"><span class="lbl">월렌트료</span><span class="val accent" id="ci_monthlyRent">-</span></div>
+        <div class="info-item"><span class="lbl">총렌트료</span><span class="val" id="ci_totalRent">-</span></div>
+        <div class="info-item"><span class="lbl">보증금</span><span class="val" id="ci_deposit">-</span></div>
+        <div class="info-item"><span class="lbl">선급금</span><span class="val" id="ci_advancePayment">-</span></div>
+        <div class="info-item"><span class="lbl">약정 회수</span><span class="val" id="ci_billingCount">-</span></div>
+        <div class="info-item"><span class="lbl">납부일</span><span class="val" id="ci_billingDay">-</span></div>
+        <div class="info-item"><span class="lbl">청구일</span><span class="val" id="ci_taxInvoiceDay">-</span></div>
+        <div class="info-item"><span class="lbl">차량모델</span><span class="val" id="ci_vehicleModel">-</span></div>
+        <div class="info-item"><span class="lbl">만기처리</span><span class="val" id="ci_maturityOption">-</span></div>
+        <div class="info-item"><span class="lbl">연락처</span><span class="val" id="ci_customerPhone">-</span></div>
+        <div class="info-item"><span class="lbl">비고</span><span class="val l" id="ci_remarks">-</span></div>
+      </div>
+    </div>
+
+    <!-- 탭 -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('consult')">상담이력 <span class="cnt" id="cnt_consult">0</span></button>
+      <button class="tab-btn" onclick="switchTab('schedule')">납부스케줄 <span class="cnt" id="cnt_schedule">0</span></button>
+      <button class="tab-btn" onclick="switchTab('billing')">청구현황 <span class="cnt" id="cnt_billing">0</span></button>
+      <button class="tab-btn" onclick="switchTab('loan')">차입금현황 <span class="cnt" id="cnt_loan">0</span></button>
+      <button class="tab-btn" onclick="switchTab('receivable')">미수현황 <span class="cnt" id="cnt_receivable">0</span></button>
+      <button class="tab-btn" onclick="switchTab('insurance')">보험현황 <span class="cnt" id="cnt_insurance">0</span></button>
+    </div>
+
+    <!-- ═ 상담이력 ═ -->
+    <div class="section-card tab-panel active" id="tab_consult">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th style="width:110px;">상담일자</th>
+              <th class="l">상담내용</th>
+              <th style="width:100px;">등록일시</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody id="consultBody">
+            <tr class="empty-row"><td colspan="5">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- 빠른 상담 등록 -->
+      <div class="consult-form">
+        <div class="cfg">
+          <label>상담일자 <span style="color:#ef4444;">*</span></label>
+          <input type="date" id="newConsultDate">
+        </div>
+        <div class="cfg" style="flex:1;">
+          <label>상담내용 <span style="color:#ef4444;">*</span></label>
+          <textarea id="newConsultContent" placeholder="상담 내용을 입력하세요"></textarea>
+        </div>
+        <button class="btn btn-add" onclick="addConsult()">저장</button>
+      </div>
+    </div>
+
+    <!-- ═ 납부스케줄 ═ -->
+    <div class="section-card tab-panel" id="tab_schedule">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th>회차</th>
+              <th>납부기간 시작</th>
+              <th>납부기간 종료</th>
+              <th>청구일</th>
+              <th>납부일</th>
+              <th>임차료</th>
+              <th>수납금액</th>
+              <th>미납금액</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleBody">
+            <tr class="empty-row"><td colspan="9">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═ 청구현황 ═ -->
+    <div class="section-card tab-panel" id="tab_billing">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th>청구번호</th>
+              <th>청구일자</th>
+              <th>고객명</th>
+              <th>청구금액</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="billingBody">
+            <tr class="empty-row"><td colspan="5">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═ 차입금현황 ═ -->
+    <div class="section-card tab-panel" id="tab_loan">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th>금융사</th>
+              <th>차입유형</th>
+              <th>차입원금</th>
+              <th>월상환액</th>
+              <th>잔여원금</th>
+              <th>상환방법</th>
+              <th>납입일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="loanBody">
+            <tr class="empty-row"><td colspan="8">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═ 미수현황 ═ -->
+    <div class="section-card tab-panel" id="tab_receivable">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th>발생일</th>
+              <th>유형</th>
+              <th class="l">내용</th>
+              <th>미수금액</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="receivableBody">
+            <tr class="empty-row"><td colspan="5">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═ 보험현황 ═ -->
+    <div class="section-card tab-panel" id="tab_insurance">
+      <div class="tbl-wrap scroll-limit">
+        <table>
+          <thead>
+            <tr>
+              <th>보험시작일</th>
+              <th>보험종료일</th>
+              <th>대인</th>
+              <th>대물</th>
+              <th>자차</th>
+              <th>운전자연령</th>
+              <th>특약사항</th>
+              <th>보험료</th>
+            </tr>
+          </thead>
+          <tbody id="insuranceBody">
+            <tr class="empty-row"><td colspan="8">조회 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /resultArea -->
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+<script>
+  let currentContractNumber = null;
+  let currentVehicleNo = null;
+
+  // ── 유틸 ──────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function fmt(n) { return Number(n || 0).toLocaleString(); }
+  function dash(v) { return (v === null || v === undefined || v === '') ? '-' : v; }
+
+  async function fetchJson(url) {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  // ── 탭 전환 ───────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const btn = document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`);
+    const panel = document.getElementById('tab_' + name);
+    if (btn) btn.classList.add('active');
+    if (panel) panel.classList.add('active');
+  }
+
+  // ── 검색 ──────────────────────────────────────────────────
+  async function doSearch() {
+    const contractNo = document.getElementById('searchContractNo').value.trim().toUpperCase();
+    const vehicleNo  = document.getElementById('searchVehicleNo').value.trim();
+
+    if (!contractNo && !vehicleNo) {
+      alert('계약번호 또는 차량번호를 입력하세요.');
+      return;
+    }
+
+    let cn = contractNo;
+    let vn = vehicleNo;
+
+    try {
+      if (!cn) {
+        // 차량번호로 계약 조회
+        const list = await fetchJson(`/api/contracts/status?vehicleNo=${encodeURIComponent(vn)}`);
+        if (!list || !list.length) { alert('해당 차량번호의 계약을 찾을 수 없습니다.'); return; }
+        cn = list[0].contractNumber || list[0].vehicleNumber;
+        // contractNumber로 재확인
+        const r2 = await fetchJson(`/api/contracts/status?vehicleNo=${encodeURIComponent(vn)}`);
+        cn = r2[0].contractNumber;
+      }
+
+      const contract = await fetchJson(`/api/contracts/by-number/${encodeURIComponent(cn)}/full`);
+      vn = vn || contract.vehicleNo || '';
+      currentContractNumber = cn;
+      currentVehicleNo = vn;
+
+      renderContractInfo(contract);
+
+      // 오늘 날짜를 상담일 기본값으로
+      document.getElementById('newConsultDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('newConsultContent').value = '';
+
+      document.getElementById('resultArea').style.display = 'block';
+      switchTab('consult');
+
+      // 모든 섹션 병렬 로드
+      loadConsultations(cn);
+      loadSchedule(vn);
+      loadBillings(cn);
+      loadLoans(vn, cn);
+      loadReceivables(cn);
+      loadInsurances(cn, vn);
+
+    } catch (e) {
+      console.error(e);
+      alert('조회 실패: ' + e.message);
+    }
+  }
+
+  // ── 계약 기본정보 렌더 ────────────────────────────────────
+  function renderContractInfo(c) {
+    document.getElementById('ci_contractNumber').textContent = c.contractNumber || '-';
+    document.getElementById('ci_customerName').textContent   = c.customerName || '-';
+    document.getElementById('ci_vehicleNo').textContent      = c.vehicleNo ? '[' + c.vehicleNo + ']' : '';
+    document.getElementById('ci_contractType').textContent   = dash(c.contractType);
+    document.getElementById('ci_startDate').textContent      = dash(c.startDate);
+    document.getElementById('ci_endDate').textContent        = dash(c.endDate);
+    document.getElementById('ci_monthlyRent').textContent    = c.monthlyRent ? fmt(c.monthlyRent) + ' 원' : '-';
+    document.getElementById('ci_totalRent').textContent      = c.totalRent ? fmt(c.totalRent) + ' 원' : '-';
+    document.getElementById('ci_deposit').textContent        = c.deposit != null ? fmt(c.deposit) + ' 원' : '-';
+    document.getElementById('ci_advancePayment').textContent = c.advancePayment != null ? fmt(c.advancePayment) + ' 원' : '-';
+    document.getElementById('ci_billingCount').textContent   = c.billingCount != null ? c.billingCount + ' 회' : '-';
+    document.getElementById('ci_billingDay').textContent     = c.billingDay != null ? c.billingDay + ' 일' : '-';
+    document.getElementById('ci_taxInvoiceDay').textContent  = c.taxInvoiceDay != null ? c.taxInvoiceDay + ' 일' : '-';
+    document.getElementById('ci_vehicleModel').textContent   = dash(c.vehicleModel);
+    document.getElementById('ci_maturityOption').textContent = dash(c.maturityOption);
+    document.getElementById('ci_customerPhone').textContent  = dash(c.customerPhone);
+    document.getElementById('ci_remarks').textContent        = dash(c.remarks);
+
+    const statusBadge = document.getElementById('ci_statusBadge');
+    const st = c.status || '';
+    statusBadge.textContent = st || '-';
+    statusBadge.className = 'status-badge st-' + (['진행중','만기','종료','반납'].includes(st) ? st : 'other');
+  }
+
+  // ── 상담이력 ──────────────────────────────────────────────
+  async function loadConsultations(cn) {
+    const tbody = document.getElementById('consultBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 중...</td></tr>';
+    try {
+      const list = await fetchJson(`/api/consultations?contractNumber=${encodeURIComponent(cn)}`);
+      document.getElementById('cnt_consult').textContent = list.length;
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">상담 이력이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map((item, i) => `
+        <tr>
+          <td style="text-align:center;">${list.length - i}</td>
+          <td style="text-align:center;">${esc(item.consultDate ?? '-')}</td>
+          <td class="l">${esc(item.consultContent ?? '-')}</td>
+          <td style="text-align:center; font-size:0.78rem; color:#9ca3af;">
+            ${item.createdAt ? esc(item.createdAt.substring(0,10)) : '-'}
+          </td>
+          <td style="text-align:center;">
+            <button class="btn btn-sm btn-del" onclick="deleteConsult(${item.id})">삭제</button>
+          </td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 실패</td></tr>';
+    }
+  }
+
+  async function addConsult() {
+    const date    = document.getElementById('newConsultDate').value;
+    const content = document.getElementById('newConsultContent').value.trim();
+    if (!date)    { alert('상담일자를 입력하세요.'); return; }
+    if (!content) { alert('상담내용을 입력하세요.'); return; }
+    const res = await fetch('/api/consultations', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractNumber: currentContractNumber, consultDate: date, consultContent: content })
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    document.getElementById('newConsultContent').value = '';
+    await loadConsultations(currentContractNumber);
+  }
+
+  async function deleteConsult(id) {
+    if (!confirm('이 상담이력을 삭제하시겠습니까?')) return;
+    const res = await fetch(`/api/consultations/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) { alert('삭제 실패: ' + res.status); return; }
+    await loadConsultations(currentContractNumber);
+  }
+
+  // ── 납부스케줄 ────────────────────────────────────────────
+  async function loadSchedule(vn) {
+    const tbody = document.getElementById('scheduleBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">조회 중...</td></tr>';
+    if (!vn) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">차량번호 정보가 없습니다.</td></tr>';
+      return;
+    }
+    try {
+      const data = await fetchJson(`/api/schedules/by-vehicle-no?vehicleNo=${encodeURIComponent(vn)}`);
+      const rows = data.schedule || [];
+      document.getElementById('cnt_schedule').textContent = rows.length;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="9">스케줄 데이터가 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const st = r.status || '예정';
+        const pyClass = { '완납':'py-완납','부분수납':'py-부분수납','미납':'py-미납','예정':'py-예정' }[st] || 'py-예정';
+        return `
+        <tr>
+          <td style="text-align:center;">${esc(r.no ?? '-')}</td>
+          <td style="text-align:center;">${esc(r.startDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(r.endDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(r.taxDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(r.payDate ?? '-')}</td>
+          <td class="r">${fmt(r.rent)}</td>
+          <td class="r">${fmt(r.paid)}</td>
+          <td class="r" style="${r.unpaid > 0 ? 'color:#c53030;font-weight:700;' : ''}">${fmt(r.unpaid)}</td>
+          <td style="text-align:center;"><span class="pay-badge ${pyClass}">${esc(st)}</span></td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">조회 실패</td></tr>';
+    }
+  }
+
+  // ── 청구현황 ──────────────────────────────────────────────
+  async function loadBillings(cn) {
+    const tbody = document.getElementById('billingBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 중...</td></tr>';
+    try {
+      const list = await fetchJson(`/api/billings?contractNumber=${encodeURIComponent(cn)}`);
+      document.getElementById('cnt_billing').textContent = list.length;
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">청구 내역이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(b => `
+        <tr>
+          <td style="text-align:center;">${esc(b.billingNo)}</td>
+          <td style="text-align:center;">${esc(b.billingDate ?? '-')}</td>
+          <td>${esc(b.customerName ?? '-')}</td>
+          <td class="r">${fmt(b.totalAmount)}</td>
+          <td style="text-align:center;">${esc(b.status ?? '-')}</td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 실패</td></tr>';
+    }
+  }
+
+  // ── 차입금현황 ────────────────────────────────────────────
+  async function loadLoans(vn, cn) {
+    const tbody = document.getElementById('loanBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조회 중...</td></tr>';
+    try {
+      const params = new URLSearchParams();
+      if (vn) params.set('vehicleNo', vn);
+      const list = await fetchJson(`/api/vehicle-loans?${params.toString()}`);
+      document.getElementById('cnt_loan').textContent = list.length;
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">차입금 내역이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(l => `
+        <tr>
+          <td>${esc(l.financeName ?? '-')}</td>
+          <td>${esc(l.loanType ?? '-')}</td>
+          <td class="r">${fmt(l.loanPrincipal)}</td>
+          <td class="r">${fmt(l.monthlyPayment)}</td>
+          <td class="r" style="${l.remainingPrincipal > 0 ? 'color:#2563eb;font-weight:700;' : 'color:#15803d;'}">${fmt(l.remainingPrincipal)}</td>
+          <td>${esc(l.repaymentMethod ?? '-')}</td>
+          <td style="text-align:center;">${l.paymentDay != null ? l.paymentDay + '일' : '-'}</td>
+          <td style="text-align:center;">
+            ${l.terminated
+              ? '<span class="pay-badge py-완납">상환완료</span>'
+              : '<span class="pay-badge py-예정">상환중</span>'}
+          </td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조회 실패</td></tr>';
+    }
+  }
+
+  // ── 미수현황 ──────────────────────────────────────────────
+  async function loadReceivables(cn) {
+    const tbody = document.getElementById('receivableBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 중...</td></tr>';
+    try {
+      const all = await fetchJson('/api/receivables');
+      const list = (Array.isArray(all) ? all : []).filter(r => r.contractNumber === cn);
+      document.getElementById('cnt_receivable').textContent = list.length;
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">미수 내역이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(r => `
+        <tr>
+          <td style="text-align:center;">${esc(r.receivableDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(r.receivableType ?? '-')}</td>
+          <td class="l">${esc(r.content ?? '-')}</td>
+          <td class="r" style="color:#c53030;font-weight:700;">${fmt(r.receivableAmount)}</td>
+          <td style="text-align:center;">
+            <span class="pay-badge ${r.status === '완납' ? 'py-완납' : 'py-미수'}">${esc(r.status ?? '-')}</span>
+          </td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">조회 실패</td></tr>';
+    }
+  }
+
+  // ── 보험현황 ──────────────────────────────────────────────
+  async function loadInsurances(cn, vn) {
+    const tbody = document.getElementById('insuranceBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조회 중...</td></tr>';
+    try {
+      const params = new URLSearchParams();
+      if (cn) params.set('contractNumber', cn);
+      const list = await fetchJson(`/api/insurances?${params.toString()}`);
+      document.getElementById('cnt_insurance').textContent = list.length;
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">보험 내역이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(ins => `
+        <tr>
+          <td style="text-align:center;">${esc(ins.insuranceStartDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(ins.insuranceEndDate ?? '-')}</td>
+          <td style="text-align:center;">${esc(ins.bodilyInjury ?? '-')}</td>
+          <td style="text-align:center;">${esc(ins.propertyDamage ?? '-')}</td>
+          <td style="text-align:center;">${esc(ins.ownVehicle ?? '-')}</td>
+          <td style="text-align:center;">${esc(ins.ageRange ?? '-')}</td>
+          <td class="l">${esc(ins.specialTerms ?? '-')}</td>
+          <td class="r">${ins.insurancePremium ? fmt(ins.insurancePremium) + ' 원' : '-'}</td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조회 실패</td></tr>';
+    }
+  }
+
+  loadSidebar();
+</script>
+</body>
+</html>
