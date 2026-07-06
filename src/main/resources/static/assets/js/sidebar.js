@@ -203,6 +203,7 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/accounting/account_management.html">기타계정관리</a></li>
                 </ul>
               </li>
+              <li><a href="${basePath}pages/management/my_info.html">내정보관리</a></li>
               <li id="companyUsersMenuItem" style="display:none;">
                 <a href="${basePath}pages/management/company_users.html">사용자관리</a>
               </li>

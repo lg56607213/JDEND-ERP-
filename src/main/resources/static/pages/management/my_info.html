@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>내정보관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    /* ── 탭 ── */
+    .tab-bar { display: flex; gap: 0; border-bottom: 2px solid #23304e; margin-bottom: 20px; }
+    .tab-btn {
+      padding: 10px 28px; border: none; background: none; cursor: pointer;
+      font-size: 0.95rem; font-weight: 600; color: #6b7280;
+      border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color .15s;
+    }
+    .tab-btn.active { color: #23304e; border-bottom-color: #23304e; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── 카드 ── */
+    .info-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 24px;
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .card-header h3 { margin: 0; font-size: 1rem; color: #1b253a; }
+
+    /* ── 버튼 ── */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+    .btn-primary { background: #23304e; color: #fff; }
+    .btn-primary:hover { background: #1b253a; }
+    .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+    .btn-edit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .btn-edit:hover { background: #dbeafe; }
+    .btn-del { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+    .btn-del:hover { background: #fed7d7; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-save { background: #10b981; color: #fff; }
+    .btn-save:hover { background: #059669; }
+
+    /* ── 테이블 ── */
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 10px 12px; font-size: 0.83rem; font-weight: 700; color: #374151; background: #f8fafc; text-align: left; }
+    th.center { text-align: center; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; color: #374151; }
+    td.center { text-align: center; }
+    tr:hover td { background: #f9fafb; }
+    .empty { text-align: center; color: #9ca3af; padding: 40px 0; }
+    .badge-active { display: inline-block; background: #dcfce7; color: #15803d; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 700; }
+    .badge-inactive { display: inline-block; background: #f1f5f9; color: #64748b; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 700; }
+
+    /* ── 모달 ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; width: 440px; max-width: 95%; }
+    .modal h3 { margin: 0 0 20px; font-size: 1.05rem; color: #1b253a; }
+    .mfg { margin-bottom: 14px; }
+    .mfg label { display: block; font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+    .mfg label .req { color: #ef4444; }
+    .mfg input, .mfg select {
+      width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 5px;
+      font-size: 0.93rem; box-sizing: border-box;
+    }
+    .mfg input:focus, .mfg select:focus { outline: none; border-color: #23304e; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <div class="page-header">
+    <h1>내정보관리</h1>
+    <p>총괄관리 &gt; 내정보관리</p>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('bank')">통장 관리</button>
+    <button class="tab-btn" onclick="switchTab('card')">법인카드 관리</button>
+  </div>
+
+  <!-- ═══ 통장 탭 ═══ -->
+  <div id="tabBank" class="tab-panel active">
+    <div class="info-card">
+      <div class="card-header">
+        <h3>등록된 통장 목록</h3>
+        <button class="btn btn-primary" onclick="openBankModal()">+ 통장 등록</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>은행명</th>
+            <th>계좌번호</th>
+            <th>예금주</th>
+            <th>별칭</th>
+            <th class="center">상태</th>
+            <th class="center">관리</th>
+          </tr>
+        </thead>
+        <tbody id="bankBody">
+          <tr><td colspan="6" class="empty">등록된 통장이 없습니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ 법인카드 탭 ═══ -->
+  <div id="tabCard" class="tab-panel">
+    <div class="info-card">
+      <div class="card-header">
+        <h3>등록된 법인카드 목록</h3>
+        <button class="btn btn-primary" onclick="openCardModal()">+ 법인카드 등록</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>카드사</th>
+            <th>카드번호(끝 4자리)</th>
+            <th>카드명의</th>
+            <th>별칭</th>
+            <th class="center">상태</th>
+            <th class="center">관리</th>
+          </tr>
+        </thead>
+        <tbody id="cardBody">
+          <tr><td colspan="6" class="empty">등록된 법인카드가 없습니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 통장 모달 ═══ -->
+<div class="modal-overlay" id="bankModal">
+  <div class="modal">
+    <h3 id="bankModalTitle">통장 등록</h3>
+    <input type="hidden" id="bankId">
+    <div class="mfg">
+      <label>은행명 <span class="req">*</span></label>
+      <input type="text" id="bankName" placeholder="예: 국민은행">
+    </div>
+    <div class="mfg">
+      <label>계좌번호 <span class="req">*</span></label>
+      <input type="text" id="bankAccountNumber" placeholder="예: 123456-78-901234">
+    </div>
+    <div class="mfg">
+      <label>예금주</label>
+      <input type="text" id="bankHolder" placeholder="예: 주식회사 제이디엔드">
+    </div>
+    <div class="mfg">
+      <label>별칭 <span style="font-weight:400;color:#6b7280;font-size:0.8rem;">(전표 입력 시 선택 목록에 표시됩니다)</span></label>
+      <input type="text" id="bankAlias" placeholder="예: 주계좌, 법인통장">
+    </div>
+    <div class="mfg">
+      <label>상태</label>
+      <select id="bankActive">
+        <option value="true">활성</option>
+        <option value="false">비활성</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeBankModal()">취소</button>
+      <button class="btn btn-save" onclick="saveBankAccount()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 법인카드 모달 ═══ -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal">
+    <h3 id="cardModalTitle">법인카드 등록</h3>
+    <input type="hidden" id="cardId">
+    <div class="mfg">
+      <label>카드사 <span class="req">*</span></label>
+      <input type="text" id="cardCompany" placeholder="예: 신한카드, 국민카드">
+    </div>
+    <div class="mfg">
+      <label>카드번호 끝 4자리</label>
+      <input type="text" id="cardLast4" placeholder="예: 1234" maxlength="4" inputmode="numeric"
+             oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+    </div>
+    <div class="mfg">
+      <label>카드명의</label>
+      <input type="text" id="cardHolder" placeholder="예: 홍길동">
+    </div>
+    <div class="mfg">
+      <label>별칭 <span style="font-weight:400;color:#6b7280;font-size:0.8rem;">(전표 입력 시 선택 목록에 표시됩니다)</span></label>
+      <input type="text" id="cardAlias" placeholder="예: 법인카드1">
+    </div>
+    <div class="mfg">
+      <label>상태</label>
+      <select id="cardActive">
+        <option value="true">활성</option>
+        <option value="false">비활성</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCardModal()">취소</button>
+      <button class="btn btn-save" onclick="saveCorporateCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+<script>
+  const BANK_API = '/api/my-info/bank-accounts';
+  const CARD_API = '/api/my-info/corporate-cards';
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── 탭 전환 ──────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    if (tab === 'bank') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('tabBank').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('tabCard').classList.add('active');
+    }
+  }
+
+  // ─── 통장 목록 ────────────────────────────────────────────
+  async function loadBankAccounts() {
+    const res = await fetch(BANK_API, { credentials: 'include' });
+    const list = await res.json();
+    const tbody = document.getElementById('bankBody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">등록된 통장이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(b => `
+      <tr>
+        <td>${escHtml(b.bankName)}</td>
+        <td>${escHtml(b.accountNumber)}</td>
+        <td>${escHtml(b.accountHolder ?? '-')}</td>
+        <td>${escHtml(b.accountAlias ?? '-')}</td>
+        <td class="center">
+          ${b.isActive
+            ? '<span class="badge-active">활성</span>'
+            : '<span class="badge-inactive">비활성</span>'}
+        </td>
+        <td class="center" style="white-space:nowrap;">
+          <button class="btn btn-sm btn-edit" onclick="editBankAccount(${b.id})">수정</button>
+          <button class="btn btn-sm btn-del" onclick="deleteBankAccount(${b.id}, '${escHtml(b.bankName)} ${escHtml(b.accountNumber)}')">삭제</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openBankModal(id) {
+    document.getElementById('bankModalTitle').textContent = '통장 등록';
+    document.getElementById('bankId').value = '';
+    document.getElementById('bankName').value = '';
+    document.getElementById('bankAccountNumber').value = '';
+    document.getElementById('bankHolder').value = '';
+    document.getElementById('bankAlias').value = '';
+    document.getElementById('bankActive').value = 'true';
+    document.getElementById('bankModal').classList.add('open');
+  }
+
+  function closeBankModal() {
+    document.getElementById('bankModal').classList.remove('open');
+  }
+
+  async function editBankAccount(id) {
+    const res = await fetch(BANK_API, { credentials: 'include' });
+    const list = await res.json();
+    const b = list.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('bankModalTitle').textContent = '통장 수정';
+    document.getElementById('bankId').value = b.id;
+    document.getElementById('bankName').value = b.bankName ?? '';
+    document.getElementById('bankAccountNumber').value = b.accountNumber ?? '';
+    document.getElementById('bankHolder').value = b.accountHolder ?? '';
+    document.getElementById('bankAlias').value = b.accountAlias ?? '';
+    document.getElementById('bankActive').value = b.isActive ? 'true' : 'false';
+    document.getElementById('bankModal').classList.add('open');
+  }
+
+  async function saveBankAccount() {
+    const id = document.getElementById('bankId').value;
+    const bankName = document.getElementById('bankName').value.trim();
+    const accountNumber = document.getElementById('bankAccountNumber').value.trim();
+    if (!bankName) { alert('은행명을 입력해주세요.'); return; }
+    if (!accountNumber) { alert('계좌번호를 입력해주세요.'); return; }
+
+    const body = {
+      bankName,
+      accountNumber,
+      accountHolder: document.getElementById('bankHolder').value.trim() || null,
+      accountAlias: document.getElementById('bankAlias').value.trim() || null,
+      isActive: document.getElementById('bankActive').value === 'true'
+    };
+
+    const url = id ? `${BANK_API}/${id}` : BANK_API;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method, credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    closeBankModal();
+    await loadBankAccounts();
+  }
+
+  async function deleteBankAccount(id, label) {
+    if (!confirm(`"${label}" 통장을 삭제하시겠습니까?`)) return;
+    const res = await fetch(`${BANK_API}/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) { alert('삭제 실패: ' + res.status); return; }
+    await loadBankAccounts();
+  }
+
+  // ─── 법인카드 목록 ─────────────────────────────────────────
+  async function loadCorporateCards() {
+    const res = await fetch(CARD_API, { credentials: 'include' });
+    const list = await res.json();
+    const tbody = document.getElementById('cardBody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">등록된 법인카드가 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(c => `
+      <tr>
+        <td>${escHtml(c.cardCompany)}</td>
+        <td>${c.cardNumberLast4 ? '****-****-****-' + escHtml(c.cardNumberLast4) : '-'}</td>
+        <td>${escHtml(c.cardHolder ?? '-')}</td>
+        <td>${escHtml(c.cardAlias ?? '-')}</td>
+        <td class="center">
+          ${c.isActive
+            ? '<span class="badge-active">활성</span>'
+            : '<span class="badge-inactive">비활성</span>'}
+        </td>
+        <td class="center" style="white-space:nowrap;">
+          <button class="btn btn-sm btn-edit" onclick="editCorporateCard(${c.id})">수정</button>
+          <button class="btn btn-sm btn-del" onclick="deleteCorporateCard(${c.id}, '${escHtml(c.cardCompany)}')">삭제</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openCardModal() {
+    document.getElementById('cardModalTitle').textContent = '법인카드 등록';
+    document.getElementById('cardId').value = '';
+    document.getElementById('cardCompany').value = '';
+    document.getElementById('cardLast4').value = '';
+    document.getElementById('cardHolder').value = '';
+    document.getElementById('cardAlias').value = '';
+    document.getElementById('cardActive').value = 'true';
+    document.getElementById('cardModal').classList.add('open');
+  }
+
+  function closeCardModal() {
+    document.getElementById('cardModal').classList.remove('open');
+  }
+
+  async function editCorporateCard(id) {
+    const res = await fetch(CARD_API, { credentials: 'include' });
+    const list = await res.json();
+    const c = list.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('cardModalTitle').textContent = '법인카드 수정';
+    document.getElementById('cardId').value = c.id;
+    document.getElementById('cardCompany').value = c.cardCompany ?? '';
+    document.getElementById('cardLast4').value = c.cardNumberLast4 ?? '';
+    document.getElementById('cardHolder').value = c.cardHolder ?? '';
+    document.getElementById('cardAlias').value = c.cardAlias ?? '';
+    document.getElementById('cardActive').value = c.isActive ? 'true' : 'false';
+    document.getElementById('cardModal').classList.add('open');
+  }
+
+  async function saveCorporateCard() {
+    const id = document.getElementById('cardId').value;
+    const cardCompany = document.getElementById('cardCompany').value.trim();
+    if (!cardCompany) { alert('카드사를 입력해주세요.'); return; }
+
+    const body = {
+      cardCompany,
+      cardNumberLast4: document.getElementById('cardLast4').value.trim() || null,
+      cardHolder: document.getElementById('cardHolder').value.trim() || null,
+      cardAlias: document.getElementById('cardAlias').value.trim() || null,
+      isActive: document.getElementById('cardActive').value === 'true'
+    };
+
+    const url = id ? `${CARD_API}/${id}` : CARD_API;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method, credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    closeCardModal();
+    await loadCorporateCards();
+  }
+
+  async function deleteCorporateCard(id, label) {
+    if (!confirm(`"${label}" 법인카드를 삭제하시겠습니까?`)) return;
+    const res = await fetch(`${CARD_API}/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) { alert('삭제 실패: ' + res.status); return; }
+    await loadCorporateCards();
+  }
+
+  // 모달 외부 클릭으로 닫기
+  document.getElementById('bankModal').addEventListener('click', function(e) {
+    if (e.target === this) closeBankModal();
+  });
+  document.getElementById('cardModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCardModal();
+  });
+
+  // 초기 로드
+  loadBankAccounts();
+  loadCorporateCards();
+  loadSidebar();
+</script>
+</body>
+</html>
