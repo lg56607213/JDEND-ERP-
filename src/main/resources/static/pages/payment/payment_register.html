@@ -196,7 +196,9 @@
 
                   <div class="form-group">
                     <label for="companyAccount">당사 계좌번호</label>
-                    <input type="text" id="companyAccount" name="companyAccount" placeholder="당사 계좌번호를 직접 입력하세요">
+                    <select id="companyAccount" name="companyAccount">
+                      <option value="">선택하세요</option>
+                    </select>
                   </div>
 
                   <div class="form-group">
@@ -349,8 +351,17 @@
     let editId = null;
     let currentVehicleNo = '';
 
-    function mustOk(res) {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    async function mustOk(res) {
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          msg = body.message || JSON.stringify(body);
+        } catch (_) {
+          try { msg = (await res.text()) || msg; } catch (_2) {}
+        }
+        throw new Error(msg);
+      }
       return res;
     }
 
@@ -402,7 +413,7 @@
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/contracts/${encodeURIComponent(cn)}/summary`);
-        mustOk(res);
+        await mustOk(res);
         const d = await res.json();
 
         currentVehicleNo = d.vehicleNo || '';
@@ -444,7 +455,7 @@
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/schedules/by-vehicle-no?vehicleNo=${encodeURIComponent(vehicleNo)}`);
-        mustOk(res);
+        await mustOk(res);
         const data = await res.json();
 
         const schedule = Array.isArray(data.schedule) ? data.schedule : [];
@@ -531,7 +542,7 @@
         modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;">검색중...</td></tr>`;
 
         const res = await fetch(`${API_BASE_URL}/api/contracts/payable-search?kw=${encodeURIComponent(kw)}`);
-        mustOk(res);
+        await mustOk(res);
         const list = await res.json();
 
         if (!list.length) {
@@ -595,7 +606,7 @@
         paymentDate: document.getElementById('paymentDate').value,
         paymentAmount: Number(document.getElementById('paymentAmount').value || 0),
         paymentMethod: document.getElementById('paymentMethod').value || null,
-        companyAccount: document.getElementById('companyAccount').value.trim() || null,
+        companyAccount: document.getElementById('companyAccount').value || null,
         memo: document.getElementById('paymentNote').value || null,
         createVoucher
       };
@@ -615,7 +626,7 @@
           body: JSON.stringify(payload)
         });
 
-        mustOk(res);
+        await mustOk(res);
 
         alert(isEdit ? '수납 수정 완료' : (createVoucher ? '수납 등록 완료' : '수납 등록 완료 (전표 미생성)'));
 
@@ -655,9 +666,28 @@
       e.target.value = v;
     });
 
+    async function loadBankAccounts() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/my-info/bank-accounts?activeOnly=true`);
+        if (!res.ok) return;
+        const accounts = await res.json();
+        const sel = document.getElementById('companyAccount');
+        accounts.forEach(acc => {
+          const label = [acc.accountAlias, acc.bankName, acc.accountNumber].filter(Boolean).join(' ');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.textContent = label;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('당사 계좌 로드 실패:', e);
+      }
+    }
+
     window.addEventListener('load', async () => {
       document.getElementById('paymentDate').value = todayISO();
       clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
+      await loadBankAccounts();
     });
   </script>
 </body>

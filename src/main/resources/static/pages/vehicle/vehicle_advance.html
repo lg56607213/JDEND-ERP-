@@ -175,6 +175,55 @@
 <script>
   const API_BASE = `${API_BASE_URL}/api/vehicle-orders`;
   let rowCount = 0;
+  let myBankAccounts = [];
+  let myCorporateCards = [];
+
+  async function loadMyInfoAccounts() {
+    try {
+      const [banks, cards] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/my-info/bank-accounts?activeOnly=true`).then(r => r.ok ? r.json() : []),
+        fetch(`${API_BASE_URL}/api/my-info/corporate-cards?activeOnly=true`).then(r => r.ok ? r.json() : [])
+      ]);
+      myBankAccounts = banks || [];
+      myCorporateCards = cards || [];
+    } catch (e) {
+      console.warn('내정보 계좌 로드 실패:', e);
+    }
+  }
+
+  function onPaymentMethodChange(idx) {
+    const method = document.getElementById(`paymentMethod_${idx}`)?.value;
+    const sel = document.getElementById(`accountRef_${idx}`);
+    if (!sel) return;
+
+    if (method === '보통예금') {
+      let opts = '<option value="">계좌 선택</option>';
+      myBankAccounts.forEach(acc => {
+        const label = [acc.accountAlias, acc.bankName, acc.accountNumber].filter(Boolean).join(' ');
+        opts += `<option value="${escHtml(label)}">${escHtml(label)}</option>`;
+      });
+      if (myBankAccounts.length === 0) opts += '<option value="" disabled>내정보관리에 등록된 계좌 없음</option>';
+      sel.innerHTML = opts;
+      sel.style.display = '';
+    } else if (method === '법인카드') {
+      let opts = '<option value="">카드 선택</option>';
+      myCorporateCards.forEach(card => {
+        const label = [card.cardAlias, card.cardCompany, card.cardNumberLast4 ? `****${card.cardNumberLast4}` : ''].filter(Boolean).join(' ');
+        opts += `<option value="${escHtml(label)}">${escHtml(label)}</option>`;
+      });
+      if (myCorporateCards.length === 0) opts += '<option value="" disabled>내정보관리에 등록된 카드 없음</option>';
+      sel.innerHTML = opts;
+      sel.style.display = '';
+    } else {
+      sel.style.display = 'none';
+      sel.value = '';
+    }
+  }
+
+  function onAccountRefChange(idx) {
+    const val = document.getElementById(`accountRef_${idx}`)?.value;
+    if (val) document.getElementById(`remark_${idx}`).value = val;
+  }
 
   const VAT_ZERO_ITEMS = new Set(["취득세", "인지대", "공채할인금액", "공채매입금액"]);
 
@@ -233,6 +282,7 @@
   }
 
   window.addEventListener('load', async function() {
+    await loadMyInfoAccounts();
     addRow();
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -273,11 +323,14 @@
       <td><input type="text" id="vatAmount_${idx}" placeholder="0" readonly></td>
       <td><input type="date" id="voucherDate_${idx}"></td>
       <td>
-        <select id="paymentMethod_${idx}">
+        <select id="paymentMethod_${idx}" onchange="onPaymentMethodChange(${idx})">
           <option value="">선택</option>
           <option value="법인카드">법인카드</option>
           <option value="미지급금">미지급금</option>
           <option value="보통예금">보통예금</option>
+        </select>
+        <select id="accountRef_${idx}" style="display:none; margin-top:4px; font-size:12px; width:100%;" onchange="onAccountRefChange(${idx})">
+          <option value="">선택</option>
         </select>
       </td>
       <td><input type="text" id="remark_${idx}" placeholder="적요 입력"></td>
@@ -294,6 +347,7 @@
       document.getElementById(`vatAmount_${idx}`).value = (prefill.vatAmount != null) ? formatMoney(prefill.vatAmount) : "";
       document.getElementById(`voucherDate_${idx}`).value = prefill.voucherDate ?? "";
       document.getElementById(`paymentMethod_${idx}`).value = prefill.paymentMethod || "";
+      onPaymentMethodChange(idx);
       document.getElementById(`remark_${idx}`).value = prefill.remark || "";
     }
 
