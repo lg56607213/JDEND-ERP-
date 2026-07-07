@@ -603,15 +603,21 @@
         });
 
         if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`HTTP ${res.status} - ${text}`);
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            errMsg = errJson.message || errMsg;
+          } catch (_) {
+            errMsg = (await res.text()) || errMsg;
+          }
+          throw new Error(errMsg);
         }
 
         const result = await res.json();
         alert(`등록 완료!\\n상태: ${result.orderStatus}\\nloanId: ${result.loanId}\\n\\n차입금현황으로 이동합니다.`);
         window.location.href = 'loan_status.html';
       } catch (e) {
-        alert("등록 실패: " + e.message + "\n\n※ 차량 상태가 '실행완료'가 아니면 실행이 안 됩니다.");
+        alert("등록 실패: " + e.message);
       }
     }
   </script>
