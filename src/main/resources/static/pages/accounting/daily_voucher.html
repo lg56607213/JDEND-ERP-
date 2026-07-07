@@ -525,8 +525,8 @@
       calculateTotals();
     }
 
-    function resetForm() {
-      if (!confirm("입력한 내용을 모두 초기화하시겠습니까?")) return;
+    function resetForm(silent = false) {
+      if (!silent && !confirm("입력한 내용을 모두 초기화하시겠습니까?")) return;
 
       qs("#voucherForm").reset();
       qs("#voucherDate").value = todayStr();
@@ -689,7 +689,7 @@
       try {
         const saved = await apiPost("/api/vouchers", payload);
         alert(`전표가 등록되었습니다.\n\n전표번호: ${saved.voucherNo}\nID: ${saved.id}`);
-        resetForm();
+        resetForm(true);
       } catch (e) {
         alert("전표 등록 실패\n\n" + e.message);
       }

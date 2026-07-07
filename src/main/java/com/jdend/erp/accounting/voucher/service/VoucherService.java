@@ -23,7 +23,12 @@ public class VoucherService {
         long cnt = voucherRepository.countByVoucherDate(date);
         long next = cnt + 1;
         String ymd = date.toString().replace("-", "");
-        return "V" + ymd + "-" + String.format("%03d", next);
+        String voucherNo = "V" + ymd + "-" + String.format("%03d", next);
+        while (voucherRepository.existsByVoucherNo(voucherNo)) {
+            next++;
+            voucherNo = "V" + ymd + "-" + String.format("%03d", next);
+        }
+        return voucherNo;
     }
 
     @Transactional
