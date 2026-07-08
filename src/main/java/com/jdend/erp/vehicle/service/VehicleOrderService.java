@@ -1,5 +1,6 @@
 package com.jdend.erp.vehicle.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.dto.*;
@@ -22,6 +23,7 @@ public class VehicleOrderService {
     private final VehicleOrderHistoryRepository historyRepo;
     private final VehicleLoanRepository loanRepo;
     private final VoucherService voucherService;
+    private final OtherAccountSettingsService accountSettings;
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -322,6 +324,7 @@ public class VehicleOrderService {
         );
 
         createLoanOpenVoucher(savedLoan);
+        createVehicleExecuteVoucher(o, req);
 
         return VehicleDeliveryExecuteResponse.builder()
                 .vehicleMgmtNo(o.getVehicleMgmtNo())
@@ -357,6 +360,44 @@ public class VehicleOrderService {
                                         .account("장기차입금")
                                         .amount(loan.getLoanPrincipal())
                                         .description("대출원금")
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    private void createVehicleExecuteVoucher(VehicleOrder order, VehicleDeliveryExecuteRequest req) {
+        String debitAccount = accountSettings.getVehicleDebitAccount();
+        if (debitAccount == null) debitAccount = "차량운반구";
+        String creditAccount = accountSettings.getVehicleCreditAccount();
+        if (creditAccount == null) creditAccount = "선급렌트자산";
+
+        long totalAdvance = order.getTotalAdvancePrice() != null ? order.getTotalAdvancePrice() : 0L;
+        if (totalAdvance <= 0) return;
+
+        String vehicleNo = order.getVehicleNo();
+        String contractNo = order.getMakerContractNo();
+        String memo = (vehicleNo == null || vehicleNo.isBlank() ? order.getVehicleMgmtNo() : vehicleNo) + " 차량 실행";
+        LocalDate voucherDate = req.startDate != null ? req.startDate : LocalDate.now();
+
+        voucherService.create(
+                VoucherCreateRequest.builder()
+                        .voucherDate(voucherDate)
+                        .contractNumber(contractNo)
+                        .vehicleNo(vehicleNo)
+                        .memo(memo)
+                        .debitEntries(List.of(
+                                VoucherCreateRequest.VoucherLineRequest.builder()
+                                        .account(debitAccount)
+                                        .amount(totalAdvance)
+                                        .description("선급렌트자산 → " + debitAccount)
+                                        .build()
+                        ))
+                        .creditEntries(List.of(
+                                VoucherCreateRequest.VoucherLineRequest.builder()
+                                        .account(creditAccount)
+                                        .amount(totalAdvance)
+                                        .description("선급렌트자산 대체")
                                         .build()
                         ))
                         .build()

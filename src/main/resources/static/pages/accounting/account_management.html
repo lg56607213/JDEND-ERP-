@@ -370,30 +370,43 @@
     if (confirm('모든 설정을 기본값으로 초기화하시겠습니까?')) location.reload();
   }
 
+  function selText(id) {
+    const el = document.getElementById(id);
+    return el ? (el.options[el.selectedIndex]?.textContent?.trim() || "") : "";
+  }
+  function selVal(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+  function inputVal(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  }
+
   function collectSettings() {
     const prepaidAccounts = [];
     document.querySelectorAll('#prepaidAccountBody .prepaid-item').forEach(item => {
       const name = item.querySelector('.prepaid-label').textContent.trim();
       const code = item.querySelector('.account-code').value.trim();
       const account = item.querySelector('.account-select').value;
-      const accountName = item.querySelector('.account-select option:checked')?.textContent || "";
+      const accountName = item.querySelector('.account-select option:checked')?.textContent?.trim() || "";
       prepaidAccounts.push({ name, code, account, accountName });
     });
 
     const vehicleMapping = {
-      debit: { code: document.getElementById('vehicleDebitCode').value.trim(), account: document.getElementById('vehicleDebitAccount').value },
-      credit: { code: document.getElementById('vehicleCreditCode').value.trim(), account: document.getElementById('vehicleCreditAccount').value }
+      debit: { code: inputVal('vehicleDebitCode'), account: selVal('vehicleDebitAccount'), accountName: selText('vehicleDebitAccount') },
+      credit: { code: inputVal('vehicleCreditCode'), account: selVal('vehicleCreditAccount'), accountName: selText('vehicleCreditAccount') }
     };
 
     const loanMapping = {
-      debit1: { code: document.getElementById('loanDebitCode1').value.trim(), account: document.getElementById('loanDebitAccount1').value },
-      debit2: { code: document.getElementById('loanDebitCode2').value.trim(), account: document.getElementById('loanDebitAccount2').value },
-      credit: { code: document.getElementById('loanCreditCode').value.trim(), account: document.getElementById('loanCreditAccount').value, bankAccount: document.getElementById('loanBankAccount').value }
+      debit1: { code: inputVal('loanDebitCode1'), account: selVal('loanDebitAccount1'), accountName: selText('loanDebitAccount1') },
+      debit2: { code: inputVal('loanDebitCode2'), account: selVal('loanDebitAccount2'), accountName: selText('loanDebitAccount2') },
+      credit: { code: inputVal('loanCreditCode'), account: selVal('loanCreditAccount'), accountName: selText('loanCreditAccount'), bankAccount: selVal('loanBankAccount') }
     };
 
     const inspectionMapping = {
-      debit: { code: document.getElementById('inspectionDebitCode').value.trim(), account: document.getElementById('inspectionDebitAccount').value },
-      credit: { code: document.getElementById('inspectionCreditCode').value.trim(), account: document.getElementById('inspectionCreditAccount').value, bankAccount: document.getElementById('inspectionBankAccount').value }
+      debit: { code: inputVal('inspectionDebitCode'), account: selVal('inspectionDebitAccount'), accountName: selText('inspectionDebitAccount') },
+      credit: { code: inputVal('inspectionCreditCode'), account: selVal('inspectionCreditAccount'), accountName: selText('inspectionCreditAccount'), bankAccount: selVal('inspectionBankAccount') }
     };
 
     return { prepaidAccounts, vehicleMapping, loanMapping, inspectionMapping };

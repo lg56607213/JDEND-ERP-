@@ -1,5 +1,6 @@
 package com.jdend.erp.vehicle.advance.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
@@ -24,6 +25,7 @@ public class VehicleAdvanceService {
   private final VehicleOrderRepository orderRepo;
   private final VehicleAdvanceRepository advanceRepo;
   private final VoucherRepository voucherRepo;
+  private final OtherAccountSettingsService accountSettings;
 
   private static final Set<String> VAT_ZERO_ITEMS = Set.of(
     "취득세", "인지대", "공채할인금액", "공채매입금액"
@@ -194,24 +196,11 @@ public class VehicleAdvanceService {
     if (itemName == null || itemName.isBlank()) {
       throw new RuntimeException("항목명이 없습니다.");
     }
-
-    return switch (itemName) {
-      case "공채할인금액" -> "공채비용";
-
-      case "차량가격",
-           "메이커탁송료",
-           "취득세",
-           "인지대",
-           "번호판대",
-           "보조번호판대",
-           "공채매입금액",
-           "등록대행비",
-           "탁송료",
-           "외주장착비용",
-           "기타비용" -> "차량운반구";
-
-      default -> "차량운반구";
-    };
+    // 기타계정관리 설정에서 항목명에 맞는 계정명 조회
+    String fromSettings = accountSettings.getPrepaidDebitAccount(itemName);
+    if (fromSettings != null) return fromSettings;
+    // 설정에 없으면 기본값
+    return "차량운반구";
   }
 
   private String mapPaymentMethodToCreditAccount(String paymentMethod) {

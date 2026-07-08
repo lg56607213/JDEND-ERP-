@@ -1,5 +1,6 @@
 package com.jdend.erp.vehicle.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.dto.*;
@@ -25,6 +26,7 @@ public class VehicleLoanService {
     private final VehicleLoanVoucherRepository voucherRepo;
     private final VehicleOrderRepository vehicleOrderRepo;
     private final VoucherService voucherService;
+    private final OtherAccountSettingsService accountSettings;
 
     @Transactional(readOnly = true)
     public List<VehicleLoanListItemResponse> list(
@@ -345,6 +347,11 @@ public class VehicleLoanService {
                 continue;
             }
 
+            String loanDebitAccount = accountSettings.getLoanDebit1Account();
+            if (loanDebitAccount == null) loanDebitAccount = "장기차입금";
+            String loanCreditAccount = accountSettings.getLoanCreditAccount();
+            if (loanCreditAccount == null) loanCreditAccount = "보통예금";
+
             voucherService.create(
                     VoucherCreateRequest.builder()
                             .voucherDate(req.voucherDate)
@@ -353,14 +360,14 @@ public class VehicleLoanService {
                             .memo(finalMemo)
                             .debitEntries(List.of(
                                     VoucherCreateRequest.VoucherLineRequest.builder()
-                                            .account("장기차입금")
+                                            .account(loanDebitAccount)
                                             .amount(req.amount)
                                             .description("차입금 상환")
                                             .build()
                             ))
                             .creditEntries(List.of(
                                     VoucherCreateRequest.VoucherLineRequest.builder()
-                                            .account("보통예금")
+                                            .account(loanCreditAccount)
                                             .amount(req.amount)
                                             .description("차입금 상환")
                                             .build()

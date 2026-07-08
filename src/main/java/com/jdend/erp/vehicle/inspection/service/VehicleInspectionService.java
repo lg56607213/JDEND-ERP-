@@ -1,5 +1,8 @@
 package com.jdend.erp.vehicle.inspection.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
+import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
+import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.inspection.dto.*;
 import com.jdend.erp.vehicle.inspection.entity.VehicleInspection;
@@ -21,6 +24,8 @@ public class VehicleInspectionService {
 
   private final VehicleInspectionRepository inspectionRepo;
   private final VehicleOrderRepository orderRepo;
+  private final VoucherService voucherService;
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional
   public VehicleInspectionResponse create(VehicleInspectionCreateRequest req) {
@@ -52,6 +57,41 @@ public class VehicleInspectionService {
     vo.setInspectionStart(req.validStart);
     vo.setInspectionEnd(req.validEnd);
     orderRepo.save(vo);
+
+    // 정기검사 비용 > 0 이면 전표 자동 생성
+    long cost = saved.getInspectionCost() != null ? saved.getInspectionCost() : 0L;
+    if (cost > 0) {
+      String debitAccount = accountSettings.getInspectionDebitAccount();
+      if (debitAccount == null) debitAccount = "차량유지비";
+      String creditAccount = accountSettings.getInspectionCreditAccount();
+      if (creditAccount == null) creditAccount = "미지급금";
+
+      LocalDate voucherDate = req.inspectionDate != null ? req.inspectionDate : LocalDate.now();
+      String vehicleNoForMemo = vo.getVehicleNo() != null ? vo.getVehicleNo() : mgmtNo;
+      String memo = vehicleNoForMemo + " 정기검사비용";
+
+      voucherService.create(
+          VoucherCreateRequest.builder()
+              .voucherDate(voucherDate)
+              .vehicleNo(vo.getVehicleNo())
+              .memo(memo)
+              .debitEntries(List.of(
+                  VoucherCreateRequest.VoucherLineRequest.builder()
+                      .account(debitAccount)
+                      .amount(cost)
+                      .description("정기검사비용")
+                      .build()
+              ))
+              .creditEntries(List.of(
+                  VoucherCreateRequest.VoucherLineRequest.builder()
+                      .account(creditAccount)
+                      .amount(cost)
+                      .description("정기검사비용")
+                      .build()
+              ))
+              .build()
+      );
+    }
 
     return toResponse(saved);
   }
