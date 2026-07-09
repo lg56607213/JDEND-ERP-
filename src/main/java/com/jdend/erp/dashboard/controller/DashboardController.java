@@ -46,4 +46,14 @@ public class DashboardController {
   public List<DashboardReceivableRow> receivablesTop(@RequestParam(defaultValue = "5") int limit) {
     return service.receivablesTop(limit);
   }
+
+  @GetMapping("/bank-summary")
+  public List<DashboardBankSummaryRow> bankSummary() {
+    return service.bankSummary();
+  }
+
+  @GetMapping("/bank-voucher-diff")
+  public List<DashboardBankDiffRow> bankVoucherDiff() {
+    return service.bankVoucherDiff();
+  }
 }

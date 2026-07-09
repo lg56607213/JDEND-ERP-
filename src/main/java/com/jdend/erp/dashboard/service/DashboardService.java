@@ -2,11 +2,14 @@ package com.jdend.erp.dashboard.service;
 
 import com.jdend.erp.dashboard.dto.*;
 import com.jdend.erp.dashboard.repository.*;
+import com.jdend.erp.myinfo.entity.BankAccount;
+import com.jdend.erp.myinfo.repository.BankAccountRepository;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -16,11 +19,13 @@ import java.util.*;
 public class DashboardService {
 
   private final DashboardBankTransactionRepository bankTxRepo;
+  private final DashboardVoucherRepository voucherRepo;
+  private final BankAccountRepository bankAccountRepo;
   private final ContractDashboardRepository contractRepo;
   private final VehicleInsuranceDashboardRepository insuranceRepo;
   private final MaturityDashboardRepository maturityRepo;
   private final ReceivableDashboardRepository receivableRepo;
-  private final VehicleOrderRepository vehicleOrderRepo; // ✅ 추가
+  private final VehicleOrderRepository vehicleOrderRepo;
 
   public DashboardCashResponse cashDaily(LocalDate baseDate) {
     LocalDate d = (baseDate != null) ? baseDate : LocalDate.now().minusDays(1);
@@ -102,6 +107,93 @@ public class DashboardService {
 
   public List<DashboardReceivableRow> receivablesTop(int limit) {
     return receivableRepo.findTopReceivables(limit);
+  }
+
+  public List<DashboardBankSummaryRow> bankSummary() {
+    LocalDate today = LocalDate.now();
+    LocalDate yesterday = today.minusDays(1);
+    LocalDate twoDaysAgo = today.minusDays(2);
+
+    List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
+    List<DashboardBankSummaryRow> result = new ArrayList<>();
+
+    for (BankAccount acct : accounts) {
+      String no = acct.getAccountNumber();
+      long bal2 = nz(bankTxRepo.sumNetUpToByAccount(no, twoDaysAgo));
+      long dep  = nz(bankTxRepo.sumDepositOnByAccount(no, yesterday));
+      long wit  = nz(bankTxRepo.sumWithdrawalOnByAccount(no, yesterday));
+      long cur  = bal2 + dep - wit;
+
+      result.add(DashboardBankSummaryRow.builder()
+          .bankName(acct.getBankName())
+          .accountNumber(no)
+          .accountAlias(acct.getAccountAlias())
+          .balance2DaysAgo(bal2)
+          .yesterdayDeposit(dep)
+          .yesterdayWithdrawal(wit)
+          .currentBalance(cur)
+          .build());
+    }
+    return result;
+  }
+
+  public List<DashboardBankDiffRow> bankVoucherDiff() {
+    LocalDate to = LocalDate.now().minusDays(1);
+    LocalDate from = to.minusDays(13); // 최근 14일
+
+    // 은행내역 일별 합계
+    List<Object[]> bankRows = bankTxRepo.sumByDateRange(from, to);
+    Map<LocalDate, long[]> bankMap = new LinkedHashMap<>();
+    for (Object[] row : bankRows) {
+      LocalDate d = ((java.sql.Date) row[0]).toLocalDate();
+      long dep = toLong(row[1]);
+      long wit = toLong(row[2]);
+      bankMap.put(d, new long[]{dep, wit});
+    }
+
+    // 전표내역 일별 합계
+    List<Object[]> voucherRows = voucherRepo.sumBankVoucherByDateRange(from, to);
+    Map<LocalDate, long[]> voucherMap = new LinkedHashMap<>();
+    for (Object[] row : voucherRows) {
+      LocalDate d = ((java.sql.Date) row[0]).toLocalDate();
+      long debit  = toLong(row[1]);
+      long credit = toLong(row[2]);
+      voucherMap.put(d, new long[]{debit, credit});
+    }
+
+    // 차이가 있는 날짜만 수집
+    Set<LocalDate> allDates = new LinkedHashSet<>();
+    allDates.addAll(bankMap.keySet());
+    allDates.addAll(voucherMap.keySet());
+
+    List<DashboardBankDiffRow> result = new ArrayList<>();
+    for (LocalDate d : allDates) {
+      long[] b = bankMap.getOrDefault(d, new long[]{0, 0});
+      long[] v = voucherMap.getOrDefault(d, new long[]{0, 0});
+      long depDiff = b[0] - v[0];
+      long witDiff = b[1] - v[1];
+      if (depDiff != 0 || witDiff != 0) {
+        result.add(DashboardBankDiffRow.builder()
+            .txDate(d)
+            .bankDeposit(b[0])
+            .bankWithdrawal(b[1])
+            .voucherDeposit(v[0])
+            .voucherWithdrawal(v[1])
+            .depositDiff(depDiff)
+            .withdrawalDiff(witDiff)
+            .build());
+      }
+    }
+    result.sort(Comparator.comparing(DashboardBankDiffRow::getTxDate).reversed());
+    return result;
+  }
+
+  private long toLong(Object o) {
+    if (o == null) return 0L;
+    if (o instanceof Long) return (Long) o;
+    if (o instanceof BigDecimal) return ((BigDecimal) o).longValue();
+    if (o instanceof Number) return ((Number) o).longValue();
+    return 0L;
   }
 
   private long nz(Long v) {
