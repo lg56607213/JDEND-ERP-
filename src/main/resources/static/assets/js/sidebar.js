@@ -132,6 +132,7 @@ function loadSidebar() {
                 <ul>
                   <li><a href="${basePath}pages/payment/billing_create.html">청구생성</a></li>
                   <li><a href="${basePath}pages/payment/billing_issue.html">청구서발행</a></li>
+                  <li><a href="${basePath}pages/payment/tax_invoice_issue.html">세금계산서 발행</a></li>
                 </ul>
               </li>
               <li class="has-sub">
