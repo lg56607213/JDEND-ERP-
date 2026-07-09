@@ -3,9 +3,13 @@ package com.jdend.erp.vehicle.service;
 import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
+import com.jdend.erp.contract.entity.Contract;
+import com.jdend.erp.contract.repository.ContractRepository;
+import com.jdend.erp.customer.Customer;
 import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.entity.*;
 import com.jdend.erp.vehicle.repository.*;
+import com.jdend.erp.vehicle.sale.repository.VehicleSaleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,8 @@ public class VehicleOrderService {
     private final VehicleLoanRepository loanRepo;
     private final VoucherService voucherService;
     private final OtherAccountSettingsService accountSettings;
+    private final VehicleSaleRepository saleRepo;
+    private final ContractRepository contractRepo;
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -402,6 +409,74 @@ public class VehicleOrderService {
                         ))
                         .build()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<VehicleStateResponse> vehicleStateList() {
+        List<VehicleOrder> orders = orderRepo.findAll();
+
+        // 매각된 차량관리번호 집합
+        Set<String> soldMgmtNos = saleRepo.findAll().stream()
+                .map(s -> normalize(s.getVehicleMgmtNo()))
+                .collect(Collectors.toSet());
+
+        // 종료되지 않은 최신 계약 (차량번호 → 계약)
+        Set<String> terminatedStatuses = Set.of(
+                "종료", "만기종료", "해지", "중도해지", "중도상환", "만기상환", "완료", "종결"
+        );
+        List<Contract> allContracts = contractRepo.findAll();
+        Map<String, Contract> activeContractByVehicleNo = new LinkedHashMap<>();
+        allContracts.forEach(c -> {
+            if (c.getVehicleNo() == null) return;
+            if (terminatedStatuses.contains(c.getStatus())) return;
+            String key = normalize(c.getVehicleNo());
+            // 같은 차량에 여러 계약이면 id 큰 것(최신)을 우선
+            activeContractByVehicleNo.merge(key, c,
+                    (existing, incoming) -> existing.getId() >= incoming.getId() ? existing : incoming);
+        });
+
+        List<VehicleStateResponse> result = new ArrayList<>();
+        for (VehicleOrder o : orders) {
+            String state;
+            String contractorName = null;
+            LocalDate contractStart = null;
+            LocalDate contractEnd = null;
+
+            String mgmtKey = normalize(o.getVehicleMgmtNo());
+            String vehicleKey = normalize(o.getVehicleNo());
+
+            if (soldMgmtNos.contains(mgmtKey)) {
+                state = "매각";
+            } else if (vehicleKey != null && !vehicleKey.isEmpty()
+                    && activeContractByVehicleNo.containsKey(vehicleKey)) {
+                Contract c = activeContractByVehicleNo.get(vehicleKey);
+                state = "계약";
+                Customer cust = c.getCustomer();
+                contractorName = (cust != null) ? cust.getCustomerName() : null;
+                contractStart = c.getStartDate();
+                contractEnd = c.getEndDate();
+            } else {
+                state = "대기";
+            }
+
+            result.add(VehicleStateResponse.builder()
+                    .vehicleNo(o.getVehicleNo())
+                    .vehicleMgmtNo(o.getVehicleMgmtNo())
+                    .carModel(o.getCarModel())
+                    .vehiclePrice(o.getTotalPrice())
+                    .vehicleState(state)
+                    .contractorName(contractorName)
+                    .contractStartDate(contractStart)
+                    .contractEndDate(contractEnd)
+                    .registeredDate(o.getRegisterDate() != null ? o.getRegisterDate() : o.getOrderDate())
+                    .build());
+        }
+        return result;
+    }
+
+    private String normalize(String s) {
+        if (s == null) return "";
+        return s.trim().replace(" ", "").replace("-", "");
     }
 
     private void applyAutoStatusStepwise(VehicleOrder o) {

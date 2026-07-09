@@ -99,6 +99,12 @@ public class VehicleOrderController {
                 .body(data);
     }
 
+    // 차량상태 (계약/대기/매각) 목록
+    @GetMapping("/state")
+    public List<VehicleStateResponse> state() {
+        return service.vehicleStateList();
+    }
+
     @GetMapping("/bulk-upload/template")
     public ResponseEntity<byte[]> bulkUploadTemplate() {
         return ResponseEntity.ok()

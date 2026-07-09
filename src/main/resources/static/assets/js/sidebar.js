@@ -45,6 +45,7 @@ function loadSidebar() {
     <li><a href="${basePath}pages/payment/loan_status.html">차입금현황</a></li>
   </ul>
 </li>
+              <li><a href="${basePath}pages/vehicle/vehicle_state.html">차량상태</a></li>
             </ul>
           </li>
           <li class="has-sub">
