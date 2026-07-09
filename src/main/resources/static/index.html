@@ -18,39 +18,38 @@
       <p>홈 &gt; 대시보드</p>
     </div>
 
-    <!-- 그래프 섹션 -->
+    <!-- 상단: 보통예금 현황(좌) + 계약현황 차트(우) -->
     <div class="charts-container">
-      <div class="chart-card">
+      <div class="chart-card" style="flex:2; min-width:0;">
+        <div class="card-header">
+          <h2>보통예금 계좌별 현황 (기준일: 어제)</h2>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>은행</th>
+                  <th>계좌번호</th>
+                  <th>별칭</th>
+                  <th class="amount-cell">2일전 현금잔액</th>
+                  <th class="amount-cell">어제 입금잔액</th>
+                  <th class="amount-cell">어제 출금잔액</th>
+                  <th class="amount-cell">최종잔액</th>
+                </tr>
+              </thead>
+              <tbody id="bankSummaryTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="flex:1; min-width:260px; max-width:340px;">
         <div class="card-header">
           <h2>계약현황 (장기/단기/대기)</h2>
         </div>
         <div class="card-body">
           <canvas id="contractStatusChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- 보통예금 계좌별 현황 -->
-    <div class="erp-card">
-      <div class="card-header">
-        <h2>보통예금 계좌별 현황 (기준일: 어제)</h2>
-      </div>
-      <div class="card-body">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>은행</th>
-                <th>계좌번호</th>
-                <th>별칭</th>
-                <th class="amount-cell">2일전 현금잔액</th>
-                <th class="amount-cell">어제 입금잔액</th>
-                <th class="amount-cell">어제 출금잔액</th>
-                <th class="amount-cell">최종잔액</th>
-              </tr>
-            </thead>
-            <tbody id="bankSummaryTbody"></tbody>
-          </table>
         </div>
       </div>
     </div>
