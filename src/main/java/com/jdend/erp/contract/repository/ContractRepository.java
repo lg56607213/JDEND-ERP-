@@ -83,6 +83,7 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
       c.vehicleNo,
       c.contractNumber,
       c.status,
+      null,
       cust.customerName,
       c.startDate,
       c.endDate,
@@ -90,6 +91,7 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
       c.totalRent,
       0L,
       c.advancePayment,
+      c.deposit,
       c.vehicleModel
     )
     from Contract c
@@ -98,14 +100,12 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
       and (:contractNumber = '' or lower(c.contractNumber) like concat('%', lower(:contractNumber), '%'))
       and (:customerName = '' or lower(cust.customerName) like concat('%', lower(:customerName), '%'))
       and (:vehicleNo = '' or lower(c.vehicleNo) like concat('%', lower(:vehicleNo), '%'))
-      and (:status = '' or c.status = :status)
     order by c.id desc
   """)
   List<ContractStatusRowResponse> statusList(
       @Param("contractNumber") String contractNumber,
       @Param("customerName") String customerName,
-      @Param("vehicleNo") String vehicleNo,
-      @Param("status") String status
+      @Param("vehicleNo") String vehicleNo
   );
 
   // ✅ BillingService에서 사용

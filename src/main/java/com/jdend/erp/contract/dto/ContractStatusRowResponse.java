@@ -13,6 +13,7 @@ public class ContractStatusRowResponse {
   private String vehicleNumber;
   private String contractNumber;
   private String status;
+  private String contractStatus; // 정상/연체/종료 (파생)
   private String customerName;
 
   private LocalDate contractStart;
@@ -23,6 +24,7 @@ public class ContractStatusRowResponse {
 
   private Long receivable;
   private Long advance;
+  private Long deposit;
 
   private String vehicleType;
 }

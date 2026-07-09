@@ -7,6 +7,51 @@
   <link rel="stylesheet" href="../../assets/css/sidebar.css" />
   <link rel="stylesheet" href="../../assets/css/pages.css" />
   <link rel="stylesheet" href="../../assets/css/management/contract_status.css" />
+  <style>
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .tab-btn {
+      padding: 10px 22px;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      border-radius: 6px 6px 0 0;
+      transition: color .15s;
+    }
+    .tab-btn.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+      background: #eff6ff;
+    }
+    .tab-btn:hover:not(.active) { color: #374151; background: #f3f4f6; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-정상  { background: #dcfce7; color: #15803d; }
+    .badge-연체  { background: #fee2e2; color: #dc2626; }
+    .badge-종료  { background: #f3f4f6; color: #6b7280; }
+
+    .amount-cell   { text-align: right; font-variant-numeric: tabular-nums; }
+    .receivable-cell { text-align: right; color: #dc2626; font-variant-numeric: tabular-nums; }
+    .advance-cell  { text-align: right; color: #2563eb; font-variant-numeric: tabular-nums; }
+    .deposit-cell  { text-align: right; color: #7c3aed; font-variant-numeric: tabular-nums; }
+    .clickable-row { cursor: pointer; }
+    .clickable-row:hover td { background: #f8fafc; }
+  </style>
 </head>
 <body>
 <div id="sidebar-container"></div>
@@ -19,6 +64,14 @@
 
   <div class="erp-card">
     <div class="card-body">
+
+      <!-- 탭 -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('all',this)">계약현황</button>
+        <button class="tab-btn" onclick="switchTab('receivable',this)">미수금</button>
+        <button class="tab-btn" onclick="switchTab('advance',this)">선수금</button>
+        <button class="tab-btn" onclick="switchTab('deposit',this)">보증금</button>
+      </div>
 
       <!-- 검색 -->
       <div class="search-section">
@@ -36,12 +89,12 @@
             <input type="text" id="searchVehicle" placeholder="차량번호 검색" />
           </div>
           <div class="form-group">
-            <label for="searchStatus">차량상태</label>
-            <select id="searchStatus">
+            <label for="searchContractStatus">계약상태</label>
+            <select id="searchContractStatus">
               <option value="">전체</option>
-              <option value="장기">장기</option>
-              <option value="단기">단기</option>
-              <option value="대기">대기</option>
+              <option value="정상">정상</option>
+              <option value="연체">연체</option>
+              <option value="종료">종료</option>
             </select>
           </div>
           <div class="form-group">
@@ -52,23 +105,9 @@
       </div>
 
       <!-- 테이블 -->
-      <div class="table-container">
-        <table>
-          <thead>
-          <tr>
-            <th>차량번호</th>
-            <th>계약번호</th>
-            <th>차량상태</th>
-            <th>거래처명</th>
-            <th>계약시작일</th>
-            <th>계약종료일</th>
-            <th>월 렌트료</th>
-            <th>총렌트료</th>
-            <th>미수금</th>
-            <th>선수금</th>
-            <th>차종</th>
-          </tr>
-          </thead>
+      <div class="table-container" style="overflow-x:auto;">
+        <table id="contractTable">
+          <thead id="tableHead"></thead>
           <tbody id="contractTableBody"></tbody>
         </table>
       </div>
@@ -80,103 +119,129 @@
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
 <script src="../../assets/js/html-escape.js"></script>
-<!-- ❌ 여기 http.js 제거 -->
-<!-- <script src="../../assets/js/common/http.js"></script> -->
-
 <script>
-  function fmtAmount(v) {
-    if (v === null || v === undefined) return "-";
-    if (typeof v === "number") return v.toLocaleString();
+  let currentTab = 'all';
+  let allData = [];
+
+  function fmtAmt(v) {
+    if (v == null) return "-";
     const n = Number(v);
     return Number.isFinite(n) ? n.toLocaleString() : "-";
   }
+  function fmtDate(v) { return v ? String(v) : "-"; }
 
-  function fmtDate(v) {
-    return v ? String(v) : "-";
+  function switchTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderRows(allData);
   }
 
-  function statusBadge(status) {
-    let cls = "";
-    if (status === "장기") cls = "long-term";
-    else if (status === "단기") cls = "short-term";
-    else if (status === "대기") cls = "standby";
-    return `<span class="status-badge ${cls}">${status || "-"}</span>`;
+  function buildHead() {
+    const heads = {
+      all: ['차량번호','계약번호','계약상태','거래처명','계약시작일','계약종료일','월렌트료','총렌트료','미수금','선수금','보증금','차종'],
+      receivable: ['차량번호','계약번호','계약상태','거래처명','계약시작일','계약종료일','월렌트료','미수금'],
+      advance:    ['차량번호','계약번호','계약상태','거래처명','계약시작일','계약종료일','월렌트료','선수금'],
+      deposit:    ['차량번호','계약번호','계약상태','거래처명','계약시작일','계약종료일','보증금'],
+    };
+    const cols = heads[currentTab] || heads.all;
+    document.getElementById('tableHead').innerHTML =
+      '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
   }
 
   function renderRows(list) {
-    const tbody = document.getElementById("contractTableBody");
+    buildHead();
+    const tbody = document.getElementById('contractTableBody');
 
-    if (!list || list.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="11" class="no-data">
-            <div class="no-data-icon">📋</div>
-            <div>검색 결과가 없습니다.</div>
-          </td>
-        </tr>
-      `;
+    let filtered = list;
+    if (currentTab === 'receivable') filtered = list.filter(r => r.receivable > 0);
+    if (currentTab === 'advance')    filtered = list.filter(r => r.advance > 0);
+    if (currentTab === 'deposit')    filtered = list.filter(r => r.deposit > 0);
+
+    if (!filtered.length) {
+      const cols = { all: 12, receivable: 8, advance: 8, deposit: 7 };
+      tbody.innerHTML = `<tr><td colspan="${cols[currentTab]||12}" class="no-data">
+        <div class="no-data-icon">📋</div><div>검색 결과가 없습니다.</div></td></tr>`;
       return;
     }
 
-    tbody.innerHTML = list.map(row => `
-      <tr onclick="viewContractDetail('${row.contractNumber || ""}')" class="clickable-row">
-        <td>${escHtml(row.vehicleNumber || "-")}</td>
-        <td>${escHtml(row.contractNumber || "-")}</td>
-        <td>${statusBadge(row.status)}</td>
-        <td>${escHtml(row.customerName || "-")}</td>
-        <td>${fmtDate(row.contractStart)}</td>
-        <td>${fmtDate(row.contractEnd)}</td>
-        <td class="amount-cell">${fmtAmount(row.monthlyRent)}</td>
-        <td class="amount-cell">${fmtAmount(row.totalRent)}</td>
-        <td class="receivable-cell">${fmtAmount(row.receivable)}</td>
-        <td class="advance-cell">${fmtAmount(row.advance)}</td>
-        <td>${escHtml(row.vehicleType || "-")}</td>
-      </tr>
-    `).join("");
+    const badge = s => `<span class="status-badge badge-${s||'정상'}">${s||'정상'}</span>`;
+    const esc = typeof escHtml === 'function' ? escHtml : s => String(s ?? '');
+
+    const rowMap = {
+      all: r => `
+        <td>${esc(r.vehicleNumber||'-')}</td>
+        <td>${esc(r.contractNumber||'-')}</td>
+        <td>${badge(r.contractStatus)}</td>
+        <td>${esc(r.customerName||'-')}</td>
+        <td>${fmtDate(r.contractStart)}</td>
+        <td>${fmtDate(r.contractEnd)}</td>
+        <td class="amount-cell">${fmtAmt(r.monthlyRent)}</td>
+        <td class="amount-cell">${fmtAmt(r.totalRent)}</td>
+        <td class="receivable-cell">${fmtAmt(r.receivable)}</td>
+        <td class="advance-cell">${fmtAmt(r.advance)}</td>
+        <td class="deposit-cell">${fmtAmt(r.deposit)}</td>
+        <td>${esc(r.vehicleType||'-')}</td>`,
+      receivable: r => `
+        <td>${esc(r.vehicleNumber||'-')}</td>
+        <td>${esc(r.contractNumber||'-')}</td>
+        <td>${badge(r.contractStatus)}</td>
+        <td>${esc(r.customerName||'-')}</td>
+        <td>${fmtDate(r.contractStart)}</td>
+        <td>${fmtDate(r.contractEnd)}</td>
+        <td class="amount-cell">${fmtAmt(r.monthlyRent)}</td>
+        <td class="receivable-cell">${fmtAmt(r.receivable)}</td>`,
+      advance: r => `
+        <td>${esc(r.vehicleNumber||'-')}</td>
+        <td>${esc(r.contractNumber||'-')}</td>
+        <td>${badge(r.contractStatus)}</td>
+        <td>${esc(r.customerName||'-')}</td>
+        <td>${fmtDate(r.contractStart)}</td>
+        <td>${fmtDate(r.contractEnd)}</td>
+        <td class="amount-cell">${fmtAmt(r.monthlyRent)}</td>
+        <td class="advance-cell">${fmtAmt(r.advance)}</td>`,
+      deposit: r => `
+        <td>${esc(r.vehicleNumber||'-')}</td>
+        <td>${esc(r.contractNumber||'-')}</td>
+        <td>${badge(r.contractStatus)}</td>
+        <td>${esc(r.customerName||'-')}</td>
+        <td>${fmtDate(r.contractStart)}</td>
+        <td>${fmtDate(r.contractEnd)}</td>
+        <td class="deposit-cell">${fmtAmt(r.deposit)}</td>`,
+    };
+
+    tbody.innerHTML = filtered.map(r => `
+      <tr class="clickable-row" onclick="viewContractDetail('${r.contractNumber||''}')">
+        ${rowMap[currentTab](r)}
+      </tr>`).join('');
   }
 
   async function searchContracts() {
     try {
-      const contractNumber = document.getElementById("searchContractNumber").value.trim();
-      const customerName = document.getElementById("searchCustomer").value.trim();
-      const vehicleNo = document.getElementById("searchVehicle").value.trim();
-      const status = document.getElementById("searchStatus").value;
-
       const qs = new URLSearchParams({
-        contractNumber,
-        customerName,
-        vehicleNo,
-        status
+        contractNumber:  document.getElementById('searchContractNumber').value.trim(),
+        customerName:    document.getElementById('searchCustomer').value.trim(),
+        vehicleNo:       document.getElementById('searchVehicle').value.trim(),
+        contractStatus:  document.getElementById('searchContractStatus').value,
       });
-
-      // ✅ const API_BASE_URL 사용 (config.js)
-      const url = API_BASE_URL.replace(/\/$/, "") + "/api/contracts/status?" + qs.toString();
-      console.log("API 호출 URL =", url);
-
-      const res = await fetch(url, { method: "GET" });
-
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`HTTP ${res.status} - ${t}`);
-      }
-
-      const data = await res.json();
-      renderRows(data);
-
+      const url = API_BASE_URL.replace(/\/$/, '') + '/api/contracts/status?' + qs.toString();
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      allData = await res.json();
+      renderRows(allData);
     } catch (e) {
-      alert("조회 실패: " + e.message);
+      alert('조회 실패: ' + e.message);
+      allData = [];
       renderRows([]);
     }
   }
 
   function viewContractDetail(contractNumber) {
     if (!contractNumber) return;
-    window.location.href = "../contract/contract_detail.html?id=" + encodeURIComponent(contractNumber);
+    window.location.href = '../contract/contract_detail.html?id=' + encodeURIComponent(contractNumber);
   }
 
-  window.addEventListener("load", () => {
-    searchContracts(); // 최초 진입 시 전체 조회
-  });
+  window.addEventListener('load', () => searchContracts());
 </script>
 </body>
 </html>

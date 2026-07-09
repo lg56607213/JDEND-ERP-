@@ -9,8 +9,10 @@ import com.jdend.erp.customer.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -105,20 +107,45 @@ public class ContractQueryController {
         .build();
   }
 
-  // ✅✅✅ [추가] 계약현황 목록
-  // GET /api/contracts/status?contractNumber=&customerName=&vehicleNo=&status=
+  private static final Set<String> TERMINATED_STATUSES = Set.of(
+      "종료", "만기종료", "해지", "중도해지", "중도상환", "만기상환", "완료", "종결"
+  );
+
+  // GET /api/contracts/status?contractNumber=&customerName=&vehicleNo=&contractStatus=
   @GetMapping("/status")
   public List<ContractStatusRowResponse> status(
       @RequestParam(required = false, defaultValue = "") String contractNumber,
       @RequestParam(required = false, defaultValue = "") String customerName,
       @RequestParam(required = false, defaultValue = "") String vehicleNo,
-      @RequestParam(required = false, defaultValue = "") String status
+      @RequestParam(required = false, defaultValue = "") String contractStatus
   ) {
-    return contractRepo.statusList(
+    List<ContractStatusRowResponse> list = contractRepo.statusList(
         contractNumber == null ? "" : contractNumber.trim(),
         customerName == null ? "" : customerName.trim(),
-        vehicleNo == null ? "" : vehicleNo.trim(),
-        status == null ? "" : status.trim()
+        vehicleNo == null ? "" : vehicleNo.trim()
     );
+
+    LocalDate today = LocalDate.now();
+    for (ContractStatusRowResponse row : list) {
+      String s = row.getStatus();
+      String derived;
+      if (s != null && TERMINATED_STATUSES.contains(s)) {
+        derived = "종료";
+      } else if (row.getContractEnd() != null && row.getContractEnd().isBefore(today)) {
+        derived = "종료";
+      } else if ("연체".equals(s)) {
+        derived = "연체";
+      } else {
+        derived = "정상";
+      }
+      row.setContractStatus(derived);
+    }
+
+    String filter = (contractStatus == null) ? "" : contractStatus.trim();
+    if (!filter.isEmpty()) {
+      list = list.stream().filter(r -> filter.equals(r.getContractStatus())).toList();
+    }
+
+    return list;
   }
 }
