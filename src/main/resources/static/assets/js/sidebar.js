@@ -137,6 +137,9 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/payment/payment_register.html">수납등록</a></li>
                 </ul>
               </li>
+              <li>
+                <a href="${basePath}pages/payment/overdue_status.html">연체현황</a>
+              </li>
               <li class="has-sub">
                 <span class="menu-label">미수관리</span>
                 <ul>

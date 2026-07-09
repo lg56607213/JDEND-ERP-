@@ -115,4 +115,16 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
     where c.customerNumber = :customerNumber
   """)
   List<String> findContractNumbersByCustomerNumber(@Param("customerNumber") String customerNumber);
+
+  // ✅ 연체현황: 종료/해지 상태가 아닌 모든 계약
+  @Query("""
+    select c
+    from Contract c
+    left join fetch c.customer cust
+    where c.status not in (
+      '종료','만기종료','해지','중도해지','중도상환','만기상환','완료','종결'
+    )
+    order by c.id asc
+  """)
+  List<Contract> findAllActiveWithCustomer();
 }
