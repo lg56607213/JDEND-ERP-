@@ -8,6 +8,7 @@ import com.jdend.erp.auth.repository.LoginUserRepository;
 import com.jdend.erp.config.TenantDatabaseService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class AuthService {
   private final LoginUserRepository loginUserRepository;
   private final CompanyUserRepository companyUserRepository;
   private final TenantDatabaseService tenantDatabaseService;
+  private final PasswordEncoder passwordEncoder;
 
   // 2단계 로그인: ① 통합 아이디/비밀번호로 회사(또는 운영자) 확인 ② 회사면 사용자 아이디/비밀번호까지 확인.
   @Transactional
@@ -42,8 +44,17 @@ public class AuthService {
     if (!Boolean.TRUE.equals(company.getIsActive())) {
       throw new IllegalArgumentException("비활성화된 계정입니다.");
     }
-    if (!company.getLoginPassword().equals(req.getCompanyPassword().trim())) {
+    String rawCompanyPwd = req.getCompanyPassword().trim();
+    if (!pwdMatches(rawCompanyPwd, company.getLoginPassword())) {
       throw new IllegalArgumentException("통합 아이디 또는 비밀번호가 올바르지 않습니다.");
+    }
+    // 평문 저장된 경우 로그인 성공 시 BCrypt로 자동 재암호화
+    if (!isHashed(company.getLoginPassword())) {
+      String encoded = passwordEncoder.encode(rawCompanyPwd);
+      company.setLoginPassword(encoded);
+      // 자동 생성된 회사 첫 사용자도 함께 재암호화
+      companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), company.getLoginId())
+          .ifPresent(u -> { if (!isHashed(u.getUserPassword())) u.setUserPassword(encoded); });
     }
 
     if ("PLATFORM_ADMIN".equals(company.getRole())) {
@@ -92,7 +103,7 @@ public class AuthService {
       // 사용자 아이디/비밀번호를 비워두면 통합 계정과 같은 아이디/비밀번호로 자동 생성된
       // 그 회사의 첫 사용자(회사관리자)로 바로 로그인한다(운영자 로그인과 동일한 편의).
       user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), company.getLoginId())
-          .filter(u -> u.getUserPassword().equals(company.getLoginPassword()))
+          .filter(u -> pwdMatches(rawCompanyPwd, u.getUserPassword()))
           .orElseThrow(() -> new IllegalArgumentException("사용자 아이디를 입력해주세요."));
     } else {
       if (isBlank(req.getUserLoginId())) throw new IllegalArgumentException("사용자 아이디를 입력해주세요.");
@@ -101,8 +112,12 @@ public class AuthService {
       user = companyUserRepository.findByCompanyIdAndUserLoginId(company.getId(), req.getUserLoginId().trim())
           .orElseThrow(() -> new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다."));
 
-      if (!user.getUserPassword().equals(req.getUserPassword().trim())) {
+      String rawUserPwd = req.getUserPassword().trim();
+      if (!pwdMatches(rawUserPwd, user.getUserPassword())) {
         throw new IllegalArgumentException("사용자 아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
+      if (!isHashed(user.getUserPassword())) {
+        user.setUserPassword(passwordEncoder.encode(rawUserPwd));
       }
     }
 
@@ -190,7 +205,7 @@ public class AuthService {
     if (isBlank(req.getCompanyName())) throw new RuntimeException("회사명을 입력해주세요.");
 
     String loginId = req.getLoginId().trim();
-    String loginPassword = req.getLoginPassword().trim();
+    String loginPassword = passwordEncoder.encode(req.getLoginPassword().trim());
 
     if (loginUserRepository.existsByLoginId(loginId)) {
       throw new RuntimeException("이미 존재하는 아이디입니다.");
@@ -237,7 +252,7 @@ public class AuthService {
     if (req == null) throw new RuntimeException("요청값이 없습니다.");
 
     if (!isBlank(req.getLoginPassword())) {
-      user.setLoginPassword(req.getLoginPassword().trim());
+      user.setLoginPassword(passwordEncoder.encode(req.getLoginPassword().trim()));
     }
 
     if (!isBlank(req.getCompanyName())) {
@@ -318,5 +333,17 @@ public class AuthService {
 
   private boolean isBlank(String s) {
     return s == null || s.trim().isEmpty();
+  }
+
+  // BCrypt 해시 여부 판별 ($2a$ 또는 $2b$ 접두사)
+  private boolean isHashed(String stored) {
+    return stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$"));
+  }
+
+  // 평문·BCrypt 모두 처리하는 비밀번호 비교
+  private boolean pwdMatches(String raw, String stored) {
+    if (stored == null || raw == null) return false;
+    if (isHashed(stored)) return passwordEncoder.matches(raw, stored);
+    return stored.equals(raw);
   }
 }

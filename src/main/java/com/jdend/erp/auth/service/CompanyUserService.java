@@ -6,6 +6,7 @@ import com.jdend.erp.auth.entity.CompanyUser;
 import com.jdend.erp.auth.repository.CompanyUserRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class CompanyUserService {
 
   private final CompanyUserRepository companyUserRepository;
   private final PermissionService permissionService;
+  private final PasswordEncoder passwordEncoder;
 
   @Transactional(readOnly = true)
   public List<CompanyUserResponse> list(HttpSession session) {
@@ -49,7 +51,7 @@ public class CompanyUserService {
         CompanyUser.builder()
             .companyId(companyId)
             .userLoginId(userLoginId)
-            .userPassword(req.getUserPassword().trim())
+            .userPassword(passwordEncoder.encode(req.getUserPassword().trim()))
             .role(normalizeRole(req.getRole()))
             .isActive(req.getIsActive() == null ? true : req.getIsActive())
             .build()
@@ -68,7 +70,7 @@ public class CompanyUserService {
     if (req == null) throw new RuntimeException("요청값이 없습니다.");
 
     if (!isBlank(req.getUserPassword())) {
-      user.setUserPassword(req.getUserPassword().trim());
+      user.setUserPassword(passwordEncoder.encode(req.getUserPassword().trim()));
     }
     if (!isBlank(req.getRole())) {
       user.setRole(normalizeRole(req.getRole()));
