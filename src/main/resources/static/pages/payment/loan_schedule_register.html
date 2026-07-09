@@ -92,13 +92,11 @@
 
               <div class="form-group">
                 <label for="repaymentAccount">상환계좌 <span class="required">*</span></label>
-                <input
-                  type="text"
-                  id="repaymentAccount"
-                  placeholder="예: 국민6062 또는 국민은행 123-45-67890"
-                >
+                <select id="repaymentAccount">
+                  <option value="">-- 계좌 선택 --</option>
+                </select>
                 <small style="display:block; margin-top:6px; color:#999;">
-                  * 상환계좌를 직접 입력하세요.
+                  * 내정보관리에 등록된 계좌가 표시됩니다.
                 </small>
               </div>
             </div>
@@ -233,6 +231,27 @@
   <script>
     const API_BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
     let lookedUp = null;
+
+    async function loadBankAccounts() {
+      try {
+        const res = await fetch(apiUrl('/api/my-info/bank-accounts?activeOnly=true'));
+        if (!res.ok) return;
+        const list = await res.json();
+        const sel = document.getElementById('repaymentAccount');
+        sel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+        (Array.isArray(list) ? list : []).forEach(a => {
+          const label = [a.bankName, a.accountNumber, a.accountHolder].filter(Boolean).join(' / ');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.textContent = label;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('계좌 목록 로드 실패:', e);
+      }
+    }
+
+    window.addEventListener('load', () => { loadBankAccounts(); });
 
     function apiUrl(path) {
       const normalizedPath = path.startsWith("/") ? path : "/" + path;
@@ -523,7 +542,7 @@
         document.getElementById('deposit').value = '0';
         document.getElementById('paymentDay').value = '25';
         document.getElementById('monthlyPayment').value = '';
-        document.getElementById('repaymentAccount').value = '';
+        document.getElementById('repaymentAccount').selectedIndex = 0;
         document.getElementById('roundingMode').value = 'ROUND';
         document.getElementById('roundingUnit').value = '1';
         document.getElementById('calcHint').textContent = '';
