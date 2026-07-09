@@ -71,6 +71,9 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/contract/maturity_termination.html">종료</a></li>
                 </ul>
               </li>
+              <li>
+                <a href="${basePath}pages/contract/legal_proceeding.html">법적절차</a>
+              </li>
             </ul>
           </li>
           <li class="has-sub">
