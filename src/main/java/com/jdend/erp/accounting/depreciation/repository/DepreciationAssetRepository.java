@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface DepreciationAssetRepository extends JpaRepository<DepreciationAsset, Long> {
   Optional<DepreciationAsset> findByVehicleNo(String vehicleNo);
+  Optional<DepreciationAsset> findByVehicleMgmtNo(String vehicleMgmtNo);
 }
