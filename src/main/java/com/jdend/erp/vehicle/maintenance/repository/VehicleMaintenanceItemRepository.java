@@ -26,7 +26,8 @@ public interface VehicleMaintenanceItemRepository extends JpaRepository<VehicleM
       i.supplyAmount,
       i.vatAmount,
       i.vendor,
-      i.paymentMethod
+      i.paymentMethod,
+      i.paymentDetail
     )
     from VehicleMaintenanceItem i
     join i.maintenance m

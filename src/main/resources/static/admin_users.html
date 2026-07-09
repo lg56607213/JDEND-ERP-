@@ -95,6 +95,7 @@
           <th>전용 DB</th>
           <th>상태</th>
           <th>세무상담</th>
+          <th>정비(MT)</th>
           <th>관리</th>
         </tr>
       </thead>
@@ -152,6 +153,14 @@
               background:${u.taxConsultationEnabled ? '#d1fae5' : '#f3f4f6'};
               color:${u.taxConsultationEnabled ? '#065f46' : '#6b7280'};">
             ${u.taxConsultationEnabled ? '사용중' : '미사용'}
+          </button>
+        </td>
+        <td>
+          <button onclick="toggleMaintenance(${u.id}, ${!!u.maintenanceEnabled})"
+            style="padding:4px 12px; border:none; border-radius:20px; cursor:pointer; font-size:12px; font-weight:700;
+              background:${u.maintenanceEnabled ? '#dbeafe' : '#f3f4f6'};
+              color:${u.maintenanceEnabled ? '#1e40af' : '#6b7280'};">
+            ${u.maintenanceEnabled ? '허용' : '차단'}
           </button>
         </td>
         <td>
@@ -215,6 +224,17 @@
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ taxConsultationEnabled: !current })
+    });
+    if (!res.ok) { alert('변경 실패'); return; }
+    await loadUsers();
+  }
+
+  async function toggleMaintenance(id, current) {
+    const res = await fetch(`/api/auth/users/${id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maintenanceEnabled: !current })
     });
     if (!res.ok) { alert('변경 실패'); return; }
     await loadUsers();

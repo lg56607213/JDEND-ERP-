@@ -39,6 +39,9 @@ public class LoginUser {
   @Column(name = "tax_consultation_enabled", nullable = false)
   private Boolean taxConsultationEnabled;
 
+  @Column(name = "maintenance_enabled", nullable = false)
+  private Boolean maintenanceEnabled;
+
   @Column(name = "created_at", insertable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -50,5 +53,6 @@ public class LoginUser {
     if (role == null || role.isBlank()) role = "USER";
     if (isActive == null) isActive = true;
     if (taxConsultationEnabled == null) taxConsultationEnabled = false;
+    if (maintenanceEnabled == null) maintenanceEnabled = false;
   }
 }

@@ -22,4 +22,5 @@ public class VehicleMaintenanceStatusRowResponse {
   private Long vatAmount;
   private String vendor;
   private String paymentMethod;
+  private String paymentDetail;
 }

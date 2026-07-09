@@ -29,6 +29,16 @@ public class VehicleInsuranceDtos {
     public String specialTerms;
 
     public Long insurancePremium;         // 필수
+    public LocalDate voucherDate;         // 전표발생일자 (null이면 insuranceStartDate 사용)
+  }
+
+  @Getter @Setter
+  public static class InsuranceChangeRequest {
+    public String changeType;      // "변경" or "해지"
+    public String changeReason;    // 변경사유
+    public Long additionalPremium; // 추가납부보험료 (DEBIT: 보험료, CREDIT: 미지급금(보험료))
+    public Long refundPremium;     // 환급보험료 (DEBIT: 미수금(보험료), CREDIT: 보험료)
+    public LocalDate voucherDate;  // 전표발생일자
   }
 
   @Getter @Setter

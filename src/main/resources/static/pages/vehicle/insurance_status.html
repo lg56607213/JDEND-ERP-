@@ -132,6 +132,56 @@
     .pick-row{ cursor:pointer; }
     .pick-row:hover{ background:#f3f4f6; }
     .muted{ color:#6b7280; font-size:13px; }
+
+    /* ===== 변경/해지 버튼 ===== */
+    .btn-change{
+      padding:4px 10px; font-size:12px; font-weight:600; border-radius:6px; cursor:pointer;
+      border:1px solid #3b82f6; background:#eff6ff; color:#1d4ed8;
+    }
+    .btn-change:hover{ background:#dbeafe; }
+    .btn-terminate{
+      padding:4px 10px; font-size:12px; font-weight:600; border-radius:6px; cursor:pointer;
+      border:1px solid #dc2626; background:#fef2f2; color:#dc2626;
+    }
+    .btn-terminate:hover{ background:#fee2e2; }
+
+    /* ===== 변경/해지 입력 모달 ===== */
+    .action-modal-backdrop{
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.5); z-index:10000;
+      align-items:center; justify-content:center;
+    }
+    .action-modal{
+      background:#fff; border-radius:12px;
+      width:min(500px, 94vw); padding:24px;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+    }
+    .action-modal h3{ margin:0 0 16px; font-size:17px; }
+    .action-modal .field{ margin-bottom:12px; }
+    .action-modal label{ display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#374151; }
+    .action-modal input[type="text"],
+    .action-modal input[type="date"],
+    .action-modal textarea{
+      width:100%; box-sizing:border-box;
+      padding:9px 11px; border:1px solid #d1d5db; border-radius:8px;
+      font-size:14px; outline:none;
+    }
+    .action-modal input:focus,
+    .action-modal textarea:focus{ border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .action-modal textarea{ resize:vertical; min-height:70px; }
+    .action-modal .modal-btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+    .action-modal .btn-ok{
+      padding:9px 22px; background:#1d4ed8; color:#fff;
+      border:none; border-radius:8px; font-weight:700; cursor:pointer;
+    }
+    .action-modal .btn-ok:hover{ background:#1e40af; }
+    .action-modal .btn-ok.terminate-ok{ background:#dc2626; }
+    .action-modal .btn-ok.terminate-ok:hover{ background:#b91c1c; }
+    .action-modal .btn-cancel-m{
+      padding:9px 16px; background:#f3f4f6; border:1px solid #d1d5db;
+      border-radius:8px; font-weight:600; cursor:pointer;
+    }
+    .action-modal .btn-cancel-m:hover{ background:#e5e7eb; }
   </style>
 </head>
 
@@ -202,10 +252,11 @@
             <th>자상</th>
             <th>무보험차상해</th>
             <th>긴급출동</th>
+            <th>관리</th>
           </tr>
           </thead>
           <tbody id="insuranceTableBody">
-          <tr><td colspan="12" style="text-align:center; color:#888;">조회하세요.</td></tr>
+          <tr><td colspan="13" style="text-align:center; color:#888;">조회하세요.</td></tr>
           </tbody>
         </table>
       </div>
@@ -278,6 +329,33 @@
   </div>
 </div>
 
+<!-- ===== 변경/해지 입력 모달 ===== -->
+<div class="action-modal-backdrop" id="actionModalBackdrop" style="display:none;">
+  <div class="action-modal">
+    <h3 id="actionModalTitle">보험 변경</h3>
+    <div class="field">
+      <label>변경사유</label>
+      <textarea id="actionReason" placeholder="변경사유를 입력하세요"></textarea>
+    </div>
+    <div class="field">
+      <label>추가납부보험료 (원)</label>
+      <input type="text" id="actionAdditional" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>환급보험료 (원)</label>
+      <input type="text" id="actionRefund" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>전표발생일자</label>
+      <input type="date" id="actionVoucherDate">
+    </div>
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel-m" id="actionModalCancelBtn">취소</button>
+      <button type="button" class="btn-ok" id="actionModalOkBtn">등록</button>
+    </div>
+  </div>
+</div>
+
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
 
@@ -309,7 +387,7 @@
     const tbody=$('insuranceTableBody');
 
     if(!Array.isArray(list)||list.length===0){
-      tbody.innerHTML=`<tr><td colspan="12" style="text-align:center; color:#888;">검색 결과가 없습니다.</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="13" style="text-align:center; color:#888;">검색 결과가 없습니다.</td></tr>`;
       return;
     }
 
@@ -327,6 +405,10 @@
         <td>${escapeHtml(it.autoInjury || '-')}</td>
         <td>${escapeHtml(it.uninsured || '-')}</td>
         <td>${escapeHtml(it.emergency || '-')}</td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+          <button class="btn-change" onclick="openActionModal(${it.id},'변경')">변경</button>
+          <button class="btn-terminate" onclick="openActionModal(${it.id},'해지')">해지</button>
+        </td>
       </tr>
     `).join('');
   }
@@ -344,7 +426,7 @@
     if(endDate) qs.set("endDate", endDate);
 
     const tbody=$('insuranceTableBody');
-    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;">조회중...</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;">조회중...</td></tr>`;
 
     try{
       const res=await fetch(`${BASE}/api/insurances?${qs.toString()}`);
@@ -352,22 +434,108 @@
       const data=await res.json();
       renderInsurance(data);
     }catch(e){
-      tbody.innerHTML=`<tr><td colspan="12" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="13" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
     }
   }
 
   async function searchAllInsurance(){
     const tbody=$('insuranceTableBody');
-    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;">조회중...</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;">조회중...</td></tr>`;
     try{
       const res=await fetch(`${BASE}/api/insurances`);
       await mustOk(res);
       const data=await res.json();
       renderInsurance(data);
     }catch(e){
-      tbody.innerHTML=`<tr><td colspan="12" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="13" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
     }
   }
+
+  /* ===== 변경/해지 모달 ===== */
+  let _actionInsuranceId = null;
+  let _actionType = null;
+
+  function parseMoneyInput(str){
+    const n = String(str ?? '').replace(/[^\d]/g, '');
+    return n ? parseInt(n, 10) : 0;
+  }
+
+  function formatMoneyField(el){
+    const n = parseMoneyInput(el.value);
+    el.value = n ? n.toLocaleString('ko-KR') : '';
+  }
+
+  function openActionModal(insuranceId, type){
+    _actionInsuranceId = insuranceId;
+    _actionType = type;
+    const isTerminate = type === '해지';
+
+    $('actionModalTitle').textContent = '보험 ' + type;
+    $('actionModalOkBtn').textContent = type + ' 등록';
+    $('actionModalOkBtn').className = 'btn-ok' + (isTerminate ? ' terminate-ok' : '');
+    $('actionReason').value = '';
+    $('actionAdditional').value = '';
+    $('actionRefund').value = '';
+    $('actionVoucherDate').value = new Date().toISOString().slice(0, 10);
+
+    $('actionModalBackdrop').style.display = 'flex';
+    setTimeout(() => $('actionReason').focus(), 0);
+  }
+
+  function closeActionModal(){
+    $('actionModalBackdrop').style.display = 'none';
+    _actionInsuranceId = null;
+    _actionType = null;
+  }
+
+  async function submitActionModal(){
+    if (!_actionInsuranceId || !_actionType) return;
+
+    const additional = parseMoneyInput($('actionAdditional').value);
+    const refund = parseMoneyInput($('actionRefund').value);
+    const voucherDate = $('actionVoucherDate').value;
+
+    if (!voucherDate) { alert('전표발생일자를 입력해주세요.'); return; }
+    if (additional <= 0 && refund <= 0) {
+      alert('추가납부보험료 또는 환급보험료 중 하나 이상을 입력해주세요.');
+      return;
+    }
+
+    const endpoint = _actionType === '해지'
+      ? `${BASE}/api/insurances/${_actionInsuranceId}/terminate`
+      : `${BASE}/api/insurances/${_actionInsuranceId}/change`;
+
+    const payload = {
+      changeType: _actionType,
+      changeReason: $('actionReason').value.trim(),
+      additionalPremium: additional || null,
+      refundPremium: refund || null,
+      voucherDate: voucherDate
+    };
+
+    try{
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await mustOk(res);
+      alert(`보험 ${_actionType} 처리 및 전표가 등록되었습니다.`);
+      closeActionModal();
+    }catch(e){
+      alert(`${_actionType} 처리 실패: ` + e.message);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    $('actionAdditional').addEventListener('input', () => formatMoneyField($('actionAdditional')));
+    $('actionRefund').addEventListener('input', () => formatMoneyField($('actionRefund')));
+    $('actionModalCancelBtn').addEventListener('click', closeActionModal);
+    $('actionModalOkBtn').addEventListener('click', submitActionModal);
+    $('actionModalBackdrop').addEventListener('click', (e) => {
+      if (e.target === $('actionModalBackdrop')) closeActionModal();
+    });
+  });
 
   /* =========================
      계약 돋보기 모달
@@ -479,6 +647,7 @@
   /* ===== ESC로 모달 닫기, 바깥 클릭 닫기 ===== */
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Escape'){
+      if($('actionModalBackdrop').style.display === 'flex') { closeActionModal(); return; }
       if($('contractModalBackdrop').style.display === 'flex') closeContractModal();
       if($('vehicleModalBackdrop').style.display === 'flex') closeVehicleModal();
     }

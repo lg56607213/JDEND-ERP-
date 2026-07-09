@@ -8,9 +8,12 @@
   <link rel="stylesheet" href="../../assets/css/pages.css">
   <link rel="stylesheet" href="../../assets/css/vehicle/maintenance_register.css">
   <style>
-    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; }
-    .modal{ display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(860px, 94vw); background:#fff; border-radius:12px; z-index:10000; overflow:hidden; }
-    .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #eee; }
+    /* 차량 검색 모달 */
+    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; }
+    .modal{ display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:min(860px,94vw); background:#fff; border-radius:12px; z-index:9001; overflow:hidden; }
+    .modal-header{ display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #eee; }
     .modal-body{ padding:14px 16px; }
     .modal-footer{ padding:12px 16px; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:8px; }
     .btn{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
@@ -22,13 +25,63 @@
     .list table{ width:100%; border-collapse:collapse; }
     .list th, .list td{ padding:10px; border-bottom:1px solid #f0f0f0; font-size:14px; text-align:left; }
     .list tr:hover{ background:#fafafa; }
-    .icon-btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:40px; height:40px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer;
-    }
+    .icon-btn{ display:inline-flex; align-items:center; justify-content:center;
+      width:40px; height:40px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
     .inline-flex{ display:flex; gap:8px; align-items:end; }
     .help{ font-size:12px; color:#666; margin-top:6px; }
     select{ width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; }
+
+    /* 계좌/카드 피커 모달 */
+    .picker-backdrop{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9500;
+      align-items:center; justify-content:center;
+    }
+    .picker-modal{
+      background:#fff; border-radius:12px; width:min(560px,94vw);
+      max-height:80vh; display:flex; flex-direction:column;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+    }
+    .picker-header{ display:flex; justify-content:space-between; align-items:center;
+      padding:14px 16px; border-bottom:1px solid #eee; }
+    .picker-header h3{ margin:0; font-size:16px; font-weight:700; }
+    .picker-close{ border:none; background:transparent; font-size:18px; cursor:pointer;
+      padding:4px 8px; border-radius:6px; }
+    .picker-close:hover{ background:#f3f4f6; }
+    .picker-body{ padding:14px 16px; overflow:auto; }
+    .picker-table{ width:100%; border-collapse:collapse; font-size:14px; }
+    .picker-table th{ background:#f8fafc; padding:10px; border-bottom:1px solid #e5e7eb;
+      text-align:left; font-weight:700; position:sticky; top:0; }
+    .picker-table td{ padding:10px; border-bottom:1px solid #f1f5f9; }
+    .picker-row{ cursor:pointer; }
+    .picker-row:hover{ background:#f0f7ff; }
+    .btn-pick{ padding:4px 12px; background:#1d4ed8; color:#fff; border:none;
+      border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; }
+    .btn-pick:hover{ background:#1e40af; }
+
+    /* 피커 버튼 (행 내부) */
+    .pay-detail-cell{ display:flex; align-items:center; gap:6px; white-space:nowrap; }
+    .pay-detail-val{ font-size:12px; color:#374151; max-width:100px; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap; }
+    .btn-open-picker{ padding:3px 10px; font-size:12px; border:1px solid #3b82f6;
+      background:#eff6ff; color:#1d4ed8; border-radius:6px; cursor:pointer; white-space:nowrap; }
+    .btn-open-picker:hover{ background:#dbeafe; }
+
+    /* 기존 정비이력 */
+    .history-section{ margin-top:28px; }
+    .history-section .section-title{ font-size:15px; font-weight:700; margin-bottom:10px;
+      padding-bottom:6px; border-bottom:2px solid #e5e7eb; }
+    .history-table{ width:100%; border-collapse:collapse; font-size:13px; }
+    .history-table th{ background:#f8fafc; padding:9px 10px; border-bottom:1px solid #e5e7eb;
+      text-align:center; font-weight:700; white-space:nowrap; }
+    .history-table td{ padding:9px 10px; border-bottom:1px solid #f1f5f9;
+      text-align:center; white-space:nowrap; }
+    .history-table td.left{ text-align:left; }
+    .history-table td.right{ text-align:right; }
+    .history-table tbody tr:hover{ background:#f9fafb; }
+    .muted{ color:#9ca3af; font-size:13px; }
+
+    /* 테이블 스크롤 */
+    .table-scroll{ overflow-x:auto; }
   </style>
 </head>
 <body>
@@ -41,6 +94,8 @@
 
     <div class="erp-card">
       <div class="card-body">
+
+        <!-- 차량 선택 -->
         <div class="form-section">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
@@ -49,89 +104,98 @@
                 <input type="text" id="vehicleMgmtNo" placeholder="차량관리번호 입력" style="width:100%;" />
                 <button type="button" class="icon-btn" id="openVehicleSearchBtn" title="차량조회">🔍</button>
               </div>
-              <div class="help">🔍로 차량을 조회/선택하거나, 차량관리번호 입력 후 엔터로 조회할 수 있어요.</div>
+              <div class="help">🔍 버튼이나 엔터로 조회하면 차량번호와 기존 정비내역이 표시됩니다.</div>
             </div>
-
             <div class="form-group" style="flex:1;">
               <label for="vehicleNo">차량번호</label>
               <input type="text" id="vehicleNo" placeholder="차량번호" disabled>
             </div>
           </div>
-
           <div id="inspectionInfo" class="inspection-info" style="display:none;">
             검사유효기간: <strong id="inspectionPeriod">-</strong>
           </div>
         </div>
 
+        <!-- 정비 입력 테이블 -->
         <div class="table-section">
           <div class="section-header">
-            <div class="section-title">정비 내역</div>
+            <div class="section-title">정비 내역 입력</div>
             <button type="button" class="btn-add" onclick="addRow()">+ 내용추가</button>
           </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th style="width:18%;">내용</th>
-                <th style="width:10%;">금액</th>
-                <th style="width:10%;">공급가액</th>
-                <th style="width:10%;">세액</th>
-                <th style="width:16%;">지급처</th>
-                <th style="width:12%;">지급방법</th>
-                <th style="width:14%;">지급일자</th>
-                <th style="width:10%;">삭제</th>
-              </tr>
-            </thead>
-            <tbody id="maintenanceTableBody">
-              <tr id="row_1">
-                <td><input type="text" placeholder="예: 엔진오일교환" id="desc_1"></td>
-                <td><input type="number" placeholder="0" id="amount_1" onchange="calculateVAT(1)"></td>
-                <td><input type="number" placeholder="0" id="supply_1" disabled></td>
-                <td><input type="number" placeholder="0" id="tax_1" disabled></td>
-                <td><input type="text" placeholder="예: 에이스공업사" id="vendor_1"></td>
-                <td>
-                  <select id="paymentMethod_1">
-                    <option value="미지급금" selected>미지급금</option>
-                    <option value="법인카드">법인카드</option>
-                    <option value="보통예금">보통예금</option>
-                  </select>
-                </td>
-                <td><input type="date" id="payDate_1"></td>
-                <td><button type="button" class="btn-delete" onclick="deleteRow(1)">삭제</button></td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-scroll">
+            <table style="min-width:900px;">
+              <thead>
+                <tr>
+                  <th style="width:16%;">내용</th>
+                  <th style="width:9%;">금액(VAT포함)</th>
+                  <th style="width:9%;">공급가액</th>
+                  <th style="width:8%;">세액</th>
+                  <th style="width:12%;">지급처</th>
+                  <th style="width:11%;">지급방법</th>
+                  <th style="width:14%;">계좌/카드</th>
+                  <th style="width:11%;">지급일자</th>
+                  <th style="width:6%;">삭제</th>
+                </tr>
+              </thead>
+              <tbody id="maintenanceTableBody">
+                <!-- 첫 행은 JS로 삽입 -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="action-buttons">
           <button type="button" class="btn-submit" onclick="submitMaintenance()">등록</button>
           <button type="button" class="btn-cancel" onclick="resetForm()">취소</button>
         </div>
+
+        <!-- 기존 정비이력 -->
+        <div class="history-section" id="historySection" style="display:none;">
+          <div class="section-title">기존 정비이력 <span id="historyVehicle" style="font-weight:400;font-size:13px;color:#6b7280;"></span></div>
+          <div class="table-scroll">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>지급일자</th>
+                  <th style="min-width:120px;text-align:left;">내용</th>
+                  <th>금액</th>
+                  <th>공급가액</th>
+                  <th>세액</th>
+                  <th>지급처</th>
+                  <th>지급방법</th>
+                  <th>계좌/카드</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr><td colspan="9" class="muted" style="padding:16px;">조회중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 
+  <!-- 차량 검색 모달 -->
   <div class="modal-backdrop" id="vehicleModalBackdrop"></div>
   <div class="modal" id="vehicleModal">
     <div class="modal-header">
       <div style="font-weight:700;">차량 조회</div>
       <button class="btn btn-ghost" type="button" id="closeVehicleModalBtn">닫기</button>
     </div>
-
     <div class="modal-body">
       <div class="search-row">
         <input type="text" id="vehicleSearchKw" placeholder="차량관리번호/차량번호/모델명으로 검색" />
         <button class="btn btn-primary" type="button" id="vehicleSearchBtn">검색</button>
       </div>
-
       <div class="list">
         <table>
           <thead>
             <tr>
-              <th>차량관리번호</th>
-              <th>차량번호</th>
-              <th>모델</th>
-              <th style="width:110px;">선택</th>
+              <th>차량관리번호</th><th>차량번호</th><th>모델</th><th style="width:80px;">선택</th>
             </tr>
           </thead>
           <tbody id="vehicleSearchTbody">
@@ -140,9 +204,26 @@
         </table>
       </div>
     </div>
-
     <div class="modal-footer">
       <button class="btn" type="button" id="vehicleModalClose2">닫기</button>
+    </div>
+  </div>
+
+  <!-- 계좌/카드 피커 모달 -->
+  <div class="picker-backdrop" id="pickerBackdrop" style="display:none;">
+    <div class="picker-modal">
+      <div class="picker-header">
+        <h3 id="pickerTitle">계좌 선택</h3>
+        <button type="button" class="picker-close" id="pickerCloseBtn">✕</button>
+      </div>
+      <div class="picker-body">
+        <table class="picker-table" id="pickerTable">
+          <thead id="pickerThead"></thead>
+          <tbody id="pickerTbody">
+            <tr><td colspan="4" class="muted" style="padding:16px;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -151,73 +232,197 @@
 
   <script>
     const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/$/, "");
-    let rowCount = 1;
+    let rowCount = 0;
+    let currentPickerRow = null; // 현재 피커가 열려있는 행 번호
 
+    /* ── 공통 유틸 ──────────────────────────────── */
     async function mustOk(res) {
       if (res.ok) return res;
-
       let msg = "HTTP " + res.status;
-      try {
-        const body = await res.json();
-        if (body && body.message) msg = body.message;
-      } catch (e) {
-        try {
-          const text = await res.text();
-          if (text) msg = text;
-        } catch (e2) {}
-      }
+      try { const b = await res.json(); if (b?.message) msg = b.message; } catch {}
       throw new Error(msg);
     }
 
-    function fmtDateRange(start, end) {
-      const s = start ? String(start) : "-";
-      const e = end ? String(end) : "-";
-      return `${s} ~ ${e}`;
-    }
-
-    function escapeHtml(s) {
+    function escHtml(s) {
       return String(s ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll("\"","&quot;")
-        .replaceAll("'","&#039;");
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll("\"","&quot;").replaceAll("'","&#039;");
+    }
+    function escAttr(s) { return String(s ?? "").replaceAll("'","\\'"); }
+    function fmtMoney(v) { return v == null ? '-' : Number(v).toLocaleString(); }
+    function fmtDate(v) { return v ?? '-'; }
+
+    /* ── 행 추가 ──────────────────────────────────── */
+    function buildRowHtml(idx) {
+      return `
+        <tr id="row_${idx}">
+          <td><input type="text" placeholder="예: 엔진오일교환" id="desc_${idx}"></td>
+          <td><input type="number" placeholder="0" id="amount_${idx}" oninput="calculateVAT(${idx})"></td>
+          <td><input type="number" placeholder="0" id="supply_${idx}" disabled></td>
+          <td><input type="number" placeholder="0" id="tax_${idx}" disabled></td>
+          <td><input type="text" placeholder="예: 에이스공업사" id="vendor_${idx}"></td>
+          <td>
+            <select id="paymentMethod_${idx}" onchange="onPayMethodChange(${idx})">
+              <option value="미지급금">미지급금</option>
+              <option value="법인카드">법인카드</option>
+              <option value="보통예금">보통예금</option>
+            </select>
+          </td>
+          <td>
+            <div class="pay-detail-cell" id="pickerCell_${idx}">
+              <span class="pay-detail-val" id="pickerDisplay_${idx}">-</span>
+              <button type="button" class="btn-open-picker" id="pickerBtn_${idx}"
+                style="display:none;" onclick="openPicker(${idx})">선택</button>
+            </div>
+          </td>
+          <td><input type="date" id="payDate_${idx}"></td>
+          <td><button type="button" class="btn-delete" onclick="deleteRow(${idx})">삭제</button></td>
+        </tr>
+      `;
     }
 
-    function escapeAttr(s) {
-      return String(s ?? "").replaceAll("'","\\'");
+    function addRow() {
+      rowCount++;
+      const tbody = document.getElementById('maintenanceTableBody');
+      const div = document.createElement('div');
+      div.innerHTML = buildRowHtml(rowCount);
+      tbody.appendChild(div.firstElementChild);
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const mgmtInput = document.getElementById("vehicleMgmtNo");
+    function deleteRow(idx) {
+      const row = document.getElementById(`row_${idx}`);
+      if (row) row.remove();
+    }
 
-      mgmtInput.addEventListener("keydown", async (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const mgmtNo = mgmtInput.value.trim();
-          if (!mgmtNo) return;
-          await loadVehicleInfoByMgmtNo(mgmtNo);
+    /* ── VAT 계산 (금액 입력 시 공급가액/세액 자동 계산) ── */
+    function calculateVAT(idx) {
+      const amount = parseFloat(document.getElementById(`amount_${idx}`)?.value) || 0;
+      const supply = Math.round(amount / 1.1);
+      const vat    = Math.max(0, Math.round(amount - supply));
+      document.getElementById(`supply_${idx}`).value = supply;
+      document.getElementById(`tax_${idx}`).value    = vat;
+    }
+
+    /* ── 지급방법 변경 → 피커 버튼 표시/숨김 ── */
+    function onPayMethodChange(idx) {
+      const method = document.getElementById(`paymentMethod_${idx}`)?.value;
+      const btn    = document.getElementById(`pickerBtn_${idx}`);
+      const disp   = document.getElementById(`pickerDisplay_${idx}`);
+      if (!btn) return;
+
+      const needsPicker = method === '보통예금' || method === '법인카드';
+      btn.style.display = needsPicker ? '' : 'none';
+      if (!needsPicker) {
+        disp.textContent = '-';
+        setPaymentDetail(idx, '');
+      }
+    }
+
+    /* ── paymentDetail 저장/조회 ── */
+    function setPaymentDetail(idx, val) {
+      const row = document.getElementById(`row_${idx}`);
+      if (row) row.dataset.paymentDetail = val;
+      const disp = document.getElementById(`pickerDisplay_${idx}`);
+      if (disp) disp.textContent = val || '-';
+    }
+    function getPaymentDetail(idx) {
+      return document.getElementById(`row_${idx}`)?.dataset?.paymentDetail || '';
+    }
+
+    /* ── 계좌/카드 피커 ── */
+    function openPicker(rowIdx) {
+      currentPickerRow = rowIdx;
+      const method = document.getElementById(`paymentMethod_${rowIdx}`)?.value;
+      const isBank = method === '보통예금';
+
+      document.getElementById('pickerTitle').textContent = isBank ? '보통예금 계좌 선택' : '법인카드 선택';
+      document.getElementById('pickerBackdrop').style.display = 'flex';
+
+      if (isBank) {
+        document.getElementById('pickerThead').innerHTML =
+          `<tr><th>은행명</th><th>계좌번호</th><th>예금주</th><th>별칭</th><th style="width:60px;"></th></tr>`;
+        loadBankAccounts();
+      } else {
+        document.getElementById('pickerThead').innerHTML =
+          `<tr><th>카드사</th><th>카드번호(끝4)</th><th>명의</th><th>별칭</th><th style="width:60px;"></th></tr>`;
+        loadCorporateCards();
+      }
+    }
+
+    function closePicker() {
+      document.getElementById('pickerBackdrop').style.display = 'none';
+      currentPickerRow = null;
+    }
+
+    async function loadBankAccounts() {
+      const tbody = document.getElementById('pickerTbody');
+      tbody.innerHTML = `<tr><td colspan="5" class="muted" style="padding:12px;">불러오는 중...</td></tr>`;
+      try {
+        const res = await fetch(`${BASE}/api/my-info/bank-accounts?activeOnly=true`);
+        await mustOk(res);
+        const list = await res.json();
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="5" class="muted" style="padding:12px;">등록된 계좌가 없습니다.</td></tr>`;
+          return;
         }
-      });
+        tbody.innerHTML = list.map(a => `
+          <tr class="picker-row">
+            <td>${escHtml(a.bankName)}</td>
+            <td>${escHtml(a.accountNumber)}</td>
+            <td>${escHtml(a.accountHolder)}</td>
+            <td>${escHtml(a.accountAlias || '-')}</td>
+            <td>
+              <button class="btn-pick" onclick="selectAccount('${escAttr(a.bankName)}','${escAttr(a.accountNumber)}','${escAttr(a.accountAlias || '')}')">선택</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:#dc2626;padding:12px;">오류: ${escHtml(e.message)}</td></tr>`;
+      }
+    }
 
-      document.getElementById("openVehicleSearchBtn").addEventListener("click", async () => {
-        openVehicleModal();
-        await doVehicleSearch(true);
-      });
-
-      document.getElementById("closeVehicleModalBtn").addEventListener("click", closeVehicleModal);
-      document.getElementById("vehicleModalClose2").addEventListener("click", closeVehicleModal);
-      document.getElementById("vehicleModalBackdrop").addEventListener("click", closeVehicleModal);
-
-      document.getElementById("vehicleSearchBtn").addEventListener("click", () => doVehicleSearch(false));
-      document.getElementById("vehicleSearchKw").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          doVehicleSearch(false);
+    async function loadCorporateCards() {
+      const tbody = document.getElementById('pickerTbody');
+      tbody.innerHTML = `<tr><td colspan="5" class="muted" style="padding:12px;">불러오는 중...</td></tr>`;
+      try {
+        const res = await fetch(`${BASE}/api/my-info/corporate-cards?activeOnly=true`);
+        await mustOk(res);
+        const list = await res.json();
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="5" class="muted" style="padding:12px;">등록된 법인카드가 없습니다.</td></tr>`;
+          return;
         }
-      });
-    });
+        tbody.innerHTML = list.map(c => `
+          <tr class="picker-row">
+            <td>${escHtml(c.cardCompany)}</td>
+            <td>*${escHtml(c.cardNumberLast4)}</td>
+            <td>${escHtml(c.cardHolder)}</td>
+            <td>${escHtml(c.cardAlias || '-')}</td>
+            <td>
+              <button class="btn-pick" onclick="selectCard('${escAttr(c.cardCompany)}','${escAttr(c.cardNumberLast4)}','${escAttr(c.cardAlias || '')}')">선택</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:#dc2626;padding:12px;">오류: ${escHtml(e.message)}</td></tr>`;
+      }
+    }
 
+    function selectAccount(bankName, accountNumber, alias) {
+      if (currentPickerRow == null) return;
+      const label = alias ? `${alias}(${bankName})` : `${bankName} ${accountNumber}`;
+      setPaymentDetail(currentPickerRow, label);
+      closePicker();
+    }
+
+    function selectCard(cardCompany, last4, alias) {
+      if (currentPickerRow == null) return;
+      const label = alias ? `${alias}(${cardCompany}*${last4})` : `${cardCompany}*${last4}`;
+      setPaymentDetail(currentPickerRow, label);
+      closePicker();
+    }
+
+    /* ── 차량 검색 모달 ── */
     function openVehicleModal() {
       document.getElementById("vehicleModalBackdrop").style.display = "block";
       document.getElementById("vehicleModal").style.display = "block";
@@ -225,154 +430,124 @@
       document.getElementById("vehicleSearchTbody").innerHTML =
         `<tr><td colspan="4" style="color:#888;">조회중...</td></tr>`;
     }
-
     function closeVehicleModal() {
       document.getElementById("vehicleModalBackdrop").style.display = "none";
       document.getElementById("vehicleModal").style.display = "none";
     }
 
-    async function doVehicleSearch(isAuto) {
+    async function doVehicleSearch() {
       const kw = document.getElementById("vehicleSearchKw").value.trim();
       const tbody = document.getElementById("vehicleSearchTbody");
       tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">조회중...</td></tr>`;
-
       try {
-        const url = `${BASE}/api/vehicle-orders/search?kw=${encodeURIComponent(kw)}`;
-        const res = await fetch(url);
+        const res = await fetch(`${BASE}/api/vehicle-orders/search?kw=${encodeURIComponent(kw)}`);
         await mustOk(res);
         const list = await res.json();
-
-        if (!Array.isArray(list) || list.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">조회 결과가 없습니다.</td></tr>`;
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">결과 없음</td></tr>`;
           return;
         }
-
         tbody.innerHTML = list.map(v => `
           <tr>
-            <td>${escapeHtml(v.vehicleMgmtNo || "")}</td>
-            <td>${escapeHtml(v.vehicleNo || "")}</td>
-            <td>${escapeHtml(v.carModel || "")}</td>
-            <td>
-              <button type="button" class="btn btn-primary"
-                onclick="selectVehicle('${escapeAttr(v.vehicleMgmtNo || "")}')">선택</button>
-            </td>
+            <td>${escHtml(v.vehicleMgmtNo)}</td>
+            <td>${escHtml(v.vehicleNo)}</td>
+            <td>${escHtml(v.carModel)}</td>
+            <td><button type="button" class="btn btn-primary"
+              onclick="selectVehicle('${escAttr(v.vehicleMgmtNo)}')">선택</button></td>
           </tr>
-        `).join("");
-
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+        `).join('');
+      } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:#d00;">오류: ${escHtml(e.message)}</td></tr>`;
       }
     }
 
     async function selectVehicle(mgmtNo) {
       closeVehicleModal();
       document.getElementById("vehicleMgmtNo").value = mgmtNo;
-      await loadVehicleInfoByMgmtNo(mgmtNo);
+      await loadVehicleInfo(mgmtNo);
     }
 
-    async function loadVehicleInfoByMgmtNo(mgmtNo) {
+    async function loadVehicleInfo(mgmtNo) {
       try {
-        const url = `${BASE}/api/vehicle-maintenance/vehicle-info?mgmtNo=${encodeURIComponent(mgmtNo)}`;
-        const res = await fetch(url);
+        const res = await fetch(`${BASE}/api/vehicle-maintenance/vehicle-info?mgmtNo=${encodeURIComponent(mgmtNo)}`);
         await mustOk(res);
         const data = await res.json();
-
         document.getElementById("vehicleMgmtNo").value = data.vehicleMgmtNo || mgmtNo;
         document.getElementById("vehicleNo").value = data.vehicleNo || "";
-        document.getElementById("inspectionPeriod").textContent = fmtDateRange(data.inspectionStart, data.inspectionEnd);
+
+        const ip = data.inspectionStart && data.inspectionEnd
+          ? `${data.inspectionStart} ~ ${data.inspectionEnd}` : '-';
+        document.getElementById("inspectionPeriod").textContent = ip;
         document.getElementById("inspectionInfo").style.display = "block";
-      } catch (e) {
+
+        await loadHistory(mgmtNo);
+      } catch(e) {
         document.getElementById("vehicleNo").value = "";
         document.getElementById("inspectionInfo").style.display = "none";
         alert("차량 정보를 불러오지 못했습니다.\n" + e.message);
       }
     }
 
-    function calculateVAT(index) {
-      const amountInput = document.getElementById(`amount_${index}`);
-      const supplyInput = document.getElementById(`supply_${index}`);
-      const taxInput = document.getElementById(`tax_${index}`);
+    /* ── 기존 정비이력 조회 ── */
+    async function loadHistory(mgmtNo) {
+      const section = document.getElementById('historySection');
+      const tbody   = document.getElementById('historyTableBody');
+      document.getElementById('historyVehicle').textContent = `(${mgmtNo})`;
+      section.style.display = '';
+      tbody.innerHTML = `<tr><td colspan="9" class="muted" style="padding:14px;">조회중...</td></tr>`;
 
-      const amount = parseFloat(amountInput.value) || 0;
-      const supplyAmount = Math.round(amount / 1.1);
-      const taxAmount = Math.max(0, Math.round(amount - supplyAmount));
+      try {
+        const res = await fetch(`${BASE}/api/vehicle-maintenance/status?vehicleMgmtNo=${encodeURIComponent(mgmtNo)}`);
+        await mustOk(res);
+        const list = await res.json();
 
-      supplyInput.value = supplyAmount;
-      taxInput.value = taxAmount;
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="9" class="muted" style="padding:14px;">등록된 정비내역이 없습니다.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map((r, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${escHtml(fmtDate(r.maintenanceDate))}</td>
+            <td class="left">${escHtml(r.description)}</td>
+            <td class="right">${fmtMoney(r.amount)}</td>
+            <td class="right">${fmtMoney(r.supplyAmount)}</td>
+            <td class="right">${fmtMoney(r.vatAmount)}</td>
+            <td>${escHtml(r.vendor || '-')}</td>
+            <td>${escHtml(r.paymentMethod || '-')}</td>
+            <td>${escHtml(r.paymentDetail || '-')}</td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="color:#dc2626;padding:14px;">오류: ${escHtml(e.message)}</td></tr>`;
+      }
     }
 
-    function addRow() {
-      rowCount++;
-      const tbody = document.getElementById('maintenanceTableBody');
-      const newRow = document.createElement('tr');
-      newRow.id = `row_${rowCount}`;
-      newRow.innerHTML = `
-        <td><input type="text" placeholder="예: 엔진오일교환" id="desc_${rowCount}"></td>
-        <td><input type="number" placeholder="0" id="amount_${rowCount}" onchange="calculateVAT(${rowCount})"></td>
-        <td><input type="number" placeholder="0" id="supply_${rowCount}" disabled></td>
-        <td><input type="number" placeholder="0" id="tax_${rowCount}" disabled></td>
-        <td><input type="text" placeholder="예: 에이스공업사" id="vendor_${rowCount}"></td>
-        <td>
-          <select id="paymentMethod_${rowCount}">
-            <option value="미지급금" selected>미지급금</option>
-            <option value="법인카드">법인카드</option>
-            <option value="보통예금">보통예금</option>
-          </select>
-        </td>
-        <td><input type="date" id="payDate_${rowCount}"></td>
-        <td><button type="button" class="btn-delete" onclick="deleteRow(${rowCount})">삭제</button></td>
-      `;
-      tbody.appendChild(newRow);
-    }
-
-    function deleteRow(index) {
-      const row = document.getElementById(`row_${index}`);
-      if (row) row.remove();
-    }
-
+    /* ── 등록 ── */
     async function submitMaintenance() {
       const mgmtNo = document.getElementById('vehicleMgmtNo').value.trim();
-      if (!mgmtNo) {
-        alert('차량관리번호를 입력/선택해주세요.');
-        return;
-      }
+      if (!mgmtNo) { alert('차량관리번호를 입력/선택해주세요.'); return; }
 
       const rows = document.querySelectorAll('#maintenanceTableBody tr');
-      if (!rows.length) {
-        alert('정비 내역을 추가해주세요.');
-        return;
-      }
+      if (!rows.length) { alert('정비 내역을 추가해주세요.'); return; }
 
       const items = [];
       for (const tr of rows) {
         const idx = tr.id.split("_")[1];
-
         const description = document.getElementById(`desc_${idx}`)?.value?.trim() || "";
-        if (!description) {
-          alert("내용은 필수입니다.");
-          return;
-        }
+        if (!description) { alert("내용은 필수입니다."); return; }
 
-        const amount = Number(document.getElementById(`amount_${idx}`)?.value || 0);
-        const supplyAmount = Number(document.getElementById(`supply_${idx}`)?.value || 0);
-        const vatAmount = Number(document.getElementById(`tax_${idx}`)?.value || 0);
+        const amount  = Number(document.getElementById(`amount_${idx}`)?.value || 0);
+        const supply  = Number(document.getElementById(`supply_${idx}`)?.value || 0);
+        const vat     = Number(document.getElementById(`tax_${idx}`)?.value || 0);
+        const vendor  = (document.getElementById(`vendor_${idx}`)?.value || "").trim() || null;
+        const method  = document.getElementById(`paymentMethod_${idx}`)?.value || "미지급금";
+        const payDate = (document.getElementById(`payDate_${idx}`)?.value || "").trim() || null;
+        const detail  = getPaymentDetail(idx) || null;
 
-        const vendorRaw = (document.getElementById(`vendor_${idx}`)?.value || "").trim();
-        const paymentMethod = document.getElementById(`paymentMethod_${idx}`)?.value || "미지급금";
-        const payDateRaw = (document.getElementById(`payDate_${idx}`)?.value || "").trim();
-
-        const vendor = vendorRaw ? vendorRaw : null;
-        const payDate = payDateRaw ? payDateRaw : null;
-
-        items.push({
-          description,
-          amount,
-          supplyAmount,
-          vatAmount,
-          vendor,
-          paymentMethod,
-          payDate
-        });
+        items.push({ description, amount, supplyAmount: supply, vatAmount: vat,
+                     vendor, paymentMethod: method, payDate, paymentDetail: detail });
       }
 
       try {
@@ -384,38 +559,66 @@
         await mustOk(res);
         const data = await res.json();
         alert(`정비 내역이 등록되었습니다. (ID: ${data.maintenanceId})`);
-        resetForm();
-      } catch (e) {
+        const currentMgmtNo = document.getElementById('vehicleMgmtNo').value.trim();
+        resetInputRows();
+        if (currentMgmtNo) await loadHistory(currentMgmtNo);
+      } catch(e) {
         alert("등록 실패: " + e.message);
       }
+    }
+
+    /* ── 초기화 ── */
+    function resetInputRows() {
+      document.getElementById('maintenanceTableBody').innerHTML = '';
+      rowCount = 0;
+      addRow();
     }
 
     function resetForm() {
       document.getElementById('vehicleMgmtNo').value = '';
       document.getElementById('vehicleNo').value = '';
       document.getElementById('inspectionInfo').style.display = 'none';
-
-      const tbody = document.getElementById('maintenanceTableBody');
-      tbody.innerHTML = `
-        <tr id="row_1">
-          <td><input type="text" placeholder="예: 엔진오일교환" id="desc_1"></td>
-          <td><input type="number" placeholder="0" id="amount_1" onchange="calculateVAT(1)"></td>
-          <td><input type="number" placeholder="0" id="supply_1" disabled></td>
-          <td><input type="number" placeholder="0" id="tax_1" disabled></td>
-          <td><input type="text" placeholder="예: 에이스공업사" id="vendor_1"></td>
-          <td>
-            <select id="paymentMethod_1">
-              <option value="미지급금" selected>미지급금</option>
-              <option value="법인카드">법인카드</option>
-              <option value="보통예금">보통예금</option>
-            </select>
-          </td>
-          <td><input type="date" id="payDate_1"></td>
-          <td><button type="button" class="btn-delete" onclick="deleteRow(1)">삭제</button></td>
-        </tr>
-      `;
-      rowCount = 1;
+      document.getElementById('historySection').style.display = 'none';
+      document.getElementById('historyTableBody').innerHTML = '';
+      resetInputRows();
     }
+
+    /* ── 이벤트 바인딩 ── */
+    document.addEventListener("DOMContentLoaded", () => {
+      addRow(); // 첫 행
+
+      document.getElementById("vehicleMgmtNo").addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const mgmtNo = document.getElementById("vehicleMgmtNo").value.trim();
+          if (mgmtNo) await loadVehicleInfo(mgmtNo);
+        }
+      });
+
+      document.getElementById("openVehicleSearchBtn").addEventListener("click", async () => {
+        openVehicleModal();
+        await doVehicleSearch();
+      });
+      document.getElementById("closeVehicleModalBtn").addEventListener("click", closeVehicleModal);
+      document.getElementById("vehicleModalClose2").addEventListener("click", closeVehicleModal);
+      document.getElementById("vehicleModalBackdrop").addEventListener("click", closeVehicleModal);
+      document.getElementById("vehicleSearchBtn").addEventListener("click", doVehicleSearch);
+      document.getElementById("vehicleSearchKw").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); doVehicleSearch(); }
+      });
+
+      document.getElementById("pickerCloseBtn").addEventListener("click", closePicker);
+      document.getElementById("pickerBackdrop").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("pickerBackdrop")) closePicker();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (document.getElementById("pickerBackdrop").style.display === 'flex') { closePicker(); return; }
+          closeVehicleModal();
+        }
+      });
+    });
   </script>
 </body>
 </html>

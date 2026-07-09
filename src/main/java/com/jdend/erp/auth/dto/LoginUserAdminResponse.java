@@ -15,4 +15,5 @@ public class LoginUserAdminResponse {
   private String role;
   private Boolean isActive;
   private Boolean taxConsultationEnabled;
+  private Boolean maintenanceEnabled;
 }

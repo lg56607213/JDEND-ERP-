@@ -18,4 +18,5 @@ public class VehicleMaintenanceItemRequest {
   private String vendor;
   private LocalDate payDate;
   private String paymentMethod;
+  private String paymentDetail;
 }

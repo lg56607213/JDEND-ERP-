@@ -27,4 +27,16 @@ public class PermissionService {
       throw new RuntimeException("회사관리자 권한이 필요합니다.");
     }
   }
+
+  // MT(정비) 기능 접근 보호 — 운영자이거나, 회사에 maintenanceEnabled 권한이 부여된 경우만 통과.
+  public void requireMaintenance(HttpSession session) {
+    String role = session == null ? null : (String) session.getAttribute(AuthService.SESSION_ROLE);
+    if ("ADMIN".equals(role)) return;
+
+    Boolean enabled = session == null ? null
+        : (Boolean) session.getAttribute(AuthService.SESSION_MAINTENANCE_ENABLED);
+    if (!Boolean.TRUE.equals(enabled)) {
+      throw new RuntimeException("MT(정비) 기능 접근 권한이 없습니다. 운영자에게 문의하세요.");
+    }
+  }
 }

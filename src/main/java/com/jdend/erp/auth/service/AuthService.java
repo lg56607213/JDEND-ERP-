@@ -23,6 +23,7 @@ public class AuthService {
   public static final String SESSION_ROLE = "ROLE";
   public static final String SESSION_COMPANY_ID = "COMPANY_ID";
   public static final String SESSION_TAX_CONSULTATION_ENABLED = "TAX_CONSULTATION_ENABLED";
+  public static final String SESSION_MAINTENANCE_ENABLED = "MAINTENANCE_ENABLED";
 
   private final LoginUserRepository loginUserRepository;
   private final CompanyUserRepository companyUserRepository;
@@ -51,6 +52,7 @@ public class AuthService {
       session.setAttribute(SESSION_TARGET_DB, "auth");
       session.setAttribute(SESSION_ROLE, "ADMIN");
       session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
+      session.setAttribute(SESSION_MAINTENANCE_ENABLED, true);
       session.removeAttribute(SESSION_COMPANY_ID);
 
       return LoginResponse.builder()
@@ -59,6 +61,7 @@ public class AuthService {
           .companyName(company.getCompanyName())
           .role("ADMIN")
           .taxConsultationEnabled(true)
+          .maintenanceEnabled(true)
           .message("로그인 성공")
           .build();
     }
@@ -69,6 +72,7 @@ public class AuthService {
       session.setAttribute(SESSION_TARGET_DB, "auth");
       session.setAttribute(SESSION_ROLE, "TAX_AGENT");
       session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
+      session.setAttribute(SESSION_MAINTENANCE_ENABLED, false);
       session.removeAttribute(SESSION_COMPANY_ID);
 
       return LoginResponse.builder()
@@ -77,6 +81,7 @@ public class AuthService {
           .companyName(company.getCompanyName())
           .role("TAX_AGENT")
           .taxConsultationEnabled(true)
+          .maintenanceEnabled(false)
           .message("로그인 성공")
           .build();
     }
@@ -109,7 +114,8 @@ public class AuthService {
     String targetDb = company.getTargetDb();
     tenantDatabaseService.ensureTenantDatabase(targetDb);
 
-    boolean taxEnabled = Boolean.TRUE.equals(company.getTaxConsultationEnabled());
+    boolean taxEnabled         = Boolean.TRUE.equals(company.getTaxConsultationEnabled());
+    boolean maintenanceEnabled = Boolean.TRUE.equals(company.getMaintenanceEnabled());
 
     session.setAttribute(SESSION_LOGIN_ID, user.getUserLoginId());
     session.setAttribute(SESSION_COMPANY_NAME, company.getCompanyName());
@@ -117,6 +123,7 @@ public class AuthService {
     session.setAttribute(SESSION_ROLE, role);
     session.setAttribute(SESSION_COMPANY_ID, company.getId());
     session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, taxEnabled);
+    session.setAttribute(SESSION_MAINTENANCE_ENABLED, maintenanceEnabled);
 
     return LoginResponse.builder()
         .success(true)
@@ -124,6 +131,7 @@ public class AuthService {
         .companyName(company.getCompanyName())
         .role(role)
         .taxConsultationEnabled(taxEnabled)
+        .maintenanceEnabled(maintenanceEnabled)
         .message("로그인 성공")
         .build();
   }
@@ -140,7 +148,8 @@ public class AuthService {
           .build();
     }
 
-    Boolean taxEnabled = (Boolean) session.getAttribute(SESSION_TAX_CONSULTATION_ENABLED);
+    Boolean taxEnabled         = (Boolean) session.getAttribute(SESSION_TAX_CONSULTATION_ENABLED);
+    Boolean maintenanceEnabled = (Boolean) session.getAttribute(SESSION_MAINTENANCE_ENABLED);
 
     return LoginResponse.builder()
         .success(true)
@@ -148,6 +157,7 @@ public class AuthService {
         .companyName(companyName)
         .role(role)
         .taxConsultationEnabled(Boolean.TRUE.equals(taxEnabled))
+        .maintenanceEnabled(Boolean.TRUE.equals(maintenanceEnabled))
         .message("로그인 상태")
         .build();
   }
@@ -248,6 +258,10 @@ public class AuthService {
       user.setTaxConsultationEnabled(req.getTaxConsultationEnabled());
     }
 
+    if (req.getMaintenanceEnabled() != null) {
+      user.setMaintenanceEnabled(req.getMaintenanceEnabled());
+    }
+
     return toAdminResponse(user);
   }
 
@@ -285,6 +299,7 @@ public class AuthService {
         .role(u.getRole())
         .isActive(u.getIsActive())
         .taxConsultationEnabled(Boolean.TRUE.equals(u.getTaxConsultationEnabled()))
+        .maintenanceEnabled(Boolean.TRUE.equals(u.getMaintenanceEnabled()))
         .build();
   }
 

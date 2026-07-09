@@ -142,6 +142,10 @@
               <label for="insurancePremium">보험료 *</label>
               <input type="text" id="insurancePremium" placeholder="0" inputmode="numeric">
             </div>
+            <div class="form-group">
+              <label for="voucherDate">전표발생일자 *</label>
+              <input type="date" id="voucherDate">
+            </div>
           </div>
         </div>
 
@@ -187,6 +191,18 @@
   <script>
     const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
     const $ = (id) => document.getElementById(id);
+
+    // 전표발생일자 기본값: 오늘
+    (function(){
+      const today = new Date().toISOString().slice(0, 10);
+      document.addEventListener("DOMContentLoaded", () => {
+        $("voucherDate").value = today;
+      });
+      // DOMContentLoaded 이전 실행 시 대비
+      if (document.readyState !== "loading") {
+        $("voucherDate") && ($("voucherDate").value = today);
+      }
+    })();
 
     function escapeHtml(s){
       return String(s ?? "")
@@ -362,7 +378,8 @@
         driverRange: $("driverRange").value,
 
         specialTerms: $("specialTerms").value.trim(),
-        insurancePremium: premium
+        insurancePremium: premium,
+        voucherDate: $("voucherDate").value || null
       };
 
       try{
@@ -390,6 +407,7 @@
 
       $("insuranceStartDate").value = "";
       $("insuranceEndDate").value = "";
+      $("voucherDate").value = new Date().toISOString().slice(0, 10);
 
       ["bodilyInjury","propertyDamage","personalInjury","autoInjury","uninsured","ownVehicle","emergency"].forEach(id => {
         $(id).value = "";

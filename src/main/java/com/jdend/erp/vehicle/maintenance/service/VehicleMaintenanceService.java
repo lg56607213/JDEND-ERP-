@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -77,6 +78,7 @@ public class VehicleMaintenanceService {
       item.setVendor(trimOrNull(it.getVendor()));
       item.setPayDate(it.getPayDate());
       item.setPaymentMethod(paymentMethod);
+      item.setPaymentDetail(trimOrNull(it.getPaymentDetail()));
 
       m.addItem(item);
     }
@@ -84,22 +86,45 @@ public class VehicleMaintenanceService {
     VehicleMaintenance saved = maintenanceRepository.save(m);
 
     for (VehicleMaintenanceItem item : saved.getItems()) {
+      long supply = nvlLong(item.getSupplyAmount());
+      long vat    = nvlLong(item.getVatAmount());
+      long total  = nvlLong(item.getAmount());
+
+      List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
+      if (supply > 0) {
+        debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account("차량유지비")
+            .amount(supply)
+            .description(item.getDescription())
+            .build());
+      }
+      if (vat > 0) {
+        debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account("부가세대급금")
+            .amount(vat)
+            .description(item.getDescription())
+            .build());
+      }
+      if (debits.isEmpty()) {
+        debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account("차량유지비")
+            .amount(total)
+            .description(item.getDescription())
+            .build());
+      }
+
+      long creditTotal = debits.stream().mapToLong(VoucherCreateRequest.VoucherLineRequest::getAmount).sum();
+
       voucherService.create(
           VoucherCreateRequest.builder()
               .voucherDate(item.getPayDate() != null ? item.getPayDate() : LocalDate.now())
               .vehicleNo(saved.getVehicleNo())
               .memo(buildVoucherMemo(saved.getVehicleNo(), item.getDescription()))
-              .debitEntries(List.of(
-                  VoucherCreateRequest.VoucherLineRequest.builder()
-                      .account("차량유지비")
-                      .amount(nvlLong(item.getAmount()))
-                      .description(item.getDescription())
-                      .build()
-              ))
+              .debitEntries(debits)
               .creditEntries(List.of(
                   VoucherCreateRequest.VoucherLineRequest.builder()
-                      .account(resolveCreditAccount(item.getPaymentMethod()))
-                      .amount(nvlLong(item.getAmount()))
+                      .account(resolveCreditAccountWithDetail(item.getPaymentMethod(), item.getPaymentDetail()))
+                      .amount(creditTotal)
                       .description(item.getPaymentMethod())
                       .build()
               ))
@@ -142,11 +167,12 @@ public class VehicleMaintenanceService {
     };
   }
 
-  private String resolveCreditAccount(String paymentMethod) {
+  private String resolveCreditAccountWithDetail(String paymentMethod, String paymentDetail) {
+    String suffix = (paymentDetail != null && !paymentDetail.isBlank()) ? "(" + paymentDetail.trim() + ")" : "";
     return switch (paymentMethod) {
       case "미지급금" -> "미지급금";
-      case "법인카드" -> "미지급비용";
-      case "보통예금" -> "보통예금";
+      case "법인카드" -> "미지급비용" + suffix;
+      case "보통예금" -> "보통예금" + suffix;
       default -> throw new IllegalArgumentException("대변 계정 매핑 불가: " + paymentMethod);
     };
   }

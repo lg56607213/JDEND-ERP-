@@ -44,6 +44,9 @@ public class VehicleMaintenanceItem {
   @Column(name = "payment_method", length = 50)
   private String paymentMethod;
 
+  @Column(name = "payment_detail", length = 200)
+  private String paymentDetail;
+
   @Column(name = "created_at", insertable = false, updatable = false)
   private LocalDateTime createdAt;
 

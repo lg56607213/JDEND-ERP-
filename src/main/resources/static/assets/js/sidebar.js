@@ -84,8 +84,8 @@ function loadSidebar() {
                 <ul>
                   <li><a href="${basePath}pages/vehicle/maintenance_register.html">정비등록</a></li>
                   <li><a href="${basePath}pages/vehicle/maintenance_status.html">정비현황</a></li>
-                  <li><a href="${basePath}pages/vehicle/mt_status.html">MT현황</a></li>
-                  <li><a href="${basePath}pages/vehicle/mt_register.html">MT등록</a></li>
+                  <li id="mtStatusMenuItem" style="display:none;"><a href="${basePath}pages/vehicle/mt_status.html">MT현황</a></li>
+                  <li id="mtRegisterMenuItem" style="display:none;"><a href="${basePath}pages/vehicle/mt_register.html">MT등록</a></li>
                 </ul>
               </li>
               <li class="has-sub">
@@ -259,8 +259,13 @@ function loadSidebar() {
       .then(function (data) {
         const role = data && data.success ? data.role : null;
         const taxEnabled = data && data.taxConsultationEnabled;
+        const maintenanceEnabled = data && data.maintenanceEnabled;
+
+        // 사용자관리 메뉴
         const item = document.getElementById('companyUsersMenuItem');
         if (item && (role === 'ADMIN' || role === 'COMPANY_ADMIN')) item.style.display = '';
+
+        // 세무상담 메뉴
         const taxMenu = document.getElementById('taxConsultationMenu');
         const taxUserItem = document.getElementById('taxConsultationUserItem');
         const taxAdminItem = document.getElementById('taxConsultationAdminItem');
@@ -270,6 +275,14 @@ function loadSidebar() {
         } else if (taxEnabled) {
           if (taxMenu) taxMenu.style.display = '';
           if (taxUserItem) taxUserItem.style.display = '';
+        }
+
+        // MT 메뉴 — 운영자이거나 maintenanceEnabled 권한이 있는 업체만 노출
+        if (role === 'ADMIN' || maintenanceEnabled) {
+          var mtStatus = document.getElementById('mtStatusMenuItem');
+          var mtRegister = document.getElementById('mtRegisterMenuItem');
+          if (mtStatus) mtStatus.style.display = '';
+          if (mtRegister) mtRegister.style.display = '';
         }
       })
       .catch(function (e) { console.error('권한 조회 실패', e); });

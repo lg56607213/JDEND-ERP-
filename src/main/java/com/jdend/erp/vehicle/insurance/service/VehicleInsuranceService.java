@@ -5,7 +5,9 @@ import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.insurance.dto.VehicleInsuranceDtos;
+import com.jdend.erp.vehicle.insurance.entity.InsuranceChange;
 import com.jdend.erp.vehicle.insurance.entity.VehicleInsurance;
+import com.jdend.erp.vehicle.insurance.repository.InsuranceChangeRepository;
 import com.jdend.erp.vehicle.insurance.repository.VehicleInsuranceRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class VehicleInsuranceService {
   private final VehicleInsuranceRepository insuranceRepo;
   private final VehicleOrderRepository vehicleOrderRepo;
   private final VoucherRepository voucherRepository;
+  private final InsuranceChangeRepository insuranceChangeRepo;
   private final JdbcTemplate jdbcTemplate;
 
   @Transactional
@@ -65,7 +68,7 @@ public class VehicleInsuranceService {
 
     VehicleInsurance saved = insuranceRepo.save(i);
 
-    createInsuranceVoucher(saved);
+    createInsuranceVoucher(saved, req.voucherDate);
 
     return toRes(saved);
   }
@@ -116,13 +119,76 @@ public class VehicleInsuranceService {
     return toRes(i);
   }
 
-  private void createInsuranceVoucher(VehicleInsurance insurance) {
+  @Transactional
+  public void change(Long insuranceId, VehicleInsuranceDtos.InsuranceChangeRequest req) {
+    VehicleInsurance insurance = insuranceRepo.findById(insuranceId)
+      .orElseThrow(() -> new RuntimeException("보험 없음: " + insuranceId));
+
+    LocalDate vd = req.voucherDate != null ? req.voucherDate : LocalDate.now();
+    String type = (req.changeType != null && !req.changeType.isBlank()) ? req.changeType : "변경";
+
+    insuranceChangeRepo.save(InsuranceChange.builder()
+      .insuranceId(insuranceId)
+      .changeType(type)
+      .changeReason(req.changeReason)
+      .additionalPremium(req.additionalPremium)
+      .refundPremium(req.refundPremium)
+      .voucherDate(vd)
+      .build());
+
+    String baseMemo = "보험" + type + " / "
+      + (insurance.getVehicleNo() != null ? "차량: " + insurance.getVehicleNo() + " / " : "")
+      + (req.changeReason != null && !req.changeReason.isBlank() ? req.changeReason : "");
+
+    if (req.additionalPremium != null && req.additionalPremium > 0) {
+      createSingleVoucher(insurance, vd, req.additionalPremium,
+        "보험료", "미지급금(보험료)", baseMemo + " (추가납부)");
+    }
+    if (req.refundPremium != null && req.refundPremium > 0) {
+      createSingleVoucher(insurance, vd, req.refundPremium,
+        "미수금(보험료)", "보험료", baseMemo + " (환급)");
+    }
+  }
+
+  private void createSingleVoucher(VehicleInsurance insurance, LocalDate voucherDate,
+                                    Long amount, String debitAccount, String creditAccount, String memo) {
+    String voucherNo = nextVoucherNo(voucherDate);
+
+    Voucher voucher = Voucher.builder()
+      .voucherNo(voucherNo)
+      .voucherDate(voucherDate)
+      .contractNumber(emptyToNull(insurance.getContractNumber()))
+      .vehicleNo(emptyToNull(insurance.getVehicleNo()))
+      .totalAmount(amount)
+      .status("대기")
+      .memo(memo)
+      .build();
+
+    voucher.addLine(VoucherLine.builder()
+      .lineType("DEBIT")
+      .accountName(debitAccount)
+      .amount(amount)
+      .description(memo)
+      .sortOrder(1)
+      .build());
+
+    voucher.addLine(VoucherLine.builder()
+      .lineType("CREDIT")
+      .accountName(creditAccount)
+      .amount(amount)
+      .description(memo)
+      .sortOrder(2)
+      .build());
+
+    voucherRepository.save(voucher);
+  }
+
+  private void createInsuranceVoucher(VehicleInsurance insurance, LocalDate requestedVoucherDate) {
     Long amount = insurance.getInsurancePremium();
     if (amount == null || amount <= 0) return;
 
-    LocalDate voucherDate = insurance.getInsuranceStartDate() != null
-      ? insurance.getInsuranceStartDate()
-      : LocalDate.now();
+    LocalDate voucherDate = requestedVoucherDate != null ? requestedVoucherDate :
+      (insurance.getInsuranceStartDate() != null ? insurance.getInsuranceStartDate() : LocalDate.now());
 
     String voucherNo = nextVoucherNo(voucherDate);
 

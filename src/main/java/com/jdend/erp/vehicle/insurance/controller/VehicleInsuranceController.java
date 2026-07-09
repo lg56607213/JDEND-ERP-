@@ -3,6 +3,7 @@ package com.jdend.erp.vehicle.insurance.controller;
 import com.jdend.erp.vehicle.insurance.dto.VehicleInsuranceDtos;
 import com.jdend.erp.vehicle.insurance.service.VehicleInsuranceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -42,5 +43,21 @@ public class VehicleInsuranceController {
   @PutMapping("/{id}")
   public VehicleInsuranceDtos.Response update(@PathVariable Long id, @RequestBody VehicleInsuranceDtos.UpdateRequest req) {
     return service.update(id, req);
+  }
+
+  @PostMapping("/{id}/change")
+  public ResponseEntity<Void> change(@PathVariable Long id,
+                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+    if (req.changeType == null || req.changeType.isBlank()) req.setChangeType("변경");
+    service.change(id, req);
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/{id}/terminate")
+  public ResponseEntity<Void> terminate(@PathVariable Long id,
+                                        @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+    req.setChangeType("해지");
+    service.change(id, req);
+    return ResponseEntity.ok().build();
   }
 }
