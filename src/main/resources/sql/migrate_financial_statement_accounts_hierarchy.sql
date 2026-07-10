@@ -116,6 +116,8 @@ INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level
 SELECT 'is', 'EXPENSE', 3, id, '500212', '지급수수료', '판매비와관리비', 12, '미사용', '사용' FROM financial_statement_accounts WHERE account_code = '5002';
 INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
 SELECT 'is', 'EXPENSE', 3, id, '500213', '임차료', '판매비와관리비', 13, '미사용', '사용' FROM financial_statement_accounts WHERE account_code = '5002';
+INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
+SELECT 'is', 'EXPENSE', 3, id, '500214', '미상각잔액', '판매비와관리비', 14, '사용', '사용' FROM financial_statement_accounts WHERE account_code = '5002';
 
 -- ========== 4) 소소분류 (level 4, 신규분 - 대손충당금 등 contra 계정) ==========
 INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
