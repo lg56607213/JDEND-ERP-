@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -127,4 +129,15 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
     order by c.id asc
   """)
   List<Contract> findAllActiveWithCustomer();
+
+  // ✅ 계약만료 스케줄러: 종료일이 지났고 아직 종료 처리되지 않은 계약
+  @Query("""
+    select c from Contract c
+    where c.endDate < :today
+      and c.status not in :terminated
+  """)
+  List<Contract> findExpiredNotClosed(
+      @Param("today") LocalDate today,
+      @Param("terminated") Collection<String> terminated
+  );
 }

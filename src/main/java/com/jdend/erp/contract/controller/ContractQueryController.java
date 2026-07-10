@@ -6,6 +6,7 @@ import com.jdend.erp.contract.dto.ContractSummaryResponse;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
+import com.jdend.erp.payment.overdue.service.OverdueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.Set;
 public class ContractQueryController {
 
   private final ContractRepository contractRepo;
+  private final OverdueService overdueService;
 
   // ✅ 기존: 전체 계약 검색(모달 등)
   @GetMapping("/search")
@@ -126,6 +128,8 @@ public class ContractQueryController {
     );
 
     LocalDate today = LocalDate.now();
+    Set<String> overdueNumbers = overdueService.overdueContractNumbers();
+
     for (ContractStatusRowResponse row : list) {
       String s = row.getStatus();
       String derived;
@@ -133,7 +137,7 @@ public class ContractQueryController {
         derived = "종료";
       } else if (row.getContractEnd() != null && row.getContractEnd().isBefore(today)) {
         derived = "종료";
-      } else if ("연체".equals(s)) {
+      } else if (overdueNumbers.contains(row.getContractNumber())) {
         derived = "연체";
       } else {
         derived = "정상";

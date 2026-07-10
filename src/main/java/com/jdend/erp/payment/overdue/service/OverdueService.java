@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +69,39 @@ public class OverdueService {
                             .unpaidAmount(unpaid)
                             .overdueDays((int) ChronoUnit.DAYS.between(dueDate, today))
                             .build());
+                }
+            }
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Set<String> overdueContractNumbers() {
+        LocalDate today = LocalDate.now();
+        List<Contract> activeContracts = contractRepo.findAllActiveWithCustomer();
+        Set<String> result = new HashSet<>();
+
+        for (Contract c : activeContracts) {
+            String contractNumber = c.getContractNumber();
+            List<PaymentSchedule> schedules =
+                    scheduleRepo.findByContractNumberOrderByInstallmentNoAsc(contractNumber);
+            if (schedules.isEmpty()) continue;
+
+            List<Payment> payments =
+                    paymentRepo.findByContractNumberOrderByPaymentDateAscIdAsc(contractNumber);
+            long remaining = payments.stream()
+                    .mapToLong(p -> p.getPaymentAmount() != null ? p.getPaymentAmount() : 0L)
+                    .sum();
+
+            for (PaymentSchedule ps : schedules) {
+                long rent = ps.getRentAmount() != null ? ps.getRentAmount() : 0L;
+                long unpaid = Math.max(0, rent - Math.max(0, Math.min(remaining, rent)));
+                remaining = Math.max(0, remaining - rent);
+
+                LocalDate dueDate = ps.getPaymentDate();
+                if (dueDate != null && dueDate.isBefore(today) && unpaid > 0) {
+                    result.add(contractNumber);
+                    break;
                 }
             }
         }

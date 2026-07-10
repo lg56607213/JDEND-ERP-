@@ -22,4 +22,7 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
     order by u.id desc
   """)
   List<LoginUser> search(@Param("kw") String kw);
+
+  @Query("select u.targetDb from LoginUser u where u.role = 'COMPANY' and u.isActive = true")
+  List<String> findAllActiveCompanyTargetDbs();
 }
