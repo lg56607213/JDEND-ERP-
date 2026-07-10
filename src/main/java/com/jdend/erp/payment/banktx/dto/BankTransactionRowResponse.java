@@ -14,6 +14,7 @@ public class BankTransactionRowResponse {
   private LocalDate txDate;
   private Long depositAmount;
   private Long withdrawalAmount;
+  private Long balance;
   private String summary;
   private String remarks;
 }

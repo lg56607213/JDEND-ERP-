@@ -6,8 +6,62 @@
   <title>은행내역업로드 | JDEND ERP</title>
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <link rel="stylesheet" href="../../assets/css/pages.css">
-  <link rel="stylesheet" href="../../assets/css/vehicle/maintenance_status.css">
-  <link rel="stylesheet" href="../../assets/css/payment/bank_transaction_upload.css">
+  <style>
+    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .top-bar .btn-save {
+      background:#1a73e8; color:#fff; border:none; border-radius:6px;
+      padding:8px 22px; font-size:14px; font-weight:600; cursor:pointer;
+    }
+    .top-bar .btn-save:hover { background:#1558b0; }
+
+    .search-section { background:#f8f9fa; border-radius:8px; padding:16px; margin-bottom:16px; }
+    .search-grid { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+    .form-group { display:flex; flex-direction:column; gap:4px; }
+    .form-group label { font-size:12px; font-weight:600; color:#555; }
+    .form-group input, .form-group select {
+      height:34px; padding:0 10px; border:1px solid #ccc; border-radius:5px; font-size:13px;
+    }
+    .upload-row { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; margin-top:4px; }
+    .btn-template {
+      height:34px; padding:0 14px; background:#fff; border:1px solid #1a73e8;
+      color:#1a73e8; border-radius:5px; font-size:13px; cursor:pointer; white-space:nowrap;
+    }
+    .btn-template:hover { background:#e8f0fe; }
+    .btn-upload-label {
+      height:34px; padding:0 14px; background:#34a853; color:#fff;
+      border-radius:5px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center;
+      white-space:nowrap;
+    }
+    .btn-upload-label:hover { background:#2d8f47; }
+    .btn-search {
+      height:34px; padding:0 20px; background:#1a73e8; color:#fff;
+      border:none; border-radius:5px; font-size:13px; cursor:pointer;
+    }
+    .btn-search:hover { background:#1558b0; }
+    .file-name { font-size:12px; color:#666; align-self:center; }
+
+    .divider { border:none; border-top:1px solid #e0e0e0; margin:0 0 14px; }
+
+    .table-container { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { background:#f1f3f4; font-weight:600; color:#444; padding:10px 8px; text-align:center;
+         border-bottom:2px solid #ddd; white-space:nowrap; }
+    td { padding:8px; border-bottom:1px solid #eee; text-align:center; color:#333; }
+    tr:hover td { background:#f9fbff; }
+    td.amount-cell { text-align:right; font-variant-numeric:tabular-nums; }
+    td.deposit-cell { color:#1a73e8; font-weight:600; }
+    td.withdrawal-cell { color:#d93025; font-weight:600; }
+    td.balance-cell { color:#333; }
+    td.no-data { text-align:center; color:#aaa; padding:40px; }
+
+    .remarks-input {
+      width:100%; min-width:120px; border:1px solid #ddd; border-radius:4px;
+      padding:4px 8px; font-size:13px; box-sizing:border-box;
+    }
+    .remarks-input:focus { outline:none; border-color:#1a73e8; }
+
+    .required-star { color:#d93025; }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -19,44 +73,66 @@
 
     <div class="erp-card">
       <div class="card-body">
-        <!-- 검색 및 업로드 섹션 -->
+
+        <!-- 상단 저장 버튼 -->
+        <div class="top-bar">
+          <span style="font-size:13px;color:#555;">비고 작성 후 저장 버튼을 누르세요.</span>
+          <button class="btn-save" onclick="saveRemarks()">저장</button>
+        </div>
+
+        <!-- 조회 + 업로드 섹션 -->
         <div class="search-section">
           <div class="search-grid">
+
             <div class="form-group">
               <label for="searchBank">은행명</label>
-              <input type="text" id="searchBank" placeholder="은행명 검색">
+              <input type="text" id="searchBank" placeholder="은행명 검색" style="width:130px;">
             </div>
 
             <div class="form-group">
               <label for="searchStartDate">일자(시작)</label>
-              <input type="date" id="searchStartDate">
+              <input type="date" id="searchStartDate" style="width:140px;">
             </div>
 
             <div class="form-group">
               <label for="searchEndDate">일자(종료)</label>
-              <input type="date" id="searchEndDate">
+              <input type="date" id="searchEndDate" style="width:140px;">
             </div>
 
             <div class="form-group">
               <label>&nbsp;</label>
-              <button type="button" class="btn-search" onclick="searchTransactions()">조회</button>
+              <button class="btn-search" onclick="searchTransactions()">조회</button>
             </div>
+          </div>
 
+          <hr class="divider" style="margin:14px 0 12px;">
+
+          <!-- 업로드 영역 -->
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
             <div class="form-group">
-              <label>CSV 파일 업로드</label>
-              <div class="upload-controls">
-                <div class="file-input-wrapper">
-                  <!-- ✅ 파일 선택하면 바로 업로드까지 진행 -->
-                  <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)">
-                  <label for="csvFile" class="file-input-label">파일 업로드</label>
-                </div>
+              <label for="uploadBankName">은행명 <span class="required-star">*</span></label>
+              <input type="text" id="uploadBankName" placeholder="예: 신한은행" style="width:140px;">
+            </div>
+            <div class="form-group">
+              <label for="uploadAccountNo">계좌번호 <span class="required-star">*</span></label>
+              <input type="text" id="uploadAccountNo" placeholder="예: 110-123-456789" style="width:180px;">
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <div class="upload-row">
+                <button class="btn-template" onclick="downloadTemplate()">양식 다운로드</button>
+                <label class="btn-upload-label" for="excelFile">엑셀 업로드</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event)">
                 <span class="file-name" id="fileName">선택된 파일 없음</span>
               </div>
             </div>
           </div>
+          <div style="margin-top:8px;font-size:12px;color:#888;">
+            ※ 양식을 다운로드 후 <strong>일자, 입금액, 출금액, 잔액, 적요</strong> 항목을 입력하여 업로드하세요.
+          </div>
         </div>
 
-        <!-- 테이블 -->
+        <!-- 결과 테이블 -->
         <div class="table-container">
           <table>
             <thead>
@@ -65,18 +141,16 @@
                 <th>은행명</th>
                 <th>계좌번호</th>
                 <th>일자</th>
-                <th>입금</th>
-                <th>출금</th>
+                <th>입금액</th>
+                <th>출금액</th>
+                <th>잔액</th>
                 <th>적요</th>
                 <th>비고</th>
               </tr>
             </thead>
             <tbody id="transactionTableBody">
               <tr>
-                <td colspan="8" class="no-data">
-                  <div class="no-data-icon">💳</div>
-                  <div>조회 또는 업로드 후 데이터가 표시됩니다.</div>
-                </td>
+                <td colspan="9" class="no-data">조회 또는 업로드 후 데이터가 표시됩니다.</td>
               </tr>
             </tbody>
           </table>
@@ -87,142 +161,143 @@
   </div>
 
   <script src="../../assets/js/sidebar.js"></script>
-  <!-- ✅ 너 프로젝트에 config.js로 API_BASE_URL 쓰는 구조라서 추가 -->
   <script src="../../assets/js/config.js"></script>
-
   <script>
-    // ===== 공용 유틸 =====
-    function mustOk(res){
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res;
+    // 현재 조회된 행 목록(비고 저장에 사용)
+    let currentRows = [];
+
+    function escapeHtml(s) {
+      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
     }
-    function escapeHtml(s){
-      return String(s ?? '')
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'","&#039;");
-    }
-    function todayISO(){ return new Date().toISOString().split('T')[0]; }
-    function startOfMonthISO(){
+    function todayISO() { return new Date().toISOString().split('T')[0]; }
+    function startOfMonthISO() {
       const d = new Date();
-      const s = new Date(d.getFullYear(), d.getMonth(), 1);
-      return s.toISOString().split('T')[0];
+      return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    }
+    function fmtAmt(v) {
+      const n = Number(v ?? 0);
+      return n > 0 ? n.toLocaleString() : '-';
     }
 
-    // ===== 초기 날짜 세팅 =====
-    window.addEventListener('DOMContentLoaded', ()=>{
+    window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('searchStartDate').value = startOfMonthISO();
-      document.getElementById('searchEndDate').value = todayISO();
+      document.getElementById('searchEndDate').value   = todayISO();
     });
 
-    // ===== 조회(API) =====
     async function searchTransactions() {
-      const bank = document.getElementById('searchBank').value.trim();
+      const bank      = document.getElementById('searchBank').value.trim();
       const startDate = document.getElementById('searchStartDate').value;
-      const endDate = document.getElementById('searchEndDate').value;
+      const endDate   = document.getElementById('searchEndDate').value;
 
       const qs = new URLSearchParams();
-      if (bank) qs.set('bank', bank);
+      if (bank)      qs.set('bank', bank);
       if (startDate) qs.set('startDate', startDate);
-      if (endDate) qs.set('endDate', endDate);
+      if (endDate)   qs.set('endDate', endDate);
 
       const tbody = document.getElementById('transactionTableBody');
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" class="no-data">
-            <div class="no-data-icon">⏳</div>
-            <div>불러오는 중...</div>
-          </td>
-        </tr>
-      `;
+      tbody.innerHTML = `<tr><td colspan="9" class="no-data">불러오는 중...</td></tr>`;
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/bank-transactions?` + qs.toString());
-        mustOk(res);
-        const list = await res.json();
-        renderTransactions(list);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        currentRows = await res.json();
+        renderRows(currentRows);
       } catch (e) {
-        console.error(e);
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="8" class="no-data">
-              <div class="no-data-icon">⚠️</div>
-              <div>조회 실패: ${escapeHtml(e.message)}</div>
-            </td>
-          </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="9" class="no-data">조회 실패: ${escapeHtml(e.message)}</td></tr>`;
       }
     }
 
-    function renderTransactions(list){
+    function renderRows(list) {
       const tbody = document.getElementById('transactionTableBody');
-
       if (!list || list.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="8" class="no-data">
-              <div class="no-data-icon">💳</div>
-              <div>검색 결과가 없습니다.</div>
-            </td>
-          </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="9" class="no-data">검색 결과가 없습니다.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = list.map((it, idx) => {
-        const dep = Number(it.depositAmount || 0);
-        const wd  = Number(it.withdrawalAmount || 0);
-
-        const depositCell = dep > 0
-          ? `<td class="amount-cell deposit-cell">${dep.toLocaleString()}</td>`
-          : `<td class="amount-cell">-</td>`;
-
-        const withdrawalCell = wd > 0
-          ? `<td class="amount-cell withdrawal-cell">${wd.toLocaleString()}</td>`
-          : `<td class="amount-cell">-</td>`;
-
+        const dep = Number(it.depositAmount ?? 0);
+        const wd  = Number(it.withdrawalAmount ?? 0);
+        const bal = Number(it.balance ?? 0);
         return `
           <tr>
             <td>${idx + 1}</td>
             <td>${escapeHtml(it.bankName ?? '')}</td>
             <td>${escapeHtml(it.accountNo ?? '')}</td>
             <td>${escapeHtml(it.txDate ?? '')}</td>
-            ${depositCell}
-            ${withdrawalCell}
+            <td class="amount-cell ${dep > 0 ? 'deposit-cell' : ''}">${fmtAmt(dep)}</td>
+            <td class="amount-cell ${wd > 0 ? 'withdrawal-cell' : ''}">${fmtAmt(wd)}</td>
+            <td class="amount-cell balance-cell">${bal > 0 ? bal.toLocaleString() : '-'}</td>
             <td>${escapeHtml(it.summary ?? '')}</td>
-            <td>${escapeHtml(it.remarks ?? '')}</td>
-          </tr>
-        `;
+            <td>
+              <input class="remarks-input" type="text"
+                data-id="${it.id}"
+                value="${escapeHtml(it.remarks ?? '')}"
+                placeholder="비고 입력">
+            </td>
+          </tr>`;
       }).join('');
     }
 
-    // ===== CSV 업로드(API) - 파일 선택하면 자동 업로드 =====
+    async function saveRemarks() {
+      const inputs = document.querySelectorAll('.remarks-input');
+      if (inputs.length === 0) { alert('저장할 내역이 없습니다.'); return; }
+
+      const payload = Array.from(inputs).map(inp => ({
+        id: Number(inp.dataset.id),
+        remarks: inp.value
+      }));
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bank-transactions/remarks`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        alert('비고가 저장되었습니다.');
+      } catch (e) {
+        alert('저장 실패: ' + e.message);
+      }
+    }
+
+    async function downloadTemplate() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bank-transactions/template`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'bank_transaction_template.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('템플릿 다운로드 실패: ' + e.message);
+      }
+    }
+
     async function handleFileUpload(event) {
       const file = event.target.files[0];
       const fileNameEl = document.getElementById('fileName');
+      if (!file) { fileNameEl.textContent = '선택된 파일 없음'; return; }
 
-      if (!file) {
-        fileNameEl.textContent = '선택된 파일 없음';
-        return;
-      }
+      const bankName  = document.getElementById('uploadBankName').value.trim();
+      const accountNo = document.getElementById('uploadAccountNo').value.trim();
+
+      if (!bankName) { alert('은행명을 먼저 입력하세요.'); event.target.value = ''; return; }
+      if (!accountNo) { alert('계좌번호를 먼저 입력하세요.'); event.target.value = ''; return; }
 
       fileNameEl.textContent = file.name;
 
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        alert('CSV 파일만 업로드 가능합니다.');
+      if (!confirm(`[${bankName} / ${accountNo}]\n${file.name} 파일을 업로드할까요?`)) {
         event.target.value = '';
         fileNameEl.textContent = '선택된 파일 없음';
-        return;
-      }
-
-      if (!confirm(`${file.name} 파일을 업로드할까요?`)) {
-        event.target.value = '';
         return;
       }
 
       const fd = new FormData();
+      fd.append('bankName',  bankName);
+      fd.append('accountNo', accountNo);
       fd.append('file', file);
 
       try {
@@ -230,27 +305,15 @@
           method: 'POST',
           body: fd
         });
-        mustOk(res);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result = await res.json();
-
-        alert(
-          `업로드 완료\n\n` +
-          `batchId: ${result.batchId}\n` +
-          `파싱: ${result.parsedRows}건\n` +
-          `저장: ${result.insertedRows}건\n` +
-          `중복스킵: ${result.skippedDuplicates}건`
-        );
-
-        // 업로드 후 자동 조회
+        alert(`업로드 완료\n\n저장: ${result.insertedRows}건\n중복 제외: ${result.skippedDuplicates}건`);
         await searchTransactions();
-
-        // 파일 선택 초기화(같은 파일 재업로드 가능)
+      } catch (e) {
+        alert('업로드 실패: ' + e.message);
+      } finally {
         event.target.value = '';
         fileNameEl.textContent = '선택된 파일 없음';
-
-      } catch (e) {
-        console.error(e);
-        alert('업로드 실패: ' + e.message + '\n\n※ CSV는 UTF-8 저장 권장');
       }
     }
   </script>

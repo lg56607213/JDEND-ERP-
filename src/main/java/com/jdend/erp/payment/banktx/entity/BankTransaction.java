@@ -32,6 +32,9 @@ public class BankTransaction {
   @Column(name="withdrawal_amount", nullable=false)
   private Long withdrawalAmount;
 
+  @Column(name="balance")
+  private Long balance;
+
   @Column(name="summary", length=255)
   private String summary;
 
@@ -54,5 +57,6 @@ public class BankTransaction {
   public void prePersist(){
     if (depositAmount == null) depositAmount = 0L;
     if (withdrawalAmount == null) withdrawalAmount = 0L;
+    if (balance == null) balance = 0L;
   }
 }
