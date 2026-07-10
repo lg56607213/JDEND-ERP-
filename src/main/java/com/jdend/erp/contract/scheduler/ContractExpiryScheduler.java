@@ -5,6 +5,8 @@ import com.jdend.erp.config.DbContextHolder;
 import com.jdend.erp.contract.service.ContractExpiryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,12 @@ public class ContractExpiryScheduler {
 
     private final LoginUserRepository loginUserRepo;
     private final ContractExpiryService expiryService;
+
+    // 앱 시작 시 즉시 실행 (기존 만료 계약 일괄 처리)
+    @EventListener(ApplicationReadyEvent.class)
+    public void runOnStartup() {
+        run();
+    }
 
     // 매일 00:05 실행
     @Scheduled(cron = "0 5 0 * * *")
