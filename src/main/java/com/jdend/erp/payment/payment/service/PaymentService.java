@@ -10,7 +10,9 @@ import com.jdend.erp.payment.payment.dto.PaymentResponse;
 import com.jdend.erp.payment.payment.dto.PaymentUpsertRequest;
 import com.jdend.erp.payment.payment.entity.Payment;
 import com.jdend.erp.payment.payment.repository.PaymentRepository;
+import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,12 +21,14 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class PaymentService {
 
   private final PaymentRepository paymentRepo;
   private final ContractRepository contractRepo;
   private final VoucherRepository voucherRepository;
+  private final FinancialStatementAccountRepository accountRepo;
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -112,9 +116,19 @@ public class PaymentService {
     if (payment == null) return;
     if (payment.getPaymentAmount() == null || payment.getPaymentAmount() <= 0) return;
 
+    // 현금주의: 수납은 현금 실수령이므로 수단(현금/계좌이체/카드 등)과 무관하게 수익 전표를 생성한다.
+    // (기존에는 현금/계좌이체만 생성하여 카드 등 수납 시 수익이 누락됐음)
     String method = blankToEmpty(payment.getPaymentMethod());
-    if (!"현금".equals(method) && !"계좌이체".equals(method)) {
-      return;
+
+    // 차변 계정: 현금 수령은 '현금' 계정(존재할 때만), 그 외(이체/카드 등)는 '보통예금'.
+    // 방어적: '현금' 계정이 해당 회사에 없으면 재무제표에서 누락되므로 '보통예금'으로 폴백하고 경고를 남긴다.
+    String debitAccount = "보통예금";
+    if ("현금".equals(method)) {
+      if (accountRepo.existsByAccountName("현금")) {
+        debitAccount = "현금";
+      } else {
+        log.warn("수납 전표: '현금' 계정이 없어 '보통예금'으로 대체 계상합니다. paymentId={}", payment.getId());
+      }
     }
 
     LocalDate voucherDate = payment.getPaymentDate() != null ? payment.getPaymentDate() : LocalDate.now();
@@ -134,7 +148,7 @@ public class PaymentService {
 
     voucher.addLine(VoucherLine.builder()
         .lineType("DEBIT")
-        .accountName("보통예금")
+        .accountName(debitAccount)
         .amount(payment.getPaymentAmount())
         .description("수납등록 입금")
         .sortOrder(1)

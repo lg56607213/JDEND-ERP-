@@ -48,13 +48,39 @@ public class StatementService {
     StatementNodeResponse liability = buildRootNode(all, byParent, "LIABILITY", debit, credit);
     StatementNodeResponse equity = buildRootNode(all, byParent, "EQUITY", debit, credit);
 
+    // 당기순이익 마감: 전표상 마감분개가 없어 수익/비용이 자본으로 넘어오지 않으면
+    // 재무상태표가 '자산 = 부채 + 자본'을 만족하지 못한다(불균형 금액 = 순이익).
+    // 마감분개(전표)를 만들지 않고, 계산 시점에 누적 순이익(수익-비용, 기준일까지)을 자본에 가산해 균형을 맞춘다.
+    // (복식부기상 총차변=총대변이므로 자산 = 부채 + 자본 + (수익-비용) 이 성립한다.)
+    StatementNodeResponse revenueToDate = buildRootNode(all, byParent, "REVENUE", debit, credit);
+    StatementNodeResponse expenseToDate = buildRootNode(all, byParent, "EXPENSE", debit, credit);
+    long netIncome = revenueToDate.getAmount() - expenseToDate.getAmount();
+
+    java.util.List<StatementNodeResponse> equityChildren = new java.util.ArrayList<>(
+        equity.getChildren() != null ? equity.getChildren() : java.util.List.of());
+    equityChildren.add(StatementNodeResponse.builder()
+        .accountCode(null)
+        .accountName("당기순이익")
+        .level(2)
+        .amount(netIncome)
+        .children(java.util.List.of())
+        .build());
+
+    StatementNodeResponse equityWithNetIncome = StatementNodeResponse.builder()
+        .accountCode(equity.getAccountCode())
+        .accountName(equity.getAccountName())
+        .level(equity.getLevel())
+        .amount(equity.getAmount() + netIncome)
+        .children(equityChildren)
+        .build();
+
     return BalanceSheetResponse.builder()
         .asset(asset)
         .liability(liability)
-        .equity(equity)
+        .equity(equityWithNetIncome)
         .totalAsset(asset.getAmount())
         .totalLiability(liability.getAmount())
-        .totalEquity(equity.getAmount())
+        .totalEquity(equityWithNetIncome.getAmount())
         .build();
   }
 
