@@ -10,6 +10,7 @@ import java.util.*;
 public class VehicleOrderResponse {
 
   public String vehicleMgmtNo;
+  public String orderNo;
   public String orderStatus;
   public String makerContractNo;
   public String carModel;

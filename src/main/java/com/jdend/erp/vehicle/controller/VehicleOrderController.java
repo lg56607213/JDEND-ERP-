@@ -41,9 +41,9 @@ public class VehicleOrderController {
         return service.search(s, e, status);
     }
 
-    // 등록
+    // 등록 (1발주 N대 → 생성된 차량행 목록 반환)
     @PostMapping
-    public VehicleOrderResponse create(@RequestBody VehicleOrderRequest req) {
+    public List<VehicleOrderResponse> create(@RequestBody VehicleOrderRequest req) {
         return service.create(req);
     }
 

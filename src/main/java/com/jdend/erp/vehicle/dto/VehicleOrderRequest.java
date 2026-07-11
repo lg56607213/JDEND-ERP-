@@ -13,6 +13,14 @@ public class VehicleOrderRequest {
   public String carModel;
   public String optionName;
 
+  // ✅ S1: 1발주 N대. quantity 대수만큼 차량행 생성.
+  //    makerContractNos = 대별 제조사계약번호(각 대가 다름). 비면 makerContractNo를 공통 적용.
+  public Integer quantity;
+  public java.util.List<String> makerContractNos;
+
+  // 응답에서만 채워지는 발주번호(요청 시 무시)
+  public String orderNo;
+
   // ✅ 추가: 차량 정보
   public String modelYear;          // 연식
   public String fuelType;           // 유종

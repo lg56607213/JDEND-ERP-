@@ -31,6 +31,7 @@ public class VehicleOrderService {
     private final OtherAccountSettingsService accountSettings;
     private final VehicleSaleRepository saleRepo;
     private final ContractRepository contractRepo;
+    private final VehicleNumberGenerator numberGenerator;
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -87,7 +88,7 @@ public class VehicleOrderService {
     }
 
     @Transactional
-    public VehicleOrderResponse create(VehicleOrderRequest req) {
+    public List<VehicleOrderResponse> create(VehicleOrderRequest req) {
         if (req.carModel == null || req.carModel.isBlank()) {
             throw new RuntimeException("차종(carModel)은 필수");
         }
@@ -95,42 +96,70 @@ public class VehicleOrderService {
             throw new RuntimeException("차량가격(vehiclePrice)은 필수");
         }
 
-        String mgmtNo = generateNextMgmtNo();
+        int quantity = (req.quantity == null || req.quantity < 1) ? 1 : req.quantity;
+        if (quantity > 99) {
+            throw new RuntimeException("발주 대수는 1~99대만 가능합니다.");
+        }
 
-        VehicleOrder o = VehicleOrder.builder()
-                .vehicleMgmtNo(mgmtNo)
-                .orderStatus("발주전")
-                .makerContractNo(emptyToNull(req.makerContractNo))
-                .carModel(req.carModel)
-                .optionName(emptyToNull(req.optionName))
-                .modelYear(emptyToNull(req.modelYear))
-                .fuelType(emptyToNull(req.fuelType))
-                .displacement(req.displacement)
-                .firstRegDate(req.firstRegDate)
-                .inspectionStart(req.inspectionStart)
-                .inspectionEnd(req.inspectionEnd)
-                .vehiclePrice(nvl(req.vehiclePrice))
-                .optionPrice(nvl(req.optionPrice))
-                .orderDate(req.orderDate != null ? req.orderDate : LocalDate.now())
-                .chassisNo(emptyToNull(req.chassisNo))
-                .releasePrice(req.releasePrice)
-                .totalAdvancePrice(req.totalAdvancePrice)
-                .vehicleNo(emptyToNull(req.vehicleNo))
-                .registerDate(req.registerDate)
-                .registerFileName(emptyToNull(req.registerFileName))
-                .registerFilePath(emptyToNull(req.registerFilePath))
-                .build();
+        LocalDate orderDate = (req.orderDate != null) ? req.orderDate : LocalDate.now();
 
-        VehicleOrder saved = orderRepo.save(o);
+        // 발주번호(10자리) 채번 — N대는 같은 발주번호를 공유(그룹 헤더)
+        String orderNo = numberGenerator.nextOrderNo(orderDate);
 
-        historyRepo.save(VehicleOrderHistory.builder()
-                .vehicleOrder(saved)
-                .status(saved.getOrderStatus())
-                .changedAt(LocalDateTime.now())
-                .note("최초 등록")
-                .build());
+        List<VehicleOrderResponse> result = new ArrayList<>();
 
-        return detail(mgmtNo);
+        for (int unit = 1; unit <= quantity; unit++) {
+            // 개별 식별 핸들: 발주 시점에 13자리 차량관리번호 확정(재렌트0 + 대순번).
+            // → vehicle_mgmt_no 유니크 유지, 기존 findByVehicleMgmtNo 조회 그대로 동작.
+            String mgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unit);
+
+            VehicleOrder o = VehicleOrder.builder()
+                    .vehicleMgmtNo(mgmtNo)
+                    .orderNo(orderNo)
+                    .orderStatus("발주전")
+                    .makerContractNo(pickMakerContractNo(req, unit))
+                    .carModel(req.carModel)
+                    .optionName(emptyToNull(req.optionName))
+                    .modelYear(emptyToNull(req.modelYear))
+                    .fuelType(emptyToNull(req.fuelType))
+                    .displacement(req.displacement)
+                    .firstRegDate(req.firstRegDate)
+                    .inspectionStart(req.inspectionStart)
+                    .inspectionEnd(req.inspectionEnd)
+                    .vehiclePrice(nvl(req.vehiclePrice))
+                    .optionPrice(nvl(req.optionPrice))
+                    .orderDate(orderDate)
+                    // 차대번호/차량번호는 대별로 나중에 개별 입력. N대 동시 발주 시 공유 방지 위해 1대일 때만 반영.
+                    .chassisNo(quantity == 1 ? emptyToNull(req.chassisNo) : null)
+                    .releasePrice(req.releasePrice)
+                    .totalAdvancePrice(req.totalAdvancePrice)
+                    .vehicleNo(quantity == 1 ? emptyToNull(req.vehicleNo) : null)
+                    .registerDate(req.registerDate)
+                    .registerFileName(emptyToNull(req.registerFileName))
+                    .registerFilePath(emptyToNull(req.registerFilePath))
+                    .build();
+
+            VehicleOrder saved = orderRepo.save(o);
+
+            historyRepo.save(VehicleOrderHistory.builder()
+                    .vehicleOrder(saved)
+                    .status(saved.getOrderStatus())
+                    .changedAt(LocalDateTime.now())
+                    .note(quantity > 1 ? ("최초 등록 (" + unit + "/" + quantity + "대)") : "최초 등록")
+                    .build());
+
+            result.add(detail(mgmtNo));
+        }
+
+        return result;
+    }
+
+    // 대별 제조사계약번호 선택: makerContractNos[unit-1]가 있으면 그 값, 없으면 공통 makerContractNo.
+    private String pickMakerContractNo(VehicleOrderRequest req, int unit) {
+        if (req.makerContractNos != null && req.makerContractNos.size() >= unit) {
+            return emptyToNull(req.makerContractNos.get(unit - 1));
+        }
+        return emptyToNull(req.makerContractNo);
     }
 
     @Transactional(readOnly = true)
@@ -581,6 +610,7 @@ public class VehicleOrderService {
     private VehicleOrderResponse toSimple(VehicleOrder o) {
         return VehicleOrderResponse.builder()
                 .vehicleMgmtNo(o.getVehicleMgmtNo())
+                .orderNo(o.getOrderNo())
                 .orderStatus(o.getOrderStatus())
                 .makerContractNo(o.getMakerContractNo())
                 .carModel(o.getCarModel())
@@ -611,26 +641,5 @@ public class VehicleOrderService {
 
     private String emptyToNull(String s) {
         return (s == null || s.isBlank()) ? null : s;
-    }
-
-    private String generateNextMgmtNo() {
-        String last = orderRepo.findTopByOrderByVehicleMgmtNoDesc()
-                .map(VehicleOrder::getVehicleMgmtNo)
-                .orElse("J0000");
-
-        int num = 0;
-        try {
-            num = Integer.parseInt(last.replace("J", ""));
-        } catch (Exception ignored) {
-        }
-
-        String next = "J" + String.format("%04d", num + 1);
-
-        while (orderRepo.existsByVehicleMgmtNo(next)) {
-            num++;
-            next = "J" + String.format("%04d", num + 1);
-        }
-
-        return next;
     }
 }

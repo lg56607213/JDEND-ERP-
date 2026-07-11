@@ -15,6 +15,18 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
 
     boolean existsByVehicleMgmtNo(String vehicleMgmtNo);
 
+    // ── 번호체계(S1) 채번용 ──
+    // 같은 날짜 발주번호(J+YYMMDD+순번3) 중 가장 큰 값 → 다음 순번 계산
+    Optional<VehicleOrder> findTopByOrderNoStartingWithOrderByOrderNoDesc(String prefix);
+
+    boolean existsByOrderNo(String orderNo);
+
+    // 발주번호(10자리)로 시작하는 차량관리번호(13자리)가 이미 있는지 방어적 확인
+    boolean existsByVehicleMgmtNoStartingWith(String prefix);
+
+    // 같은 발주(발주번호)로 묶인 N대 조회
+    List<VehicleOrder> findByOrderNoOrderByVehicleMgmtNoAsc(String orderNo);
+
     List<VehicleOrder> findByOrderDateBetween(LocalDate start, LocalDate end);
 
     List<VehicleOrder> findByOrderStatus(String status);

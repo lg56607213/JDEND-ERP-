@@ -157,6 +157,7 @@
           <thead>
             <tr style="background:#f5f5f5;">
               <th style="padding:10px; border-bottom:1px solid #ddd;">차량관리번호</th>
+              <th style="padding:10px; border-bottom:1px solid #ddd;">제조사계약번호</th>
               <th style="padding:10px; border-bottom:1px solid #ddd;">차종</th>
               <th style="padding:10px; border-bottom:1px solid #ddd;">차량번호</th>
               <th style="padding:10px; border-bottom:1px solid #ddd;">발주일자</th>
@@ -583,6 +584,7 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleMgmtNo ?? '')}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.makerContractNo ?? '')}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.carModel ?? '')}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleNo ?? '')}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${v.orderDate ?? ''}</td>
