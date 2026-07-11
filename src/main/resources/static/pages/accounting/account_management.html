@@ -15,6 +15,7 @@
   <div class="page-header">
     <h1>기타계정관리</h1>
     <p>회계관리 &gt; 계정관리 &gt; 기타계정관리</p>
+    <p class="page-note">계정 목록은 <b>재무제표관리</b>에 등록된 계정에서 자동으로 불러옵니다. 등록된 계정만 선택·저장할 수 있습니다.</p>
   </div>
 
   <div class="erp-card">
@@ -23,148 +24,11 @@
       <!-- 선급관리 계정분류 -->
       <div class="form-section">
         <h3 class="section-title">선급관리 계정분류</h3>
+        <p class="section-note">미지정 항목은 기본값 <b>차량운반구</b>로 처리됩니다.</p>
 
-        <div class="prepaid-grid" id="prepaidAccountBody">
-          <!-- 아래는 “기본 템플릿” (JS가 DB값 있으면 덮어씀) -->
-          <div class="prepaid-item" data-key="차량가격">
-            <label class="prepaid-label">차량가격</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="1010">현금</option>
-                <option value="1020">보통예금</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="메이커탁송료">
-            <label class="prepaid-label">메이커탁송료</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="1010">현금</option>
-                <option value="1020">보통예금</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="취득세">
-            <label class="prepaid-label">취득세</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="5010" />
-              <select class="account-select">
-                <option value="2010">선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="1010">현금</option>
-                <option value="1020">보통예금</option>
-                <option value="5010" selected>세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="인지세">
-            <label class="prepaid-label">인지세</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="5020" />
-              <select class="account-select">
-                <option value="2010">선급렌트자산</option>
-                <option value="5010">세금과공과</option>
-                <option value="5020" selected>인지세</option>
-                <option value="5030">기타비용</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="번호판대">
-            <label class="prepaid-label">번호판대</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="보조번호판대">
-            <label class="prepaid-label">보조번호판대</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="공채매입금액">
-            <label class="prepaid-label">공채매입금액</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="3020" />
-              <select class="account-select">
-                <option value="2010">선급렌트자산</option>
-                <option value="3010">단기투자상품</option>
-                <option value="3020" selected>장기투자상품</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="공채할인금액">
-            <label class="prepaid-label">공채할인금액</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="5010" />
-              <select class="account-select">
-                <option value="2010">선급렌트자산</option>
-                <option value="5010" selected>세금과공과</option>
-                <option value="5030">기타비용</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="등록대행비">
-            <label class="prepaid-label">등록대행비</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="탁송료">
-            <label class="prepaid-label">탁송료</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="5010">세금과공과</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="prepaid-item" data-key="기타비용">
-            <label class="prepaid-label">기타비용</label>
-            <div class="prepaid-inputs">
-              <input type="text" class="account-code" value="2010" />
-              <select class="account-select">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="2020">선급비용</option>
-                <option value="5030">기타비용</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <!-- prepaid-item 들은 JS(renderPrepaidItems)가 재무제표 계정 목록으로 채웁니다.
+             항목명은 차량선급 입력화면(vehicle_advance.html)의 항목명과 반드시 일치해야 합니다. -->
+        <div class="prepaid-grid" id="prepaidAccountBody"></div>
       </div>
 
       <!-- 차량관리 실행 -->
@@ -174,24 +38,16 @@
           <div class="mapping-item">
             <label>차변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="vehicleDebitCode" value="1110" placeholder="계정코드">
-              <select class="account-select" id="vehicleDebitAccount">
-                <option value="1110" selected>차량운반구</option>
-                <option value="1120">비품</option>
-                <option value="2010">선급렌트자산</option>
-              </select>
+              <input type="text" class="account-code" id="vehicleDebitCode" placeholder="계정코드">
+              <select class="account-select" id="vehicleDebitAccount" data-default-name="차량운반구"></select>
             </div>
           </div>
           <div class="mapping-arrow">→</div>
           <div class="mapping-item">
             <label>대변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="vehicleCreditCode" value="2010" placeholder="계정코드">
-              <select class="account-select" id="vehicleCreditAccount">
-                <option value="2010" selected>선급렌트자산</option>
-                <option value="1020">보통예금</option>
-                <option value="2020">선급비용</option>
-              </select>
+              <input type="text" class="account-code" id="vehicleCreditCode" placeholder="계정코드">
+              <select class="account-select" id="vehicleCreditAccount" data-default-name="미지급금"></select>
             </div>
           </div>
         </div>
@@ -204,36 +60,24 @@
           <div class="mapping-item">
             <label>차변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="loanDebitCode1" value="4010" placeholder="계정코드">
-              <select class="account-select" id="loanDebitAccount1">
-                <option value="4010" selected>장기차입금</option>
-                <option value="4020">단기차입금</option>
-                <option value="4030">유동성장기차입금</option>
-              </select>
+              <input type="text" class="account-code" id="loanDebitCode1" placeholder="계정코드">
+              <select class="account-select" id="loanDebitAccount1" data-default-name="차입금"></select>
             </div>
             <div class="account-input-group" style="margin-top: 10px;">
-              <input type="text" class="account-code" id="loanDebitCode2" value="5040" placeholder="계정코드">
-              <select class="account-select" id="loanDebitAccount2">
-                <option value="5040" selected>장기차입이자</option>
-                <option value="5050">단기차입이자</option>
-                <option value="5060">이자비용</option>
-              </select>
+              <input type="text" class="account-code" id="loanDebitCode2" placeholder="계정코드">
+              <select class="account-select" id="loanDebitAccount2" data-default-name="이자비용"></select>
             </div>
           </div>
           <div class="mapping-arrow">→</div>
           <div class="mapping-item">
             <label>대변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="loanCreditCode" value="1020" placeholder="계정코드">
-              <select class="account-select" id="loanCreditAccount">
-                <option value="1010">현금</option>
-                <option value="1020" selected>보통예금</option>
-                <option value="1030">정기예금</option>
-              </select>
+              <input type="text" class="account-code" id="loanCreditCode" placeholder="계정코드">
+              <select class="account-select" id="loanCreditAccount" data-default-name="보통예금"></select>
             </div>
             <div class="account-input-group" style="margin-top: 10px;">
               <label class="sub-label">계좌번호</label>
-              <select class="account-select" id="loanBankAccount">
+              <select class="bank-select" id="loanBankAccount">
                 <option value="">선택하세요</option>
                 <option value="KB_6062">국민6062계좌</option>
                 <option value="KB_6065">국민6065계좌</option>
@@ -252,28 +96,20 @@
           <div class="mapping-item">
             <label>차변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="inspectionDebitCode" value="5070" placeholder="계정코드">
-              <select class="account-select" id="inspectionDebitAccount">
-                <option value="5070" selected>차량유지비</option>
-                <option value="5080">수선비</option>
-                <option value="5090">소모품비</option>
-              </select>
+              <input type="text" class="account-code" id="inspectionDebitCode" placeholder="계정코드">
+              <select class="account-select" id="inspectionDebitAccount" data-default-name="차량유지비"></select>
             </div>
           </div>
           <div class="mapping-arrow">→</div>
           <div class="mapping-item">
             <label>대변</label>
             <div class="account-input-group">
-              <input type="text" class="account-code" id="inspectionCreditCode" value="1020" placeholder="계정코드">
-              <select class="account-select" id="inspectionCreditAccount">
-                <option value="1010">현금</option>
-                <option value="1020" selected>보통예금</option>
-                <option value="1030">정기예금</option>
-              </select>
+              <input type="text" class="account-code" id="inspectionCreditCode" placeholder="계정코드">
+              <select class="account-select" id="inspectionCreditAccount" data-default-name="보통예금"></select>
             </div>
             <div class="account-input-group" style="margin-top: 10px;">
               <label class="sub-label">계좌번호</label>
-              <select class="account-select" id="inspectionBankAccount">
+              <select class="bank-select" id="inspectionBankAccount">
                 <option value="">선택하세요</option>
                 <option value="KB_6062">국민6062계좌</option>
                 <option value="KB_6065">국민6065계좌</option>
@@ -297,11 +133,10 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
-<!-- ❌ http.js 제거 -->
 
 <script>
   // =========================
-  // ✅ API_BASE_URL(fetch) 기반 공통
+  // ✅ 공통 fetch
   // =========================
   function apiBase() {
     return (window.API_BASE_URL || "").replace(/\/$/, "");
@@ -313,8 +148,6 @@
       const ct = res.headers.get("content-type") || "";
       return ct.includes("application/json") ? res.json() : res.text();
     }
-
-    // 에러 바디 최대한 읽어서 보여줌
     let body = "";
     try { body = await res.text(); } catch (_) {}
     throw new Error(`HTTP ${res.status} - ${body || "요청 실패"}`);
@@ -322,16 +155,11 @@
 
   async function getJson(path) {
     const url = apiBase() + path;
-    console.log("GET:", url);
-    return request(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" }
-    });
+    return request(url, { method: "GET", headers: { "Content-Type": "application/json" } });
   }
 
   async function putJson(path, body) {
     const url = apiBase() + path;
-    console.log("PUT:", url, body);
     return request(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -340,19 +168,81 @@
   }
 
   // =========================
-  // ✅ 화면 로직(기존 그대로)
+  // ✅ 선급 항목 목록
+  //   ⚠ 반드시 차량선급 입력화면(vehicle_advance.html)의 항목명과 동일해야
+  //   VehicleAdvanceService.mapItemNameToDebitAccount 매칭이 됩니다.
   // =========================
+  const PREPAID_ITEMS = [
+    "차량가격", "메이커탁송료", "취득세", "인지대",
+    "번호판대", "보조번호판대", "공채매입금액", "공채할인금액",
+    "등록대행비", "탁송료", "외주장착비용", "기타비용"
+  ];
 
-  // 계정코드 변경 시 분류계정 자동 선택
+  // 재무제표관리에서 불러온 말단계정 목록 (leaves)
+  let ACCOUNTS = []; // [{accountCode, accountName}, ...]
+
+  // =========================
+  // ✅ 렌더링
+  // =========================
+  function renderPrepaidItems() {
+    const box = document.getElementById("prepaidAccountBody");
+    box.innerHTML = "";
+    PREPAID_ITEMS.forEach(name => {
+      const item = document.createElement("div");
+      item.className = "prepaid-item";
+      item.setAttribute("data-key", name);
+      item.innerHTML =
+        `<label class="prepaid-label">${name}</label>` +
+        `<div class="prepaid-inputs">` +
+        `  <input type="text" class="account-code" placeholder="계정코드" />` +
+        `  <select class="account-select"></select>` +
+        `</div>`;
+      box.appendChild(item);
+    });
+  }
+
+  function buildOptionsHtml(placeholder) {
+    let html = `<option value="">${placeholder}</option>`;
+    ACCOUNTS.forEach(a => {
+      const code = a.accountCode ?? "";
+      const nm = a.accountName ?? "";
+      // value=계정코드, 표시/저장 텍스트=계정명 (accountName 매칭용이므로 텍스트에 코드 섞지 않음)
+      html += `<option value="${code}" title="${code}">${nm}</option>`;
+    });
+    return html;
+  }
+
+  // 모든 계정 select(.account-select) 를 재무제표 계정 목록으로 채움 (은행계좌 select 은 제외 = .bank-select)
+  function populateAccountSelects() {
+    document.querySelectorAll(".account-select").forEach(sel => {
+      const isPrepaid = !!sel.closest("#prepaidAccountBody");
+      const placeholder = isPrepaid ? "미지정 (기본: 차량운반구)" : "선택";
+      sel.innerHTML = buildOptionsHtml(placeholder);
+
+      // 기본 계정명(data-default-name)이 목록에 있으면 미리 선택
+      const defName = sel.getAttribute("data-default-name");
+      if (defName) {
+        const opt = Array.from(sel.options).find(o => o.textContent.trim() === defName);
+        if (opt) {
+          sel.value = opt.value;
+          const input = sel.closest(".account-input-group")?.querySelector(".account-code");
+          if (input) input.value = opt.value;
+        }
+      }
+    });
+  }
+
+  // 계정코드 입력 ↔ 계정 select 동기화
   function wireSync() {
     document.querySelectorAll('.account-code').forEach(input => {
       input.addEventListener('change', function () {
         const row = this.closest('.prepaid-item') || this.closest('.account-input-group');
-        const select = row.querySelector('.account-select');
+        const select = row?.querySelector('.account-select');
         if (select) {
           const code = this.value.trim();
           const option = select.querySelector(`option[value="${code}"]`);
           if (option) select.value = code;
+          else this.value = ""; // 등록된 계정코드가 아니면 되돌림
         }
       });
     });
@@ -360,7 +250,7 @@
     document.querySelectorAll('.account-select').forEach(select => {
       select.addEventListener('change', function () {
         const row = this.closest('.prepaid-item') || this.closest('.account-input-group');
-        const input = row.querySelector('.account-code');
+        const input = row?.querySelector('.account-code');
         if (input) input.value = this.value;
       });
     });
@@ -412,59 +302,69 @@
     return { prepaidAccounts, vehicleMapping, loanMapping, inspectionMapping };
   }
 
+  function applySelect(id, code) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (code && el.querySelector(`option[value="${code}"]`)) {
+      el.value = code;
+      const input = el.closest(".account-input-group")?.querySelector(".account-code");
+      if (input) input.value = code;
+    }
+  }
+
   function applySettings(settings) {
     if (!settings) return;
 
-    // 선급 분류
+    // 선급 분류 (항목명 기준 매칭)
     if (Array.isArray(settings.prepaidAccounts)) {
       const map = new Map(settings.prepaidAccounts.map(x => [x.name, x]));
       document.querySelectorAll('#prepaidAccountBody .prepaid-item').forEach(item => {
         const name = item.querySelector('.prepaid-label').textContent.trim();
         const saved = map.get(name);
-        if (saved) {
-          item.querySelector('.account-code').value = saved.code ?? "";
+        if (saved && saved.account) {
           const sel = item.querySelector('.account-select');
-          if (sel.querySelector(`option[value="${saved.account}"]`)) sel.value = saved.account;
+          if (sel.querySelector(`option[value="${saved.account}"]`)) {
+            sel.value = saved.account;
+            item.querySelector('.account-code').value = saved.account;
+          }
         }
       });
     }
 
     // 차량관리 실행
     if (settings.vehicleMapping) {
-      document.getElementById('vehicleDebitCode').value = settings.vehicleMapping.debit?.code ?? "";
-      document.getElementById('vehicleDebitAccount').value = settings.vehicleMapping.debit?.account ?? document.getElementById('vehicleDebitAccount').value;
-      document.getElementById('vehicleCreditCode').value = settings.vehicleMapping.credit?.code ?? "";
-      document.getElementById('vehicleCreditAccount').value = settings.vehicleMapping.credit?.account ?? document.getElementById('vehicleCreditAccount').value;
+      applySelect('vehicleDebitAccount',  settings.vehicleMapping.debit?.account);
+      applySelect('vehicleCreditAccount', settings.vehicleMapping.credit?.account);
     }
 
     // 차입금상환
     if (settings.loanMapping) {
-      document.getElementById('loanDebitCode1').value = settings.loanMapping.debit1?.code ?? "";
-      document.getElementById('loanDebitAccount1').value = settings.loanMapping.debit1?.account ?? document.getElementById('loanDebitAccount1').value;
-
-      document.getElementById('loanDebitCode2').value = settings.loanMapping.debit2?.code ?? "";
-      document.getElementById('loanDebitAccount2').value = settings.loanMapping.debit2?.account ?? document.getElementById('loanDebitAccount2').value;
-
-      document.getElementById('loanCreditCode').value = settings.loanMapping.credit?.code ?? "";
-      document.getElementById('loanCreditAccount').value = settings.loanMapping.credit?.account ?? document.getElementById('loanCreditAccount').value;
-      document.getElementById('loanBankAccount').value = settings.loanMapping.credit?.bankAccount ?? "";
+      applySelect('loanDebitAccount1', settings.loanMapping.debit1?.account);
+      applySelect('loanDebitAccount2', settings.loanMapping.debit2?.account);
+      applySelect('loanCreditAccount', settings.loanMapping.credit?.account);
+      const bank = document.getElementById('loanBankAccount');
+      if (bank) bank.value = settings.loanMapping.credit?.bankAccount ?? "";
     }
 
     // 정기검사
     if (settings.inspectionMapping) {
-      document.getElementById('inspectionDebitCode').value = settings.inspectionMapping.debit?.code ?? "";
-      document.getElementById('inspectionDebitAccount').value = settings.inspectionMapping.debit?.account ?? document.getElementById('inspectionDebitAccount').value;
-
-      document.getElementById('inspectionCreditCode').value = settings.inspectionMapping.credit?.code ?? "";
-      document.getElementById('inspectionCreditAccount').value = settings.inspectionMapping.credit?.account ?? document.getElementById('inspectionCreditAccount').value;
-      document.getElementById('inspectionBankAccount').value = settings.inspectionMapping.credit?.bankAccount ?? "";
+      applySelect('inspectionDebitAccount',  settings.inspectionMapping.debit?.account);
+      applySelect('inspectionCreditAccount', settings.inspectionMapping.credit?.account);
+      const bank = document.getElementById('inspectionBankAccount');
+      if (bank) bank.value = settings.inspectionMapping.credit?.bankAccount ?? "";
     }
+  }
+
+  async function loadAccounts() {
+    // 재무제표관리 말단계정(등록·사용 계정) 목록
+    const data = await getJson("/api/financial-statement-accounts/leaves");
+    ACCOUNTS = Array.isArray(data) ? data : [];
+    populateAccountSelects();
   }
 
   async function loadSettings() {
     try {
       const data = await getJson("/api/accounting/other-account-settings");
-      // 서버 응답이 {settings:{...}} 형태라는 가정
       applySettings(data?.settings);
     } catch (e) {
       console.warn("설정 로드 실패(처음이면 정상):", e.message);
@@ -481,9 +381,15 @@
     }
   }
 
-  window.addEventListener("load", () => {
+  window.addEventListener("load", async () => {
+    renderPrepaidItems();
+    try {
+      await loadAccounts();
+    } catch (e) {
+      alert("계정 목록을 불러오지 못했습니다. 재무제표관리 계정 등록 상태를 확인하세요.\n" + e.message);
+    }
     wireSync();
-    loadSettings();
+    await loadSettings();
   });
 </script>
 </body>

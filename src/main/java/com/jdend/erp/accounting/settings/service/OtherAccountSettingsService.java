@@ -5,10 +5,12 @@ import com.jdend.erp.accounting.settings.dto.OtherAccountSettingsRequest;
 import com.jdend.erp.accounting.settings.dto.OtherAccountSettingsResponse;
 import com.jdend.erp.accounting.settings.entity.OtherAccountSettings;
 import com.jdend.erp.accounting.settings.repository.OtherAccountSettingsRepository;
+import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,7 @@ import java.util.Map;
 public class OtherAccountSettingsService {
 
   private final OtherAccountSettingsRepository repo;
+  private final FinancialStatementAccountRepository fsAccountRepo;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Transactional(readOnly = true)
@@ -102,6 +105,8 @@ public class OtherAccountSettingsService {
 
   @Transactional
   public OtherAccountSettingsResponse save(OtherAccountSettingsRequest req) {
+    // 재무제표관리에 등록된 계정만 저장 허용 (단일 진실: financial_statement_accounts)
+    validateAccountCodesExist(req.getSettings());
     try {
       String json = objectMapper.writeValueAsString(req.getSettings());
       OtherAccountSettings saved = repo.save(
@@ -111,6 +116,37 @@ public class OtherAccountSettingsService {
       return OtherAccountSettingsResponse.builder().settings(obj).build();
     } catch (Exception e) {
       throw new IllegalArgumentException("설정 저장 JSON 변환 실패: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * settings 안의 모든 계정코드("account" 키)가 재무제표관리에 실제 존재하는지 검증.
+   * 비어있는 값(미지정)은 통과, 존재하지 않는 코드가 하나라도 있으면 저장 거부.
+   * (은행계좌 select 값은 "bankAccount" 키라 검증 대상이 아님)
+   */
+  private void validateAccountCodesExist(Object settings) {
+    List<String> invalid = new ArrayList<>();
+    collectAndCheckAccountCodes(settings, invalid);
+    if (!invalid.isEmpty()) {
+      throw new IllegalArgumentException(
+          "재무제표관리에 등록되지 않은 계정코드입니다: " + String.join(", ", invalid)
+              + " — 재무제표관리에 등록된 계정만 선택할 수 있습니다.");
+    }
+  }
+
+  private void collectAndCheckAccountCodes(Object node, List<String> invalid) {
+    if (node instanceof Map) {
+      Map<?, ?> m = (Map<?, ?>) node;
+      Object acc = m.get("account");
+      if (acc instanceof String) {
+        String code = ((String) acc).trim();
+        if (!code.isEmpty() && !invalid.contains(code) && !fsAccountRepo.existsByAccountCode(code)) {
+          invalid.add(code);
+        }
+      }
+      for (Object v : m.values()) collectAndCheckAccountCodes(v, invalid);
+    } else if (node instanceof List) {
+      for (Object v : (List<?>) node) collectAndCheckAccountCodes(v, invalid);
     }
   }
 }
