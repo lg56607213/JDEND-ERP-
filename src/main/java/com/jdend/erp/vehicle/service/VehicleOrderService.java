@@ -106,13 +106,13 @@ public class VehicleOrderService {
         // 발주번호(10자리) 채번 — N대는 같은 발주번호를 공유(그룹 헤더)
         String orderNo = numberGenerator.nextOrderNo(orderDate);
 
+        // Phase 2 v5: 발주(미실행) 차량관리번호 = 발주번호 + "000". N대 모두 동일값 공유.
+        // 개별 식별은 행 PK(id)로 하며, 실번호(…001,…002)는 실행(S3)에서 확정한다.
+        String mgmtNo = VehicleNumberGenerator.buildOrderStageMgmtNo(orderNo);
+
         List<VehicleOrderResponse> result = new ArrayList<>();
 
         for (int unit = 1; unit <= quantity; unit++) {
-            // 개별 식별 핸들: 발주 시점에 13자리 차량관리번호 확정(재렌트0 + 대순번).
-            // → vehicle_mgmt_no 유니크 유지, 기존 findByVehicleMgmtNo 조회 그대로 동작.
-            String mgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unit);
-
             VehicleOrder o = VehicleOrder.builder()
                     .vehicleMgmtNo(mgmtNo)
                     .orderNo(orderNo)
@@ -148,7 +148,8 @@ public class VehicleOrderService {
                     .note(quantity > 1 ? ("최초 등록 (" + unit + "/" + quantity + "대)") : "최초 등록")
                     .build());
 
-            result.add(detail(mgmtNo));
+            // …000은 N행 공유값이라 mgmtNo로 되조회하면 NonUnique → 저장된 엔티티(id)로 응답 구성
+            result.add(buildDetailResponse(saved));
         }
 
         return result;
@@ -164,9 +165,21 @@ public class VehicleOrderService {
 
     @Transactional(readOnly = true)
     public VehicleOrderResponse detail(String mgmtNo) {
+        // 주의: 발주(미실행) …000은 공유값이라 여러 행이면 NonUnique. 실행 후 유니크 번호에만 안전.
         VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
+        return buildDetailResponse(o);
+    }
 
+    // 발주~선급(pre-실행) 단계 단건 조회는 행 PK(id)로 특정한다(…000 공유 대비).
+    @Transactional(readOnly = true)
+    public VehicleOrderResponse detailById(Long id) {
+        VehicleOrder o = orderRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("차량 없음(id): " + id));
+        return buildDetailResponse(o);
+    }
+
+    private VehicleOrderResponse buildDetailResponse(VehicleOrder o) {
         List<VehicleOrderResponse.HistoryItem> history = historyRepo
                 .findByVehicleOrder_IdOrderByChangedAtAsc(o.getId())
                 .stream()
@@ -191,9 +204,21 @@ public class VehicleOrderService {
     // req에 들어온 값만 수정하고, 안 들어온 값은 기존 DB 값을 그대로 유지함.
     @Transactional
     public VehicleOrderResponse update(String mgmtNo, VehicleOrderRequest req) {
+        // 주의: 발주(미실행) …000 공유값에는 부적합(NonUnique). 실행 후 유니크 번호에만 사용.
         VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
+        return applyUpdate(o, req);
+    }
 
+    // 발주~선급(pre-실행) 단계 수정은 행 PK(id)로 특정(…000 공유 대비).
+    @Transactional
+    public VehicleOrderResponse updateById(Long id, VehicleOrderRequest req) {
+        VehicleOrder o = orderRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("차량 없음(id): " + id));
+        return applyUpdate(o, req);
+    }
+
+    private VehicleOrderResponse applyUpdate(VehicleOrder o, VehicleOrderRequest req) {
         String oldStatus = o.getOrderStatus();
 
         if (req.orderStatus != null && !req.orderStatus.isBlank()) {
@@ -289,7 +314,7 @@ public class VehicleOrderService {
                     .build());
         }
 
-        return detail(mgmtNo);
+        return buildDetailResponse(o);
     }
 
     @Transactional
@@ -609,6 +634,7 @@ public class VehicleOrderService {
 
     private VehicleOrderResponse toSimple(VehicleOrder o) {
         return VehicleOrderResponse.builder()
+                .id(o.getId())
                 .vehicleMgmtNo(o.getVehicleMgmtNo())
                 .orderNo(o.getOrderNo())
                 .orderStatus(o.getOrderStatus())

@@ -307,8 +307,9 @@
       alert('선급등록은 차량 1대만 선택한 상태에서 진행할 수 있습니다.');
       return;
     }
-    const mgmtNo = checked[0].value;
-    window.location.href = 'vehicle_advance.html?id=' + encodeURIComponent(mgmtNo);
+    // …000 공유값 대비: 해당 차량 행 PK(id)로 선급화면 이동
+    const rowId = checked[0].value;
+    window.location.href = 'vehicle_advance.html?id=' + encodeURIComponent(rowId);
   }
 
   function showStatusView() {
@@ -410,12 +411,12 @@
         : (vehiclePrice + optionPrice);
 
       return `
-        <tr onclick="viewDetail('${item.vehicleMgmtNo}')">
+        <tr onclick="viewDetail('${item.id}')">
           <td class="checkbox-cell" onclick="event.stopPropagation()">
             <input
               type="checkbox"
               class="row-check"
-              value="${item.vehicleMgmtNo ?? ''}"
+              value="${item.id ?? ''}"
               onchange="updateSelectedCount()"
             >
           </td>
@@ -439,8 +440,9 @@
     }).join('');
   }
 
-  function viewDetail(vehicleMgmtNo) {
-    window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(vehicleMgmtNo);
+  // 발주~선급 pre-실행 단계는 …000 공유값이라 행 PK(id)로 상세 이동
+  function viewDetail(rowId) {
+    window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(rowId);
   }
 
   function toggleAllRows(source) {
@@ -493,9 +495,10 @@
     let successCount = 0;
     let failItems = [];
 
-    for (const mgmtNo of ids) {
+    for (const rowId of ids) {
       try {
-        const res = await fetch(`${API_BASE}/${encodeURIComponent(mgmtNo)}`, {
+        // …000 공유값 대비: 행 PK(id) 기반 수정 엔드포인트 사용
+        const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(rowId)}`, {
           method: 'PUT',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -504,10 +507,10 @@
         if (res.ok) {
           successCount++;
         } else {
-          failItems.push(mgmtNo);
+          failItems.push(rowId);
         }
       } catch {
-        failItems.push(mgmtNo);
+        failItems.push(rowId);
       }
     }
 

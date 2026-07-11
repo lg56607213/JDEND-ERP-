@@ -146,7 +146,7 @@
         const statusLabel = item.orderStatus ?? '-';
         const statusClass = getStatusClass(statusLabel);
         return `
-          <tr onclick="viewDetail('${escHtml(item.vehicleMgmtNo)}')">
+          <tr onclick="viewDetail('${item.id}')">
             <td>${index + 1}</td>
             <td><span class="status-badge ${statusClass}">${escHtml(statusLabel)}</span></td>
             <td>${escHtml(item.vehicleMgmtNo ?? '-')}</td>
@@ -171,8 +171,9 @@
       window.location.href = 'vehicle_order.html';
     }
 
-    function viewDetail(vehicleMgmtNo) {
-      window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(vehicleMgmtNo);
+    // Phase 2 v5: 상세 이동은 행 PK(id) 기반 (…000 공유값 대비)
+    function viewDetail(rowId) {
+      window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(rowId);
     }
   </script>
 </body>

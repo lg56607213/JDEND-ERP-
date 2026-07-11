@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 차량 번호체계 채번 유틸 (Phase 2 - S1).
@@ -34,6 +36,11 @@ public class VehicleNumberGenerator {
 
     private final VehicleOrderRepository orderRepo;
 
+    // 같은 날짜(prefix)에 이 인스턴스가 마지막으로 발급한 발주순번.
+    // v5로 vehicle_mgmt_no UNIQUE 를 제거해 DB 레벨 충돌 방어가 사라졌으므로,
+    // 커밋 전이라 DB max 가 아직 반영되지 않는 동시 발주 구간을 인메모리로 메운다(단일 인스턴스 보장).
+    private final Map<String, Integer> lastSeqByPrefix = new HashMap<>();
+
     /**
      * 해당 날짜의 다음 발주번호(10자리)를 채번한다. 같은 날짜의 마지막 발주순번 + 1.
      */
@@ -41,9 +48,11 @@ public class VehicleNumberGenerator {
         LocalDate d = (date != null) ? date : LocalDate.now();
         String prefix = "J" + d.format(YYMMDD); // J + 6자리 = 7자리
 
-        int seq = orderRepo.findTopByOrderNoStartingWithOrderByOrderNoDesc(prefix)
+        int dbMax = orderRepo.findTopByOrderNoStartingWithOrderByOrderNoDesc(prefix)
                 .map(o -> parseOrderSeq(o.getOrderNo()))
-                .orElse(0) + 1;
+                .orElse(0);
+        int cached = lastSeqByPrefix.getOrDefault(prefix, 0);
+        int seq = Math.max(dbMax, cached) + 1;
 
         String candidate = prefix + String.format("%03d", seq);
 
@@ -54,7 +63,22 @@ public class VehicleNumberGenerator {
             candidate = prefix + String.format("%03d", seq);
         }
 
+        lastSeqByPrefix.put(prefix, seq);
         return candidate;
+    }
+
+    /** 발주(미실행) 상태 마커: 끝 3자리 000. */
+    public static final String ORDER_STAGE_SUFFIX = "000";
+
+    /**
+     * 발주(미실행) 단계 차량관리번호(13자리) = 발주번호 + "000".
+     * N대 발주면 모든 행이 이 동일값을 공유(제조사계약번호로 구분). 실행(S3) 시 실번호로 확정.
+     */
+    public static String buildOrderStageMgmtNo(String orderNo) {
+        if (orderNo == null || orderNo.length() != 10) {
+            throw new IllegalArgumentException("발주번호는 10자리여야 합니다: " + orderNo);
+        }
+        return orderNo + ORDER_STAGE_SUFFIX;
     }
 
     /**

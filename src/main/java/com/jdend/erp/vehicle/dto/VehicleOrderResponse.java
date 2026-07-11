@@ -9,6 +9,7 @@ import java.util.*;
 @Builder
 public class VehicleOrderResponse {
 
+  public Long id;               // 행 PK — 발주~선급(pre-실행) 단계 단건 특정용 (…000 공유 대비)
   public String vehicleMgmtNo;
   public String orderNo;
   public String orderStatus;

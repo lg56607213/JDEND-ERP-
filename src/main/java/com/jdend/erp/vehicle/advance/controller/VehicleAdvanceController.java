@@ -22,10 +22,23 @@ public class VehicleAdvanceController {
     return service.list(mgmtNo);
   }
 
+  // 발주~선급(pre-실행) 단계 — 행 PK 기반 (…000 공유값 대비)
+  @GetMapping("/by-id/{id}/advances")
+  public List<VehicleAdvanceRowDto> listById(@PathVariable Long id) {
+    return service.listById(id);
+  }
+
+  @PutMapping("/by-id/{id}/advances")
+  public Map<String, Object> saveAllById(@PathVariable Long id, @RequestBody VehicleAdvanceSaveRequest req) {
+    return toResult(service.saveAllById(id, req));
+  }
+
   @PutMapping("/{mgmtNo}/advances")
   public Map<String, Object> saveAll(@PathVariable String mgmtNo, @RequestBody VehicleAdvanceSaveRequest req) {
-    int voucherCreatedCount = service.saveAll(mgmtNo, req);
+    return toResult(service.saveAll(mgmtNo, req));
+  }
 
+  private Map<String, Object> toResult(int voucherCreatedCount) {
     return Map.of(
       "message", voucherCreatedCount > 0
         ? "선급금 정보가 저장되었습니다. 전표가 발생했습니다."

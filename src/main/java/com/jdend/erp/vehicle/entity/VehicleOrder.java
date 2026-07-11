@@ -15,11 +15,13 @@ public class VehicleOrder {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name="vehicle_mgmt_no", nullable=false, unique=true, length=20)
+  // Phase 2 v5: 발주(미실행)=끝 3자리 000. N대 발주면 N행 모두 '...000' 동일값을 공유하므로
+  // UNIQUE 제약을 두지 않는다(실행 후 유니크한 13자리는 실행 로직/앱에서 보장 — S3).
+  // 발주~선급(pre-실행) 단계 단건 특정은 행 PK(id)로 한다.
+  @Column(name="vehicle_mgmt_no", nullable=false, length=20)
   private String vehicleMgmtNo;
 
   // 발주번호(10자리, J+YYMMDD+발주순번3). 1발주=N대일 때 N개 행이 같은 값을 공유하는 그룹 헤더.
-  // (개별 식별은 vehicle_mgmt_no 13자리로 함 → 유니크·findByVehicleMgmtNo 유지)
   @Column(name="order_no", length=10)
   private String orderNo;
 

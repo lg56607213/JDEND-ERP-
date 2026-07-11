@@ -295,6 +295,7 @@
   const API_BASE = `${API_BASE_URL}/api/vehicle-orders`;
   
   const urlParams = new URLSearchParams(window.location.search);
+  // Phase 2 v5: id 파라미터 = 차량 행 PK (…000 공유값 대비, 발주~선급 pre-실행 단계 단건 특정)
   const vehicleId = urlParams.get('id');
 
   const vehicleDetailSection = document.getElementById('vehicleDetailSection');
@@ -369,7 +370,7 @@
   }
 
   async function fetchDetail() {
-    const res = await fetch(`${API_BASE}/${vehicleId}`);
+    const res = await fetch(`${API_BASE}/by-id/${vehicleId}`);
     if (!res.ok) return alert("상세 조회 실패: " + res.status);
     currentData = await res.json();
     loadVehicleDetail();
@@ -511,7 +512,7 @@
       registerDate: document.getElementById('editRegisterDate').value || null
     };
 
-    const res = await fetch(`${API_BASE}/${vehicleId}`, {
+    const res = await fetch(`${API_BASE}/by-id/${vehicleId}`, {
       method: "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(payload)

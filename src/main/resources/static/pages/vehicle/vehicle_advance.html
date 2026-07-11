@@ -178,6 +178,9 @@
   let rowCount = 0;
   let myBankAccounts = [];
   let myCorporateCards = [];
+  // Phase 2 v5: 발주(미실행)=…000 공유값이라 차량관리번호로는 단건 특정 불가.
+  // 저장/선급조회는 항상 이 행 PK(id)로 한다. 어떤 경로로 로드해도 여기에 세팅한다.
+  let selectedVehicleId = null;
 
   async function loadMyInfoAccounts() {
     try {
@@ -287,10 +290,10 @@
     addRow();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('id');
-    if (id) {
-      document.getElementById('vehicleManagementNumber').value = id;
-      await loadVehicleInfo();
+    // id 파라미터 = 차량 행 PK (발주화면 선급등록 버튼/검색선택에서 전달)
+    const rowId = urlParams.get('id');
+    if (rowId) {
+      await loadVehicleInfoById(rowId);
     }
   });
 
@@ -413,6 +416,7 @@
     if (vatEl) vatEl.value = vat ? formatMoney(vat) : "";
   }
 
+  // 수동 차량관리번호 입력 경로(실행 후 유니크 번호 조회용). 발주(…000)는 검색/버튼(id)로 진입 권장.
   async function loadVehicleInfo() {
     const mgmtNo = document.getElementById('vehicleManagementNumber').value.trim();
     if (!mgmtNo) {
@@ -427,8 +431,24 @@
       return;
     }
 
-    const v = await res.json();
+    await fillVehicleInfo(await res.json());
+  }
 
+  // 행 PK(id) 기반 로드 — 발주~선급 pre-실행 단계 표준 경로.
+  async function loadVehicleInfoById(id) {
+    const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(id)}`);
+    if (!res.ok) {
+      alert('해당 차량을 찾을 수 없습니다.');
+      clearVehicleInfo();
+      return;
+    }
+    await fillVehicleInfo(await res.json());
+  }
+
+  async function fillVehicleInfo(v) {
+    selectedVehicleId = v.id ?? null;
+
+    document.getElementById('vehicleManagementNumber').value = v.vehicleMgmtNo ?? '';
     document.getElementById('vehicleModel').value = v.carModel ?? '';
     document.getElementById('vehicleOptions').value = v.optionName ?? '';
 
@@ -440,7 +460,7 @@
     document.getElementById('vinNumber').value = v.chassisNo ?? '';
     document.getElementById('vehiclePlateNumber').value = v.vehicleNo ?? '';
 
-    await loadAdvanceRows(mgmtNo);
+    await loadAdvanceRows(selectedVehicleId);
 
     for (let i = 0; i < rowCount; i++) {
       if (!document.getElementById(`row_${i}`)) continue;
@@ -450,12 +470,18 @@
     updateTotalAmount();
   }
 
-  async function loadAdvanceRows(mgmtNo) {
+  async function loadAdvanceRows(vehicleId) {
     const tbody = document.getElementById('advanceTableBody');
     tbody.innerHTML = '';
     rowCount = 0;
 
-    const res = await fetch(`${API_BASE}/${mgmtNo}/advances`);
+    if (!vehicleId) {
+      addRow();
+      updateTotalAmount();
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(vehicleId)}/advances`);
     if (!res.ok) {
       addRow();
       updateTotalAmount();
@@ -474,6 +500,7 @@
   }
 
   function clearVehicleInfo() {
+    selectedVehicleId = null;
     document.getElementById('vehicleModel').value = '';
     document.getElementById('vehicleOptions').value = '';
     document.getElementById('vehiclePrice').value = '';
@@ -495,8 +522,8 @@
   }
 
   async function saveAdvance() {
-    const mgmtNo = document.getElementById('vehicleManagementNumber').value.trim();
-    if (!mgmtNo) return alert('차량관리번호를 입력해주세요.');
+    // …000 공유값 대비: 저장은 항상 행 PK(id) 기반. 검색/버튼/수동조회 어느 경로든 선택된 차량 id 필요.
+    if (!selectedVehicleId) return alert('차량을 먼저 조회/선택해주세요. (돋보기 검색 또는 발주화면 선급등록 버튼)');
 
     const tbody = document.getElementById('advanceTableBody');
     const trList = Array.from(tbody.querySelectorAll('tr'));
@@ -534,7 +561,7 @@
 
     if (rows.length === 0) return alert('선급금 항목을 추가해주세요.');
 
-    const res = await fetch(`${API_BASE}/${mgmtNo}/advances`, {
+    const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(selectedVehicleId)}/advances`, {
       method: "PUT",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ rows })
@@ -552,7 +579,7 @@
     } catch (e) {}
 
     alert(msg);
-    await loadAdvanceRows(mgmtNo);
+    await loadAdvanceRows(selectedVehicleId);
     updateTotalAmount();
   }
 
@@ -589,17 +616,18 @@
         <td style="padding:10px; border-bottom:1px solid #eee;">${escHtml(v.vehicleNo ?? '')}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">${v.orderDate ?? ''}</td>
         <td style="padding:10px; border-bottom:1px solid #eee;">
-          <button type="button" onclick="selectVehicle('${v.vehicleMgmtNo ?? ''}')">선택</button>
+          <button type="button" onclick="selectVehicle('${v.id ?? ''}')">선택</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  async function selectVehicle(mgmtNo) {
-    document.getElementById('vehicleManagementNumber').value = mgmtNo;
+  // …000 공유값 대비: 선택은 행 PK(id)로 특정
+  async function selectVehicle(rowId) {
     closeVehicleSearch();
-    await loadVehicleInfo();
+    if (!rowId) { alert('선택한 차량의 식별자가 없습니다.'); return; }
+    await loadVehicleInfoById(rowId);
   }
 </script>
 

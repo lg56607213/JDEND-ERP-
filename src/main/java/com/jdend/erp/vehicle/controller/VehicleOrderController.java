@@ -47,17 +47,30 @@ public class VehicleOrderController {
         return service.create(req);
     }
 
-    // 상세
+    // 상세 (차량관리번호 기반 — 실행 후 유니크 번호 조회용)
     @GetMapping("/{mgmtNo}")
     public VehicleOrderResponse detail(@PathVariable String mgmtNo) {
         return service.detail(mgmtNo);
     }
 
-    // 수정
+    // 상세 (행 PK 기반 — 발주~선급 pre-실행 단계, …000 공유값 대비)
+    @GetMapping("/by-id/{id}")
+    public VehicleOrderResponse detailById(@PathVariable Long id) {
+        return service.detailById(id);
+    }
+
+    // 수정 (차량관리번호 기반)
     @PutMapping("/{mgmtNo}")
     public VehicleOrderResponse update(@PathVariable String mgmtNo, @RequestBody VehicleOrderRequest req, HttpSession session) {
         permissionService.requireManager(session);
         return service.update(mgmtNo, req);
+    }
+
+    // 수정 (행 PK 기반 — 발주~선급 pre-실행 단계)
+    @PutMapping("/by-id/{id}")
+    public VehicleOrderResponse updateById(@PathVariable Long id, @RequestBody VehicleOrderRequest req, HttpSession session) {
+        permissionService.requireManager(session);
+        return service.updateById(id, req);
     }
 
     // 실행하기
