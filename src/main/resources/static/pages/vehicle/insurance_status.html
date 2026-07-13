@@ -263,6 +263,31 @@
 
     </div>
   </div>
+
+  <!-- 미가입 차량 현황 -->
+  <div class="erp-card" style="margin-top:18px;">
+    <div class="card-header" style="padding:14px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0; font-size:16px; font-weight:700; color:#111827;">미가입 차량</h2>
+      <span style="font-size:13px; color:#64748b;">보험이 한 건도 등록되지 않은 차량</span>
+    </div>
+    <div class="card-body">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>차량관리번호</th>
+              <th>차량번호</th>
+              <th>차종</th>
+            </tr>
+          </thead>
+          <tbody id="uninsuredTbody">
+            <tr><td colspan="4" style="text-align:center; color:#888;">불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== 계약 검색 모달 ===== -->
@@ -687,7 +712,32 @@
 
     // 첫 로딩: 보험 전체조회
     searchAllInsurance();
+    loadUninsuredVehicles();
   });
+
+  async function loadUninsuredVehicles(){
+    const tbody = $('uninsuredTbody');
+    try{
+      const res = await fetch(`${BASE}/api/dashboard/vehicle-insurance-all`, { credentials:'include' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const all = await res.json();
+      const list = (all||[]).filter(r => r.status === '미가입');
+      if(list.length === 0){
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">미가입 차량 없음</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.map((r,i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td>${escapeHtml(r.vehicleMgmtNo||'-')}</td>
+          <td>${escapeHtml(r.vehicleNo||'-')}</td>
+          <td>${escapeHtml(r.carModel||'-')}</td>
+        </tr>
+      `).join('');
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#e74c3c;">오류: ${escapeHtml(e.message)}</td></tr>`;
+    }
+  }
 </script>
 </body>
 </html>

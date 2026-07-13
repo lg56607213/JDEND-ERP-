@@ -56,4 +56,14 @@ public class DashboardController {
   public List<DashboardBankDiffRow> bankVoucherDiff() {
     return service.bankVoucherDiff();
   }
+
+  @GetMapping("/vehicle-insurance-all")
+  public List<DashboardVehicleInsuranceRow> vehicleInsuranceAll() {
+    return service.vehicleInsuranceAll();
+  }
+
+  @GetMapping("/vehicle-inspection-all")
+  public List<DashboardVehicleInspectionRow> vehicleInspectionAll() {
+    return service.vehicleInspectionAll();
+  }
 }

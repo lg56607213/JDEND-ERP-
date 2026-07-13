@@ -138,6 +138,11 @@
   color: #0284c7;
 }
 
+.badge-secondary {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 /* 반응형 */
 @media (max-width: 1200px) {
   .dashboard-grid {

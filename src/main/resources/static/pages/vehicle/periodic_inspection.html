@@ -118,6 +118,34 @@
         <p class="table-note">* 검사유효기간이 등록된 차량만 조회됩니다.</p>
       </div>
     </div>
+
+    <!-- 전체 차량 정기검사 현황 -->
+    <div class="erp-card" style="margin-top:18px;">
+      <div class="card-header" style="padding:14px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:16px; font-weight:700; color:#111827;">전체 차량 정기검사 현황</h2>
+        <span style="font-size:13px; color:#64748b;">미등록 포함 전체 차량 검사 상태</span>
+      </div>
+      <div class="card-body">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>차량관리번호</th>
+                <th>차량번호</th>
+                <th>차종</th>
+                <th>검사종료일</th>
+                <th>D-Day</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="inspAllTbody">
+              <tr><td colspan="7" style="text-align:center; color:#718096;">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 등록 모달 -->
@@ -509,8 +537,43 @@
       }
     }
 
+    async function loadAllInspectionStatus(){
+      const tbody = document.getElementById("inspAllTbody");
+      try{
+        const res = await fetch(`${BASE}/api/dashboard/vehicle-inspection-all`, { credentials:'include' });
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const list = await res.json();
+        if(!list || list.length === 0){
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#718096;">등록된 차량 없음</td></tr>`;
+          return;
+        }
+        const badgeStyle = {
+          '만료':    'background:#ffe6e6; color:#dc2626;',
+          '만료임박': 'background:#fff7e6; color:#d97706;',
+          '미등록':  'background:#f1f5f9; color:#64748b;',
+          '정상':    'background:#f0fdf4; color:#16a34a;'
+        };
+        tbody.innerHTML = list.map((r,i) => {
+          const dday = r.dday != null ? (r.dday < 0 ? `D+${Math.abs(r.dday)}` : `D-${r.dday}`) : '-';
+          const sty = badgeStyle[r.status] || '';
+          return `<tr>
+            <td>${i+1}</td>
+            <td>${escapeHtml(r.vehicleMgmtNo||'-')}</td>
+            <td>${escapeHtml(r.vehicleNo||'-')}</td>
+            <td>${escapeHtml(r.carModel||'-')}</td>
+            <td>${r.inspectionEndDate ? String(r.inspectionEndDate).substring(0,10) : '-'}</td>
+            <td>${dday}</td>
+            <td><span style="display:inline-block; padding:3px 9px; border-radius:4px; font-size:12px; font-weight:600; ${sty}">${escapeHtml(r.status)}</span></td>
+          </tr>`;
+        }).join('');
+      }catch(e){
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#e74c3c;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", ()=>{
       document.getElementById("searchBtn").addEventListener("click", searchInspection);
+      loadAllInspectionStatus();
 
       document.getElementById("openRegisterBtn").addEventListener("click", openRegisterModal);
       document.getElementById("closeRegisterBtn").addEventListener("click", closeRegisterModal);

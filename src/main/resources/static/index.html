@@ -79,27 +79,53 @@
       </div>
     </div>
 
-    <!-- 최근 보험 만기일건 확인 -->
-    <div class="erp-card">
-      <div class="card-header">
-        <h2>최근 보험 만기일건 확인 (보험만기 7일전)</h2>
-        <a href="pages/contract/contract_register.html" class="view-all-link">전체보기 →</a>
+    <!-- 보험 · 정기검사 현황 (2열 그리드) -->
+    <div class="dashboard-grid">
+      <!-- 보험 현황 -->
+      <div class="erp-card">
+        <div class="card-header">
+          <h2>보험 현황 (만료·임박·미가입)</h2>
+          <a href="pages/vehicle/insurance_status.html" class="view-all-link">전체보기 →</a>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>차량번호</th>
+                  <th>차종</th>
+                  <th>보험종료일</th>
+                  <th>D-Day</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="insuranceAlertTbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>계약번호</th>
-                <th>고객명</th>
-                <th>차량번호</th>
-                <th>보험만기일</th>
-                <th>D-Day</th>
-                <th>상태</th>
-              </tr>
-            </thead>
-            <tbody id="recentContractsTable"></tbody>
-          </table>
+
+      <!-- 정기검사 현황 -->
+      <div class="erp-card">
+        <div class="card-header">
+          <h2>정기검사 현황 (만료·임박·미등록)</h2>
+          <a href="pages/vehicle/periodic_inspection.html" class="view-all-link">전체보기 →</a>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>차량번호</th>
+                  <th>차종</th>
+                  <th>검사종료일</th>
+                  <th>D-Day</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="inspectionAlertTbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -170,7 +196,8 @@
         await loadContractStatus(base, contractStatusChart);
         await loadBankSummary(base);
         await loadBankVoucherDiff(base);
-        await loadInsuranceExpiring(base);
+        await loadInsuranceAlert(base);
+        await loadInspectionAlert(base);
         await loadMaturitySoon(base);
         await loadReceivablesTop(base);
 
@@ -357,30 +384,59 @@
       });
     }
 
-    async function loadInsuranceExpiring(base) {
-      const rows = await getJson(`${base}/api/dashboard/insurance-expiring?days=7&limit=5`);
-      const tbody = document.getElementById('recentContractsTable');
+    async function loadInsuranceAlert(base) {
+      const tbody = document.getElementById('insuranceAlertTbody');
       tbody.innerHTML = '';
-
-      if (!rows || rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
-        return;
+      try {
+        const all = await getJson(`${base}/api/dashboard/vehicle-insurance-all`);
+        const rows = (all || []).filter(r => r.status !== '정상').slice(0, 5);
+        if (rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">이상 없음</td></tr>`;
+          return;
+        }
+        for (const r of rows) {
+          const badgeClass = r.status === '만료' ? 'badge-danger' : r.status === '만료임박' ? 'badge-warning' : 'badge-secondary';
+          const ddayText = r.dday != null ? (r.dday < 0 ? `D+${Math.abs(r.dday)}` : `D-${r.dday}`) : '-';
+          tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${esc(r.vehicleNo)}</td>
+              <td>${esc(r.carModel)}</td>
+              <td>${fmtDate(r.insuranceEndDate)}</td>
+              <td>${ddayText}</td>
+              <td><span class="badge ${badgeClass}">${esc(r.status)}</span></td>
+            </tr>
+          `);
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e74c3c;">로드 오류</td></tr>`;
       }
+    }
 
-      for (const r of rows) {
-        const dday = Number(r.dday || 0);
-        const badge = dday <= 1 ? 'badge-danger' : 'badge-warning';
-
-        tbody.insertAdjacentHTML('beforeend', `
-          <tr>
-            <td>${esc(r.contractNumber)}</td>
-            <td>${esc(r.customerName)}</td>
-            <td>${esc(r.vehicleNo)}</td>
-            <td>${fmtDate(r.insuranceEndDate)}</td>
-            <td><span class="badge ${badge}">D-${dday}</span></td>
-            <td><span class="badge badge-warning">갱신필요</span></td>
-          </tr>
-        `);
+    async function loadInspectionAlert(base) {
+      const tbody = document.getElementById('inspectionAlertTbody');
+      tbody.innerHTML = '';
+      try {
+        const all = await getJson(`${base}/api/dashboard/vehicle-inspection-all`);
+        const rows = (all || []).filter(r => r.status !== '정상').slice(0, 5);
+        if (rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">이상 없음</td></tr>`;
+          return;
+        }
+        for (const r of rows) {
+          const badgeClass = r.status === '만료' ? 'badge-danger' : r.status === '만료임박' ? 'badge-warning' : 'badge-secondary';
+          const ddayText = r.dday != null ? (r.dday < 0 ? `D+${Math.abs(r.dday)}` : `D-${r.dday}`) : '-';
+          tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${esc(r.vehicleNo)}</td>
+              <td>${esc(r.carModel)}</td>
+              <td>${fmtDate(r.inspectionEndDate)}</td>
+              <td>${ddayText}</td>
+              <td><span class="badge ${badgeClass}">${esc(r.status)}</span></td>
+            </tr>
+          `);
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#e74c3c;">로드 오류</td></tr>`;
       }
     }
 

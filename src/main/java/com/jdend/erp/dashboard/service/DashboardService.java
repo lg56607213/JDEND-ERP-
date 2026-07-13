@@ -5,6 +5,9 @@ import com.jdend.erp.dashboard.repository.*;
 import com.jdend.erp.myinfo.entity.BankAccount;
 import com.jdend.erp.myinfo.repository.BankAccountRepository;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
+import com.jdend.erp.vehicle.inspection.entity.VehicleInspection;
+import com.jdend.erp.vehicle.inspection.repository.VehicleInspectionRepository;
+import com.jdend.erp.vehicle.insurance.entity.VehicleInsurance;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class DashboardService {
   private final MaturityDashboardRepository maturityRepo;
   private final ReceivableDashboardRepository receivableRepo;
   private final VehicleOrderRepository vehicleOrderRepo;
+  private final VehicleInspectionRepository inspectionRepo;
 
   public DashboardCashResponse cashDaily(LocalDate baseDate) {
     LocalDate d = (baseDate != null) ? baseDate : LocalDate.now().minusDays(1);
@@ -198,6 +202,117 @@ public class DashboardService {
 
   private long nz(Long v) {
     return v == null ? 0L : v;
+  }
+
+  /** 등록된 전체 차량의 보험 가입 현황 (미가입 포함) */
+  public List<DashboardVehicleInsuranceRow> vehicleInsuranceAll() {
+    List<VehicleOrder> vehicles = vehicleOrderRepo.findAll().stream()
+        .filter(o -> o.getVehicleNo() != null && !o.getVehicleNo().isBlank())
+        .toList();
+
+    // 차량번호 기준 최신 보험 종료일
+    Map<String, LocalDate> latestEnd = new HashMap<>();
+    for (VehicleInsurance i : insuranceRepo.findAll()) {
+      if (i.getVehicleNo() == null) continue;
+      String key = normalize(i.getVehicleNo());
+      LocalDate cur = latestEnd.get(key);
+      if (cur == null || i.getInsuranceEndDate().isAfter(cur)) {
+        latestEnd.put(key, i.getInsuranceEndDate());
+      }
+    }
+
+    LocalDate today = LocalDate.now();
+    List<DashboardVehicleInsuranceRow> result = new ArrayList<>();
+
+    for (VehicleOrder o : vehicles) {
+      String key = normalize(o.getVehicleNo());
+      LocalDate endDate = latestEnd.get(key);
+
+      String status;
+      Long dday = null;
+      if (endDate == null) {
+        status = "미가입";
+      } else {
+        dday = ChronoUnit.DAYS.between(today, endDate);
+        if (dday < 0)       status = "만료";
+        else if (dday <= 30) status = "만료임박";
+        else                 status = "정상";
+      }
+
+      result.add(DashboardVehicleInsuranceRow.builder()
+          .vehicleMgmtNo(o.getVehicleMgmtNo())
+          .vehicleNo(o.getVehicleNo())
+          .carModel(o.getCarModel())
+          .insuranceEndDate(endDate)
+          .status(status)
+          .dday(dday)
+          .build());
+    }
+
+    // 만료 → 만료임박 → 미가입 → 정상 순 정렬
+    result.sort(Comparator.comparingInt((DashboardVehicleInsuranceRow r) -> statusOrder(r.getStatus()))
+        .thenComparing(r -> r.getInsuranceEndDate() == null ? LocalDate.MAX : r.getInsuranceEndDate()));
+    return result;
+  }
+
+  /** 등록된 전체 차량의 정기검사 현황 (미등록 포함) */
+  public List<DashboardVehicleInspectionRow> vehicleInspectionAll() {
+    List<VehicleOrder> vehicles = vehicleOrderRepo.findAll().stream()
+        .filter(o -> o.getVehicleNo() != null && !o.getVehicleNo().isBlank())
+        .toList();
+
+    // 차량관리번호 기준 최신 검사 종료일 (vehicle_inspections 테이블 우선)
+    Map<String, LocalDate> latestInspEnd = new HashMap<>();
+    for (VehicleInspection vi : inspectionRepo.findAll()) {
+      if (vi.getVehicleMgmtNo() == null || vi.getValidEnd() == null) continue;
+      String key = normalize(vi.getVehicleMgmtNo());
+      LocalDate cur = latestInspEnd.get(key);
+      if (cur == null || vi.getValidEnd().isAfter(cur)) {
+        latestInspEnd.put(key, vi.getValidEnd());
+      }
+    }
+
+    LocalDate today = LocalDate.now();
+    List<DashboardVehicleInspectionRow> result = new ArrayList<>();
+
+    for (VehicleOrder o : vehicles) {
+      String key = normalize(o.getVehicleMgmtNo());
+      // vehicle_inspections 우선, 없으면 등록 시 기재한 inspection_end
+      LocalDate endDate = latestInspEnd.getOrDefault(key, o.getInspectionEnd());
+
+      String status;
+      Long dday = null;
+      if (endDate == null) {
+        status = "미등록";
+      } else {
+        dday = ChronoUnit.DAYS.between(today, endDate);
+        if (dday < 0)       status = "만료";
+        else if (dday <= 30) status = "만료임박";
+        else                 status = "정상";
+      }
+
+      result.add(DashboardVehicleInspectionRow.builder()
+          .vehicleMgmtNo(o.getVehicleMgmtNo())
+          .vehicleNo(o.getVehicleNo())
+          .carModel(o.getCarModel())
+          .inspectionEndDate(endDate)
+          .status(status)
+          .dday(dday)
+          .build());
+    }
+
+    result.sort(Comparator.comparingInt((DashboardVehicleInspectionRow r) -> statusOrder(r.getStatus()))
+        .thenComparing(r -> r.getInspectionEndDate() == null ? LocalDate.MAX : r.getInspectionEndDate()));
+    return result;
+  }
+
+  private int statusOrder(String status) {
+    return switch (status) {
+      case "만료"   -> 0;
+      case "만료임박" -> 1;
+      case "미가입", "미등록" -> 2;
+      default       -> 3; // 정상
+    };
   }
 
   // ✅ 차량번호 normalize
