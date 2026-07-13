@@ -4,6 +4,8 @@ import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
 import com.jdend.erp.customer.CustomerRepository;
+import com.jdend.erp.myinfo.entity.SupplierInfo;
+import com.jdend.erp.myinfo.repository.SupplierInfoRepository;
 import com.jdend.erp.payment.billing.entity.PaymentSchedules;
 import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
 import com.jdend.erp.payment.taxinvoice.dto.TaxInvoicePreviewRow;
@@ -29,15 +31,7 @@ public class TaxInvoiceService {
     private final PaymentSchedulesRepository schedulesRepo;
     private final ContractRepository contractRepo;
     private final CustomerRepository customerRepo;
-
-    // ── 공급자(자사) 정보 ── 실제 사업자등록번호로 변경 필요
-    private static final String SUPPLIER_REG_NO   = "0000000000";
-    private static final String SUPPLIER_NAME     = "주식회사 제이디엔드렌트카";
-    private static final String SUPPLIER_CEO      = "";
-    private static final String SUPPLIER_ADDRESS  = "서울시 영등포구 여의대방로 379, 605호";
-    private static final String SUPPLIER_BIZ_TYPE = "";
-    private static final String SUPPLIER_BIZ_ITEM = "";
-    private static final String SUPPLIER_EMAIL    = "";
+    private final SupplierInfoRepository supplierRepo;
 
     public List<TaxInvoicePreviewRow> preview(LocalDate taxStart, LocalDate taxEnd,
                                               String type, String customerNumber) {
@@ -87,6 +81,8 @@ public class TaxInvoiceService {
     }
 
     public byte[] generateExcel(List<TaxInvoicePreviewRow> rows) {
+        // 현재 테넌트(회사)의 공급자 정보 조회 — 미입력이면 빈 값으로 안전 처리.
+        SupplierInfo supplier = supplierRepo.findTopByOrderByIdAsc().orElse(null);
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = wb.createSheet("엑셀업로드양식");
 
@@ -173,7 +169,7 @@ public class TaxInvoiceService {
                 TaxInvoicePreviewRow row = rows.get(i);
                 Row dataRow = sheet.createRow(6 + i);
 
-                String[] values = buildRow(row, dateFmt);
+                String[] values = buildRow(row, dateFmt, supplier);
                 for (int c = 0; c < values.length; c++) {
                     Cell cell = dataRow.createCell(c);
                     // 금액 컬럼 (C20,C21,C26,C27,C28,C29,C36,C37,C44,C45,C52,C53)
@@ -197,7 +193,7 @@ public class TaxInvoiceService {
         }
     }
 
-    private String[] buildRow(TaxInvoicePreviewRow row, DateTimeFormatter dateFmt) {
+    private String[] buildRow(TaxInvoicePreviewRow row, DateTimeFormatter dateFmt, SupplierInfo supplier) {
         String[] values = new String[59];
         java.util.Arrays.fill(values, "");
 
@@ -209,17 +205,17 @@ public class TaxInvoiceService {
         String memo = safe(row.getContractNumber()) + " " + safe(row.getVehicleNo());
         String item = firstNonBlank(row.getVehicleModel(), "차량렌탈");
 
-        // 공급자 (C1~C10)
-        values[0]  = "01";                              // 종류
-        values[1]  = dateStr;                           // 작성일자
-        values[2]  = SUPPLIER_REG_NO;                   // 공급자 등록번호
-        values[3]  = "";                                 // 공급자 종사업장번호
-        values[4]  = SUPPLIER_NAME;                     // 공급자 상호
-        values[5]  = SUPPLIER_CEO;                      // 공급자 성명
-        values[6]  = SUPPLIER_ADDRESS;                  // 공급자 주소
-        values[7]  = SUPPLIER_BIZ_TYPE;                 // 공급자 업태
-        values[8]  = SUPPLIER_BIZ_ITEM;                 // 공급자 종목
-        values[9]  = SUPPLIER_EMAIL;                    // 공급자 이메일
+        // 공급자 (C1~C10) — 현재 테넌트가 '내정보관리'에서 입력한 값 사용(미입력 시 빈 값)
+        values[0]  = "01";                                              // 종류
+        values[1]  = dateStr;                                           // 작성일자
+        values[2]  = supplier != null ? nvl(supplier.getRegistrationNumber()).replace("-", "") : ""; // 공급자 등록번호
+        values[3]  = "";                                                // 공급자 종사업장번호
+        values[4]  = supplier != null ? nvl(supplier.getCompanyName()) : "";  // 공급자 상호
+        values[5]  = supplier != null ? nvl(supplier.getCeoName()) : "";      // 공급자 성명
+        values[6]  = supplier != null ? nvl(supplier.getAddress()) : "";      // 공급자 주소
+        values[7]  = supplier != null ? nvl(supplier.getBusinessType()) : ""; // 공급자 업태
+        values[8]  = supplier != null ? nvl(supplier.getBusinessItem()) : ""; // 공급자 종목
+        values[9]  = supplier != null ? nvl(supplier.getEmail()) : "";        // 공급자 이메일
 
         // 공급받는자 (C11~C19)
         values[10] = nvl(row.getRegistrationNumber()).replace("-", ""); // 등록번호

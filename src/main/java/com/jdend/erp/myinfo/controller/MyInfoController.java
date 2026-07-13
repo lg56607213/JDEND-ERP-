@@ -64,4 +64,16 @@ public class MyInfoController {
         service.deleteCorporateCard(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ── 세금계산서 공급자 정보 ─────────────────────────────────
+
+    @GetMapping("/supplier")
+    public SupplierInfoResponse getSupplierInfo() {
+        return service.getSupplierInfo();
+    }
+
+    @PutMapping("/supplier")
+    public SupplierInfoResponse saveSupplierInfo(@RequestBody SupplierInfoRequest req) {
+        return service.saveSupplierInfo(req);
+    }
 }

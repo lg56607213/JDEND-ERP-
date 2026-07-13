@@ -3,8 +3,10 @@ package com.jdend.erp.myinfo.service;
 import com.jdend.erp.myinfo.dto.*;
 import com.jdend.erp.myinfo.entity.BankAccount;
 import com.jdend.erp.myinfo.entity.CorporateCard;
+import com.jdend.erp.myinfo.entity.SupplierInfo;
 import com.jdend.erp.myinfo.repository.BankAccountRepository;
 import com.jdend.erp.myinfo.repository.CorporateCardRepository;
+import com.jdend.erp.myinfo.repository.SupplierInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ public class MyInfoService {
 
     private final BankAccountRepository bankRepo;
     private final CorporateCardRepository cardRepo;
+    private final SupplierInfoRepository supplierRepo;
 
     // ─── 통장 ───────────────────────────────────────────────
 
@@ -102,5 +105,34 @@ public class MyInfoService {
     @Transactional
     public void deleteCorporateCard(Long id) {
         cardRepo.deleteById(id);
+    }
+
+    // ─── 세금계산서 공급자 정보 (테넌트당 1건) ─────────────────────
+
+    @Transactional(readOnly = true)
+    public SupplierInfoResponse getSupplierInfo() {
+        return SupplierInfoResponse.from(
+                supplierRepo.findTopByOrderByIdAsc().orElse(null));
+    }
+
+    /** 공급자 정보 저장 — 기존 1건이 있으면 수정, 없으면 신규 생성(upsert). */
+    @Transactional
+    public SupplierInfoResponse saveSupplierInfo(SupplierInfoRequest req) {
+        SupplierInfo e = supplierRepo.findTopByOrderByIdAsc()
+                .orElseGet(SupplierInfo::new);
+        e.setCompanyName(trimToNull(req.getCompanyName()));
+        e.setCeoName(trimToNull(req.getCeoName()));
+        e.setBusinessType(trimToNull(req.getBusinessType()));
+        e.setBusinessItem(trimToNull(req.getBusinessItem()));
+        e.setEmail(trimToNull(req.getEmail()));
+        e.setRegistrationNumber(trimToNull(req.getRegistrationNumber()));
+        e.setAddress(trimToNull(req.getAddress()));
+        return SupplierInfoResponse.from(supplierRepo.save(e));
+    }
+
+    private String trimToNull(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 }

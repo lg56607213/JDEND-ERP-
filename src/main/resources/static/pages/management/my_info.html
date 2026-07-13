@@ -83,6 +83,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('bank')">통장 관리</button>
     <button class="tab-btn" onclick="switchTab('card')">법인카드 관리</button>
+    <button class="tab-btn" onclick="switchTab('supplier')">세금계산서 공급자 정보</button>
   </div>
 
   <!-- ═══ 통장 탭 ═══ -->
@@ -132,6 +133,50 @@
           <tr><td colspan="6" class="empty">등록된 법인카드가 없습니다.</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- ═══ 세금계산서 공급자 정보 탭 ═══ -->
+  <div id="tabSupplier" class="tab-panel">
+    <div class="info-card">
+      <div class="card-header">
+        <h3>세금계산서 공급자(자사) 정보</h3>
+        <button class="btn btn-save" onclick="saveSupplierInfo()">저장</button>
+      </div>
+      <p style="margin:0 0 18px;color:#6b7280;font-size:0.85rem;">
+        전자세금계산서 발행 시 공급자 칸에 아래 값이 채워집니다.
+        회사(테넌트)별로 저장되며, 사업자등록번호와 사업장주소는 세금계산서 법적 필수 항목입니다.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;max-width:760px;">
+        <div class="mfg">
+          <label>상호명</label>
+          <input type="text" id="supCompanyName" placeholder="예: 주식회사 OO렌트카">
+        </div>
+        <div class="mfg">
+          <label>대표자명</label>
+          <input type="text" id="supCeoName" placeholder="예: 홍길동">
+        </div>
+        <div class="mfg">
+          <label>사업자등록번호 <span style="font-weight:400;color:#6b7280;font-size:0.8rem;">(세금계산서 필수)</span></label>
+          <input type="text" id="supRegistrationNumber" placeholder='예: 1234567890 ("-" 없이)'>
+        </div>
+        <div class="mfg">
+          <label>이메일</label>
+          <input type="text" id="supEmail" placeholder="예: tax@company.com">
+        </div>
+        <div class="mfg">
+          <label>업태</label>
+          <input type="text" id="supBusinessType" placeholder="예: 서비스, 임대">
+        </div>
+        <div class="mfg">
+          <label>업종(종목)</label>
+          <input type="text" id="supBusinessItem" placeholder="예: 자동차임대업">
+        </div>
+        <div class="mfg" style="grid-column:1 / span 2;">
+          <label>사업장주소 <span style="font-weight:400;color:#6b7280;font-size:0.8rem;">(세금계산서 필수)</span></label>
+          <input type="text" id="supAddress" placeholder="예: 서울시 영등포구 여의대방로 379, 605호">
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -212,6 +257,7 @@
 <script>
   const BANK_API = '/api/my-info/bank-accounts';
   const CARD_API = '/api/my-info/corporate-cards';
+  const SUPPLIER_API = '/api/my-info/supplier';
 
   function escHtml(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -221,12 +267,16 @@
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const btns = document.querySelectorAll('.tab-btn');
     if (tab === 'bank') {
-      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      btns[0].classList.add('active');
       document.getElementById('tabBank').classList.add('active');
-    } else {
-      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    } else if (tab === 'card') {
+      btns[1].classList.add('active');
       document.getElementById('tabCard').classList.add('active');
+    } else {
+      btns[2].classList.add('active');
+      document.getElementById('tabSupplier').classList.add('active');
     }
   }
 
@@ -410,6 +460,40 @@
     await loadCorporateCards();
   }
 
+  // ─── 세금계산서 공급자 정보 ───────────────────────────────
+  async function loadSupplierInfo() {
+    const res = await fetch(SUPPLIER_API, { credentials: 'include' });
+    if (!res.ok) return;
+    const s = await res.json();
+    document.getElementById('supCompanyName').value = s.companyName ?? '';
+    document.getElementById('supCeoName').value = s.ceoName ?? '';
+    document.getElementById('supRegistrationNumber').value = s.registrationNumber ?? '';
+    document.getElementById('supEmail').value = s.email ?? '';
+    document.getElementById('supBusinessType').value = s.businessType ?? '';
+    document.getElementById('supBusinessItem').value = s.businessItem ?? '';
+    document.getElementById('supAddress').value = s.address ?? '';
+  }
+
+  async function saveSupplierInfo() {
+    const body = {
+      companyName: document.getElementById('supCompanyName').value.trim() || null,
+      ceoName: document.getElementById('supCeoName').value.trim() || null,
+      registrationNumber: document.getElementById('supRegistrationNumber').value.trim() || null,
+      email: document.getElementById('supEmail').value.trim() || null,
+      businessType: document.getElementById('supBusinessType').value.trim() || null,
+      businessItem: document.getElementById('supBusinessItem').value.trim() || null,
+      address: document.getElementById('supAddress').value.trim() || null
+    };
+    const res = await fetch(SUPPLIER_API, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    await loadSupplierInfo();
+    alert('공급자 정보가 저장되었습니다.');
+  }
+
   // 모달 외부 클릭으로 닫기
   document.getElementById('bankModal').addEventListener('click', function(e) {
     if (e.target === this) closeBankModal();
@@ -421,6 +505,7 @@
   // 초기 로드
   loadBankAccounts();
   loadCorporateCards();
+  loadSupplierInfo();
   loadSidebar();
 </script>
 </body>
