@@ -84,15 +84,6 @@ public class VehicleOrderController {
         return service.registerVehicleById(id, req, file);
     }
 
-    // 실행하기
-    @PostMapping("/{mgmtNo}/execute")
-    public VehicleDeliveryExecuteResponse execute(
-            @PathVariable String mgmtNo,
-            @RequestBody VehicleDeliveryExecuteRequest req
-    ) {
-        return service.executeDelivery(mgmtNo, req);
-    }
-
     // 차량번호로 조회
     @GetMapping("/by-vehicle-no/{vehicleNo}")
     public VehicleLookupResponse lookupByVehicleNo(@PathVariable String vehicleNo) {

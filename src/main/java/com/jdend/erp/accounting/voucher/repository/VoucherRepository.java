@@ -32,4 +32,8 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
          where v.id in :ids
     """)
     int approveByIds(@Param("ids") List<Long> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Voucher v set v.vehicleMgmtNo = :newNo where v.vehicleMgmtNo = :oldNo")
+    int updateVehicleMgmtNo(@Param("oldNo") String oldNo, @Param("newNo") String newNo);
 }

@@ -1,7 +1,5 @@
 package com.jdend.erp.vehicle.service;
 
-import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
-import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
@@ -26,9 +24,7 @@ public class VehicleOrderService {
 
     private final VehicleOrderRepository orderRepo;
     private final VehicleOrderHistoryRepository historyRepo;
-    private final VehicleLoanRepository loanRepo;
     private final VoucherService voucherService;
-    private final OtherAccountSettingsService accountSettings;
     private final VehicleSaleRepository saleRepo;
     private final ContractRepository contractRepo;
     private final VehicleNumberGenerator numberGenerator;
@@ -303,19 +299,7 @@ public class VehicleOrderService {
 
         applyAutoStatusStepwise(o);
 
-        // S3: 등록완료 전환 시 …000 발주번호 → 실번호 확정
-        if ("등록완료".equals(o.getOrderStatus())
-                && o.getVehicleMgmtNo() != null
-                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
-            confirmVehicleMgmtNo(o);
-        }
-
         orderRepo.save(o);
-
-        // 취득 전표: 등록완료 최초 전환 시 차량운반구 취득 계상
-        if (!Objects.equals(oldStatus, "등록완료") && "등록완료".equals(o.getOrderStatus())) {
-            createAcquisitionVoucher(o);
-        }
 
         if (!Objects.equals(oldStatus, o.getOrderStatus())) {
             historyRepo.save(VehicleOrderHistory.builder()
@@ -327,156 +311,6 @@ public class VehicleOrderService {
         }
 
         return buildDetailResponse(o);
-    }
-
-    @Transactional
-    public VehicleDeliveryExecuteResponse executeDelivery(String mgmtNo, VehicleDeliveryExecuteRequest req) {
-
-        VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
-                .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
-
-        if (!"실행완료".equals(o.getOrderStatus())) {
-            throw new RuntimeException("실행완료 상태만 차입금 스케줄 등록이 가능합니다. 현재상태=" + o.getOrderStatus());
-        }
-
-        if (o.getVehicleNo() == null || o.getVehicleNo().isBlank()) {
-            throw new RuntimeException("차량번호가 없는 차량은 차입금 스케줄 등록이 불가능합니다.");
-        }
-
-        List<VehicleLoan> existingLoans = loanRepo.findByVehicleNoNormalizedOrderByIdDesc(o.getVehicleNo());
-        for (VehicleLoan existing : existingLoans) {
-            if (existing.getTerminated() == null || !existing.getTerminated()) {
-                throw new RuntimeException("이미 등록된 차입금 스케줄이 있습니다. 기존 차입금현황에서 확인해주세요.");
-            }
-        }
-
-        if (req.loanPrincipal == null || req.loanPrincipal <= 0) {
-            throw new RuntimeException("대출원금 필수");
-        }
-        if (req.loanInterest == null) {
-            throw new RuntimeException("대출이자 필수");
-        }
-        if (req.financeName == null || req.financeName.isBlank()) {
-            throw new RuntimeException("금융사명 필수");
-        }
-        if (req.repaymentMethod == null || req.repaymentMethod.isBlank()) {
-            throw new RuntimeException("상환방식 필수");
-        }
-        if (req.repaymentPeriod == null || req.repaymentPeriod <= 0) {
-            throw new RuntimeException("상환기간 필수");
-        }
-        if (req.startDate == null) {
-            throw new RuntimeException("시작일 필수");
-        }
-        if (req.paymentDay == null || req.paymentDay < 1 || req.paymentDay > 31) {
-            throw new RuntimeException("매월 상환일자(1~31) 필수");
-        }
-
-        VehicleLoan savedLoan = loanRepo.save(
-                VehicleLoan.builder()
-                        .vehicleOrder(o)
-                        .vehicleMgmtNo(o.getVehicleMgmtNo())
-                        .loanType((req.loanType == null || req.loanType.isBlank()) ? "금융리스" : req.loanType)
-                        .loanPrincipal(req.loanPrincipal)
-                        .loanInterest(req.loanInterest)
-                        .financeName(req.financeName)
-                        .repaymentMethod(req.repaymentMethod)
-                        .repaymentPeriod(req.repaymentPeriod)
-                        .downPayment(req.downPayment == null ? 0L : req.downPayment)
-                        .startDate(req.startDate)
-                        .endDate(req.endDate)
-                        .deposit(req.deposit == null ? 0L : req.deposit)
-                        .paymentDay(req.paymentDay)
-                        .monthlyPayment(req.monthlyPayment)
-                        .repaymentAccount(req.repaymentAccount)
-                        .remainingPrincipal(req.loanPrincipal)
-                        .lastPaymentDate(null)
-                        .terminated(false)
-                        .terminatedAt(null)
-                        .build()
-        );
-
-        createLoanOpenVoucher(savedLoan);
-        createVehicleExecuteVoucher(o, req);
-
-        return VehicleDeliveryExecuteResponse.builder()
-                .vehicleMgmtNo(o.getVehicleMgmtNo())
-                .orderStatus(o.getOrderStatus())
-                .loanId(savedLoan.getId())
-                .build();
-    }
-
-    private void createLoanOpenVoucher(VehicleLoan loan) {
-        VehicleOrder order = loan.getVehicleOrder();
-        String vehicleNo = order != null ? order.getVehicleNo() : "";
-        String contractNo = order != null ? order.getMakerContractNo() : null;
-
-        String memo = (vehicleNo == null || vehicleNo.isBlank())
-                ? "차입금 등록"
-                : vehicleNo + " 차입금 등록";
-
-        voucherService.create(
-                VoucherCreateRequest.builder()
-                        .voucherDate(loan.getStartDate() != null ? loan.getStartDate() : LocalDate.now())
-                        .contractNumber(contractNo)
-                        .vehicleNo(vehicleNo)
-                        .vehicleMgmtNo(order != null ? order.getVehicleMgmtNo() : null)
-                        .memo(memo)
-                        .debitEntries(List.of(
-                                VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account("미수금")
-                                        .amount(loan.getLoanPrincipal())
-                                        .description("대출원금")
-                                        .build()
-                        ))
-                        .creditEntries(List.of(
-                                VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account("장기차입금")
-                                        .amount(loan.getLoanPrincipal())
-                                        .description("대출원금")
-                                        .build()
-                        ))
-                        .build()
-        );
-    }
-
-    private void createVehicleExecuteVoucher(VehicleOrder order, VehicleDeliveryExecuteRequest req) {
-        String debitAccount = accountSettings.getVehicleDebitAccount();
-        if (debitAccount == null) debitAccount = "차량운반구";
-        String creditAccount = accountSettings.getVehicleCreditAccount();
-        if (creditAccount == null) creditAccount = "선급렌트자산";
-
-        long totalAdvance = order.getTotalAdvancePrice() != null ? order.getTotalAdvancePrice() : 0L;
-        if (totalAdvance <= 0) return;
-
-        String vehicleNo = order.getVehicleNo();
-        String contractNo = order.getMakerContractNo();
-        String memo = (vehicleNo == null || vehicleNo.isBlank() ? order.getVehicleMgmtNo() : vehicleNo) + " 차량 실행";
-        LocalDate voucherDate = req.startDate != null ? req.startDate : LocalDate.now();
-
-        voucherService.create(
-                VoucherCreateRequest.builder()
-                        .voucherDate(voucherDate)
-                        .contractNumber(contractNo)
-                        .vehicleNo(vehicleNo)
-                        .vehicleMgmtNo(order.getVehicleMgmtNo())
-                        .memo(memo)
-                        .debitEntries(List.of(
-                                VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account(debitAccount)
-                                        .amount(totalAdvance)
-                                        .description("선급렌트자산 → " + debitAccount)
-                                        .build()
-                        ))
-                        .creditEntries(List.of(
-                                VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account(creditAccount)
-                                        .amount(totalAdvance)
-                                        .description("선급렌트자산 대체")
-                                        .build()
-                        ))
-                        .build()
-        );
     }
 
     @Transactional(readOnly = true)
@@ -645,8 +479,15 @@ public class VehicleOrderService {
         }
 
         String oldStatus = o.getOrderStatus();
+        String oldMgmtNo = o.getVehicleMgmtNo();
+
         o.setVehicleNo(req.getVehicleNo());
         o.setRegisterDate(req.getRegisterDate());
+        if (req.getInspectionStart() != null) o.setInspectionStart(req.getInspectionStart());
+        if (req.getInspectionEnd() != null)   o.setInspectionEnd(req.getInspectionEnd());
+        if (req.getModelYear() != null)        o.setModelYear(req.getModelYear());
+        if (req.getFuelType() != null)         o.setFuelType(req.getFuelType());
+        if (req.getDisplacement() != null)     o.setDisplacement(req.getDisplacement());
 
         if (file != null && !file.isEmpty()) {
             String savedPath = saveFile(o.getVehicleMgmtNo(), file);
@@ -656,7 +497,7 @@ public class VehicleOrderService {
 
         o.setOrderStatus("등록완료");
 
-        // S3: …000 → 실번호 확정
+        // 차량관리번호 실번호 확정 (…000 → …001 등)
         if (o.getVehicleMgmtNo() != null
                 && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
             confirmVehicleMgmtNo(o);
@@ -664,8 +505,10 @@ public class VehicleOrderService {
 
         orderRepo.save(o);
 
-        // 취득 전표: 차량운반구 취득 계상
-        createAcquisitionVoucher(o);
+        // 선급 등록 시 생성된 전표의 차량관리번호를 실번호로 일괄 대체
+        if (!Objects.equals(oldMgmtNo, o.getVehicleMgmtNo())) {
+            voucherService.updateVehicleMgmtNo(oldMgmtNo, o.getVehicleMgmtNo());
+        }
 
         if (!Objects.equals(oldStatus, "등록완료")) {
             historyRepo.save(VehicleOrderHistory.builder()
@@ -690,31 +533,6 @@ public class VehicleOrderService {
         int unitSeq = (int) confirmedCount + 1; // 1-based
         String realMgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq);
         o.setVehicleMgmtNo(realMgmtNo);
-    }
-
-    // 차량 등록완료 시 차량운반구 취득 전표 생성 (A안 회계모델)
-    // 차변: 차량운반구 = 취득가(vehiclePrice+optionPrice) / 대변: 미지급금 = 동일
-    private void createAcquisitionVoucher(VehicleOrder o) {
-        long totalPrice = (o.getTotalPrice() != null) ? o.getTotalPrice() : 0L;
-        if (totalPrice <= 0) return;
-
-        LocalDate date = (o.getRegisterDate() != null) ? o.getRegisterDate() : LocalDate.now();
-        String memo = o.getVehicleMgmtNo() + " 차량 취득";
-
-        voucherService.create(VoucherCreateRequest.builder()
-                .voucherDate(date)
-                .vehicleNo(o.getVehicleNo())
-                .vehicleMgmtNo(o.getVehicleMgmtNo())
-                .memo(memo)
-                .debitEntries(List.of(
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account("차량운반구").amount(totalPrice).description(memo).build()
-                ))
-                .creditEntries(List.of(
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account("미지급금").amount(totalPrice).description(memo).build()
-                ))
-                .build());
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {

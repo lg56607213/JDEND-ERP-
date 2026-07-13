@@ -69,6 +69,50 @@
     .btn-advance:hover:not(:disabled) { background: #1d4ed8; }
     .btn-advance:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
 
+    .btn-car-register {
+      padding: 6px 14px;
+      background: #059669;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-car-register:hover:not(:disabled) { background: #047857; }
+    .btn-car-register:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+
+    /* 차량등록 모달 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px 32px;
+      width: 480px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-box h3 { margin: 0 0 20px; font-size: 1.1rem; color: #111827; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .modal-grid label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .modal-grid label.required::after { content: ' *'; color: #ef4444; }
+    .modal-grid input, .modal-grid select { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+    .modal-actions .btn-cancel { padding: 8px 18px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .modal-actions .btn-save { padding: 8px 18px; background: #059669; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+
     @media (max-width: 768px) {
       .option-layout-grid {
         grid-template-columns: 1fr;
@@ -121,6 +165,7 @@
               <button type="button" class="btn-add" onclick="showRegisterForm()">+ 등록추가</button>
               <button type="button" class="btn-release" id="btnRelease" onclick="bulkSetReleased()" disabled>출고완료 변경 <span id="releaseCount"></span></button>
               <button type="button" class="btn-advance" id="btnAdvance" onclick="goToAdvance()" disabled>선급등록</button>
+              <button type="button" class="btn-car-register" id="btnCarRegister" onclick="openCarRegisterModal()" disabled>차량등록</button>
             </div>
           </div>
         </div>
@@ -238,6 +283,58 @@
             <button type="submit" class="btn btn-primary">발주 등록</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 차량등록 모달 -->
+  <div class="modal-overlay" id="carRegisterModal">
+    <div class="modal-box">
+      <h3>차량등록</h3>
+      <div class="modal-grid">
+        <div class="full">
+          <label class="required">차량번호</label>
+          <input type="text" id="regVehicleNo" placeholder="예) 12가3456">
+        </div>
+        <div>
+          <label class="required">등록일자</label>
+          <input type="date" id="regRegisterDate">
+        </div>
+        <div>
+          <label>정기검사 시작일</label>
+          <input type="date" id="regInspectionStart">
+        </div>
+        <div>
+          <label>정기검사 종료일</label>
+          <input type="date" id="regInspectionEnd">
+        </div>
+        <div>
+          <label>연식</label>
+          <input type="text" id="regModelYear" placeholder="예) 2023">
+        </div>
+        <div>
+          <label>유종</label>
+          <select id="regFuelType">
+            <option value="">선택</option>
+            <option value="가솔린">가솔린</option>
+            <option value="디젤">디젤</option>
+            <option value="LPG">LPG</option>
+            <option value="전기">전기</option>
+            <option value="하이브리드">하이브리드</option>
+          </select>
+        </div>
+        <div>
+          <label>배기량 (cc)</label>
+          <input type="number" id="regDisplacement" placeholder="예) 2000">
+        </div>
+        <div class="full">
+          <label>등록증 파일</label>
+          <input type="file" id="regFile" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeCarRegisterModal()">취소</button>
+        <button class="btn-save" onclick="submitCarRegister()">저장</button>
       </div>
     </div>
   </div>
@@ -477,9 +574,88 @@
     if (releaseBtn) releaseBtn.disabled = checked.length === 0;
     if (releaseCount) releaseCount.textContent = checked.length > 0 ? `(${checked.length})` : '';
 
-    // 선급등록은 정확히 1대 선택 시에만 활성화 (해당 차량의 선급 화면으로 이동)
+    // 선급등록은 정확히 1대 선택 시에만 활성화
     const advanceBtn = document.getElementById('btnAdvance');
     if (advanceBtn) advanceBtn.disabled = checked.length !== 1;
+
+    // 차량등록은 정확히 1대 선택 + 해당 차량이 출고완료 상태일 때만 활성화
+    const carRegBtn = document.getElementById('btnCarRegister');
+    if (carRegBtn) {
+      if (checked.length === 1) {
+        const rowId = checked[0].value;
+        const row = currentVehicleRows.find(r => String(r.id) === String(rowId));
+        carRegBtn.disabled = !(row && row.orderStatus === '출고완료');
+      } else {
+        carRegBtn.disabled = true;
+      }
+    }
+  }
+
+  let carRegisterTargetId = null;
+
+  function openCarRegisterModal() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length !== 1) return;
+    carRegisterTargetId = checked[0].value;
+
+    // 폼 초기화
+    document.getElementById('regVehicleNo').value = '';
+    document.getElementById('regRegisterDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('regInspectionStart').value = '';
+    document.getElementById('regInspectionEnd').value = '';
+    document.getElementById('regModelYear').value = '';
+    document.getElementById('regFuelType').value = '';
+    document.getElementById('regDisplacement').value = '';
+    document.getElementById('regFile').value = '';
+
+    document.getElementById('carRegisterModal').classList.add('open');
+  }
+
+  function closeCarRegisterModal() {
+    document.getElementById('carRegisterModal').classList.remove('open');
+    carRegisterTargetId = null;
+  }
+
+  async function submitCarRegister() {
+    const vehicleNo = document.getElementById('regVehicleNo').value.trim();
+    const registerDate = document.getElementById('regRegisterDate').value;
+    if (!vehicleNo) { alert('차량번호는 필수입니다.'); return; }
+    if (!registerDate) { alert('등록일자는 필수입니다.'); return; }
+
+    const data = {
+      vehicleNo,
+      registerDate,
+      inspectionStart: document.getElementById('regInspectionStart').value || null,
+      inspectionEnd:   document.getElementById('regInspectionEnd').value || null,
+      modelYear:       document.getElementById('regModelYear').value.trim() || null,
+      fuelType:        document.getElementById('regFuelType').value || null,
+      displacement:    document.getElementById('regDisplacement').value ? parseInt(document.getElementById('regDisplacement').value, 10) : null
+    };
+
+    const formData = new FormData();
+    formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const fileInput = document.getElementById('regFile');
+    if (fileInput.files.length > 0) {
+      formData.append('file', fileInput.files[0]);
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(carRegisterTargetId)}/register`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        alert('차량등록 실패: ' + msg);
+        return;
+      }
+      alert('차량등록이 완료되었습니다.');
+      closeCarRegisterModal();
+      await searchVehicle();
+    } catch (e) {
+      alert('오류 발생: ' + e.message);
+    }
   }
 
   async function bulkSetReleased() {

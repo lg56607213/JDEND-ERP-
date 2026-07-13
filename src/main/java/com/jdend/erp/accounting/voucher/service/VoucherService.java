@@ -199,6 +199,12 @@ public class VoucherService {
         return t.isEmpty() ? null : t;
     }
 
+    @Transactional
+    public void updateVehicleMgmtNo(String oldNo, String newNo) {
+        if (isBlank(oldNo) || isBlank(newNo) || oldNo.equals(newNo)) return;
+        voucherRepository.updateVehicleMgmtNo(oldNo, newNo);
+    }
+
     private String nvl(String s) {
         return s == null ? "" : s;
     }
