@@ -85,9 +85,9 @@ public class TenantSchemaUpdateRunner implements ApplicationRunner {
             Map<String, Object> props = new HashMap<>();
             props.put("hibernate.hbm2ddl.auto", "update");
             props.put("hibernate.physical_naming_strategy",
-                "org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy");
+                "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
             props.put("hibernate.implicit_naming_strategy",
-                "org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy");
+                "org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl");
             props.put("hibernate.show_sql", "false");
 
             LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
