@@ -162,6 +162,7 @@ public class VehicleAdvanceService {
       .voucherDate(voucherDate)
       .contractNumber(null)
       .vehicleNo(vehicleNo)
+      .vehicleMgmtNo(emptyToNull(order.getVehicleMgmtNo()))
       .totalAmount(totalAmt)
       .status("대기")
       .memo(memo)

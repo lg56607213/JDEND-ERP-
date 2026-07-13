@@ -156,6 +156,7 @@ public class LegalCaseService {
                 .voucherDate(voucherDate)
                 .contractNumber(nullIfBlank(lc.getContractNumber()))
                 .vehicleNo(nullIfBlank(lc.getVehicleNo()))
+                .vehicleMgmtNo(null)
                 .totalAmount(amount)
                 .status("대기")
                 .memo(memo.toString())

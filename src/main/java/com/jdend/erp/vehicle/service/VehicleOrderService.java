@@ -303,6 +303,13 @@ public class VehicleOrderService {
 
         applyAutoStatusStepwise(o);
 
+        // S3: 등록완료 전환 시 …000 발주번호 → 실번호 확정
+        if ("등록완료".equals(o.getOrderStatus())
+                && o.getVehicleMgmtNo() != null
+                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
+            confirmVehicleMgmtNo(o);
+        }
+
         orderRepo.save(o);
 
         if (!Objects.equals(oldStatus, o.getOrderStatus())) {
@@ -408,6 +415,7 @@ public class VehicleOrderService {
                         .voucherDate(loan.getStartDate() != null ? loan.getStartDate() : LocalDate.now())
                         .contractNumber(contractNo)
                         .vehicleNo(vehicleNo)
+                        .vehicleMgmtNo(order != null ? order.getVehicleMgmtNo() : null)
                         .memo(memo)
                         .debitEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
@@ -446,6 +454,7 @@ public class VehicleOrderService {
                         .voucherDate(voucherDate)
                         .contractNumber(contractNo)
                         .vehicleNo(vehicleNo)
+                        .vehicleMgmtNo(order.getVehicleMgmtNo())
                         .memo(memo)
                         .debitEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
@@ -613,6 +622,66 @@ public class VehicleOrderService {
                     .note("차량 등록 완료")
                     .build());
         }
+    }
+
+    @Transactional
+    public VehicleOrderResponse registerVehicleById(Long id, VehicleRegisterRequest req, MultipartFile file) {
+        VehicleOrder o = orderRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("차량 없음(id): " + id));
+
+        if (!"출고완료".equals(o.getOrderStatus())) {
+            throw new RuntimeException("출고완료 상태의 차량만 등록할 수 있습니다.");
+        }
+        if (req.getVehicleNo() == null || req.getVehicleNo().isBlank()) {
+            throw new RuntimeException("차량번호(vehicleNo)는 필수");
+        }
+        if (req.getRegisterDate() == null) {
+            throw new RuntimeException("등록일자(registerDate)은 필수");
+        }
+
+        String oldStatus = o.getOrderStatus();
+        o.setVehicleNo(req.getVehicleNo());
+        o.setRegisterDate(req.getRegisterDate());
+
+        if (file != null && !file.isEmpty()) {
+            String savedPath = saveFile(o.getVehicleMgmtNo(), file);
+            o.setRegisterFileName(file.getOriginalFilename());
+            o.setRegisterFilePath(savedPath);
+        }
+
+        o.setOrderStatus("등록완료");
+
+        // S3: …000 → 실번호 확정
+        if (o.getVehicleMgmtNo() != null
+                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
+            confirmVehicleMgmtNo(o);
+        }
+
+        orderRepo.save(o);
+
+        if (!Objects.equals(oldStatus, "등록완료")) {
+            historyRepo.save(VehicleOrderHistory.builder()
+                    .vehicleOrder(o)
+                    .status("등록완료")
+                    .changedAt(LocalDateTime.now())
+                    .note("차량 등록 완료")
+                    .build());
+        }
+
+        return buildDetailResponse(o);
+    }
+
+    private void confirmVehicleMgmtNo(VehicleOrder o) {
+        String orderNo = o.getVehicleMgmtNo().substring(0, 10); // 발주번호 10자리
+        // 같은 발주 내 이미 확정된(실번호, 000이 아닌) 대 수 = 다음 대순번 계산
+        long confirmedCount = orderRepo.findByOrderNoOrderByVehicleMgmtNoAsc(orderNo)
+                .stream()
+                .filter(v -> !v.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)
+                        && !v.getId().equals(o.getId()))
+                .count();
+        int unitSeq = (int) confirmedCount + 1; // 1-based
+        String realMgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq);
+        o.setVehicleMgmtNo(realMgmtNo);
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {

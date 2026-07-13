@@ -73,6 +73,17 @@ public class VehicleOrderController {
         return service.updateById(id, req);
     }
 
+    // 차량 등록 (행 PK 기반 — …000 공유값 대비, S3 실번호 확정 포함)
+    @PostMapping("/by-id/{id}/register")
+    public VehicleOrderResponse registerById(
+            @PathVariable Long id,
+            @RequestPart(value = "data") VehicleRegisterRequest req,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            HttpSession session) {
+        permissionService.requireManager(session);
+        return service.registerVehicleById(id, req, file);
+    }
+
     // 실행하기
     @PostMapping("/{mgmtNo}/execute")
     public VehicleDeliveryExecuteResponse execute(

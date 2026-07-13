@@ -60,6 +60,7 @@ public class VoucherService {
                 .voucherDate(req.getVoucherDate())
                 .contractNumber(blankToNull(req.getContractNumber()))
                 .vehicleNo(blankToNull(req.getVehicleNo()))
+                .vehicleMgmtNo(blankToNull(req.getVehicleMgmtNo()))
                 .totalAmount(debitSum)
                 .status("대기")
                 .memo(blankToNull(req.getMemo()))

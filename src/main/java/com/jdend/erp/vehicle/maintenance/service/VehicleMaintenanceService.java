@@ -119,6 +119,7 @@ public class VehicleMaintenanceService {
           VoucherCreateRequest.builder()
               .voucherDate(item.getPayDate() != null ? item.getPayDate() : LocalDate.now())
               .vehicleNo(saved.getVehicleNo())
+              .vehicleMgmtNo(saved.getVehicleMgmtNo())
               .memo(buildVoucherMemo(saved.getVehicleNo(), item.getDescription()))
               .debitEntries(debits)
               .creditEntries(List.of(

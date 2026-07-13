@@ -11,6 +11,7 @@ import com.jdend.erp.payment.payment.dto.PaymentUpsertRequest;
 import com.jdend.erp.payment.payment.entity.Payment;
 import com.jdend.erp.payment.payment.repository.PaymentRepository;
 import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
+import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -29,6 +30,7 @@ public class PaymentService {
   private final ContractRepository contractRepo;
   private final VoucherRepository voucherRepository;
   private final FinancialStatementAccountRepository accountRepo;
+  private final VehicleOrderRepository vehicleOrderRepo;
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -136,11 +138,20 @@ public class PaymentService {
 
     String memo = buildPaymentVoucherMemo(payment);
 
+    String vehicleMgmtNo = null;
+    String pVehicleNo = blankToNull(payment.getVehicleNo());
+    if (pVehicleNo != null) {
+      vehicleMgmtNo = vehicleOrderRepo.findByVehicleNoNormalized(pVehicleNo)
+          .map(vo -> vo.getVehicleMgmtNo())
+          .orElse(null);
+    }
+
     Voucher voucher = Voucher.builder()
         .voucherNo(voucherNo)
         .voucherDate(voucherDate)
         .contractNumber(blankToNull(payment.getContractNumber()))
         .vehicleNo(blankToNull(payment.getVehicleNo()))
+        .vehicleMgmtNo(vehicleMgmtNo)
         .totalAmount(payment.getPaymentAmount())
         .status("대기")
         .memo(memo)

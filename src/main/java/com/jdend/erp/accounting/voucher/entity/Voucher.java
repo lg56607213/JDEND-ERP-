@@ -32,6 +32,9 @@ public class Voucher {
     @Column(name = "vehicle_no", length = 50)
     private String vehicleNo;
 
+    @Column(name = "vehicle_mgmt_no", length = 30)
+    private String vehicleMgmtNo;
+
     @Column(name = "total_amount", nullable = false)
     private Long totalAmount;
 

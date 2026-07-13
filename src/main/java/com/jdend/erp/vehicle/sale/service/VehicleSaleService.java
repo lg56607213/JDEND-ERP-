@@ -101,6 +101,7 @@ public class VehicleSaleService {
     voucherService.create(VoucherCreateRequest.builder()
         .voucherDate(s.getSaleDate())
         .vehicleNo(s.getVehicleNo())
+        .vehicleMgmtNo(s.getVehicleMgmtNo())
         .contractNumber(null)
         .memo(memo)
         .debitEntries(debits)
