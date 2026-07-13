@@ -94,7 +94,7 @@ public class VehicleSaleService {
     if (remaining > 0)   debits.add(line("미상각잔액", remaining, memo));
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
-    credits.add(line("판매수익", s.getSupplyAmount(), memo));
+    credits.add(line("매각수익", s.getSupplyAmount(), memo));
     credits.add(line("부가세예수금", s.getTaxAmount(), memo));
     if (acquisitionCost > 0) credits.add(line("차량운반구", acquisitionCost, memo));
 

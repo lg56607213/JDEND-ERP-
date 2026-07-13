@@ -312,6 +312,11 @@ public class VehicleOrderService {
 
         orderRepo.save(o);
 
+        // 취득 전표: 등록완료 최초 전환 시 차량운반구 취득 계상
+        if (!Objects.equals(oldStatus, "등록완료") && "등록완료".equals(o.getOrderStatus())) {
+            createAcquisitionVoucher(o);
+        }
+
         if (!Objects.equals(oldStatus, o.getOrderStatus())) {
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
@@ -659,6 +664,9 @@ public class VehicleOrderService {
 
         orderRepo.save(o);
 
+        // 취득 전표: 차량운반구 취득 계상
+        createAcquisitionVoucher(o);
+
         if (!Objects.equals(oldStatus, "등록완료")) {
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
@@ -682,6 +690,31 @@ public class VehicleOrderService {
         int unitSeq = (int) confirmedCount + 1; // 1-based
         String realMgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq);
         o.setVehicleMgmtNo(realMgmtNo);
+    }
+
+    // 차량 등록완료 시 차량운반구 취득 전표 생성 (A안 회계모델)
+    // 차변: 차량운반구 = 취득가(vehiclePrice+optionPrice) / 대변: 미지급금 = 동일
+    private void createAcquisitionVoucher(VehicleOrder o) {
+        long totalPrice = (o.getTotalPrice() != null) ? o.getTotalPrice() : 0L;
+        if (totalPrice <= 0) return;
+
+        LocalDate date = (o.getRegisterDate() != null) ? o.getRegisterDate() : LocalDate.now();
+        String memo = o.getVehicleMgmtNo() + " 차량 취득";
+
+        voucherService.create(VoucherCreateRequest.builder()
+                .voucherDate(date)
+                .vehicleNo(o.getVehicleNo())
+                .vehicleMgmtNo(o.getVehicleMgmtNo())
+                .memo(memo)
+                .debitEntries(List.of(
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account("차량운반구").amount(totalPrice).description(memo).build()
+                ))
+                .creditEntries(List.of(
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account("미지급금").amount(totalPrice).description(memo).build()
+                ))
+                .build());
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {
