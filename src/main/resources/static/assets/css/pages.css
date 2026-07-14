@@ -1,3 +1,18 @@
+/* Excel Export Button */
+.btn-excel {
+  padding: 8px 14px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-excel:hover { background: #15803d; }
+
 /* Reset CSS */
 * {
   margin: 0;

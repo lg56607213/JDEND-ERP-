@@ -91,6 +91,7 @@
           <input type="text" id="filterKeyword" placeholder="계약번호 / 차량번호 / 계약자명 검색">
           <button type="button" class="btn btn-primary" onclick="applyFilter()">조회</button>
           <button type="button" class="btn btn-secondary" onclick="resetFilter()">초기화</button>
+          <button type="button" class="btn-excel" onclick="exportTableToExcel('overdueTableBody', '연체현황')">엑셀 내보내기</button>
         </div>
 
         <div class="summary-bar" id="summaryBar"></div>
@@ -215,5 +216,6 @@
 
     load();
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

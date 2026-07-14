@@ -102,6 +102,7 @@
       <div class="card-body">
         <div class="section-header">
           <h3 class="section-title">차입금 등록현황</h3>
+          <button type="button" class="btn-excel" onclick="exportTableToExcel('loanTableBody', '차입금현황')" style="margin-right:8px;">엑셀 내보내기</button>
           <button type="button" class="btn-register" onclick="openRegisterModal()">+ 등록</button>
         </div>
         <p class="section-desc">차량 실행 시 등록된 차입금 현황입니다. 누락된 차입금은 등록 버튼을 통해 추가할 수 있습니다.</p>
@@ -923,5 +924,6 @@
       alert("목록 로드 실패: " + err.message);
     });
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

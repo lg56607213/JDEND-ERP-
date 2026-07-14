@@ -95,6 +95,9 @@
 
         <!-- 선급금 입력 섹션 -->
         <div class="section-title">선급금 내역</div>
+        <div style="text-align:right;margin-bottom:6px;">
+          <button type="button" class="btn-excel" onclick="exportTableToExcel('advanceTableBody', '선급금')">엑셀 내보내기</button>
+        </div>
         <div class="advance-table-container">
           <table>
             <thead>
@@ -631,5 +634,6 @@
   }
 </script>
 
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

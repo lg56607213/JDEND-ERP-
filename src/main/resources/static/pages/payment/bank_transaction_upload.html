@@ -103,6 +103,10 @@
               <label>&nbsp;</label>
               <button class="btn-search" onclick="searchTransactions()">조회</button>
             </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('transactionTableBody', '은행내역')">엑셀 내보내기</button>
+            </div>
           </div>
 
           <hr class="divider" style="margin:14px 0 12px;">
@@ -317,5 +321,6 @@
       }
     }
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

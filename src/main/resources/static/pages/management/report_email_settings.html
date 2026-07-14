@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>이메일 보고서 설정 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .content-wrapper { margin-left: 220px; padding: 32px; max-width: 720px; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1b253a; margin-bottom: 4px; }
+    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 28px; }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1b253a;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 토글 스위치 */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { display: none; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      left: 3px; top: 3px;
+      transition: transform .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #2563eb; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+    .toggle-label { font-size: 0.92rem; font-weight: 600; color: #374151; }
+    .toggle-desc { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
+
+    /* 수신자 입력 */
+    .recipient-section { margin-top: 24px; }
+    .field-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    .tag-input-box {
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      padding: 8px 10px;
+      min-height: 52px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      background: #fff;
+      cursor: text;
+      transition: border-color .15s;
+    }
+    .tag-input-box:focus-within {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag-remove {
+      cursor: pointer;
+      font-size: 14px;
+      color: #93c5fd;
+      line-height: 1;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+    .tag-remove:hover { color: #1d4ed8; }
+    #emailInput {
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #374151;
+      flex: 1;
+      min-width: 200px;
+      background: transparent;
+    }
+    .input-hint { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+
+    /* 발송 시간 안내 */
+    .schedule-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f0fdf4;
+      border-radius: 7px;
+      padding: 12px 16px;
+      margin-top: 24px;
+      font-size: 13px;
+      color: #166534;
+    }
+    .schedule-dot {
+      width: 8px; height: 8px;
+      background: #16a34a;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* 버튼 */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .btn-save {
+      padding: 10px 24px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-save:hover { background: #1d4ed8; }
+    .btn-save:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-test {
+      padding: 10px 20px;
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-test:hover { background: #f9fafb; }
+
+    .msg { font-size: 13px; margin-top: 10px; }
+    .msg.ok { color: #16a34a; }
+    .msg.err { color: #dc2626; }
+
+    /* 미리보기 안내 */
+    .preview-box {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px 24px;
+    }
+    .preview-box .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+    .preview-box .item:last-child { border-bottom: none; }
+    .preview-box .item-label { color: #6b7280; }
+    .preview-box .item-value { font-weight: 600; color: #1b253a; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <h1>이메일 보고서 설정</h1>
+  <p class="page-sub">매일 오전 9시, 전일 자금일보를 지정한 이메일로 자동 발송합니다.</p>
+
+  <div class="card">
+    <div class="card-title">
+      📧 발송 설정
+    </div>
+
+    <!-- 활성화 토글 -->
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="enabledToggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <div>
+        <div class="toggle-label">일일 이메일 보고서 발송</div>
+        <div class="toggle-desc">활성화 시 매일 오전 9시에 전일 자금일보가 발송됩니다.</div>
+      </div>
+    </div>
+
+    <!-- 수신자 입력 -->
+    <div class="recipient-section">
+      <div class="field-label">수신자 이메일 <span style="color:#ef4444;">*</span></div>
+      <div class="tag-input-box" id="tagBox" onclick="document.getElementById('emailInput').focus()">
+        <!-- 태그들이 여기 추가됨 -->
+        <input type="email" id="emailInput"
+               placeholder="이메일 입력 후 Enter"
+               autocomplete="off">
+      </div>
+      <div class="input-hint">이메일 입력 후 Enter를 누르면 수신자로 추가됩니다. 여러 명 추가 가능.</div>
+    </div>
+
+    <!-- 발송 일정 안내 -->
+    <div class="schedule-info">
+      <div class="schedule-dot"></div>
+      매일 오전 9시 &nbsp;|&nbsp; 전일 (어제) 자금일보 &nbsp;|&nbsp; 은행별 입출금 + 전표 현금성 계정 포함
+    </div>
+
+    <div class="action-row">
+      <button class="btn-save" id="saveBtn" onclick="save()">설정 저장</button>
+      <button class="btn-test" onclick="sendTest()">테스트 발송</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 이메일 포함 내용</div>
+    <div class="preview-box">
+      <div class="item">
+        <span class="item-label">발송 기준일</span>
+        <span class="item-value">전일 (어제) 데이터</span>
+      </div>
+      <div class="item">
+        <span class="item-label">은행별 입출금</span>
+        <span class="item-value">은행 구분별 입금 / 출금 합계</span>
+      </div>
+      <div class="item">
+        <span class="item-label">전표 현금성 계정</span>
+        <span class="item-value">계정별 입금 / 출금 합계</span>
+      </div>
+      <div class="item">
+        <span class="item-label">미확인 차이</span>
+        <span class="item-value">은행 내역 – 전표 차이금액</span>
+      </div>
+      <div class="item">
+        <span class="item-label">발송 시각</span>
+        <span class="item-value">매일 오전 9:00 (KST)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script>
+  const recipients = [];
+
+  function addTag(email) {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@')) return;
+    if (recipients.includes(trimmed)) return;
+
+    recipients.push(trimmed);
+    renderTags();
+    document.getElementById('emailInput').value = '';
+  }
+
+  function removeTag(email) {
+    const idx = recipients.indexOf(email);
+    if (idx !== -1) recipients.splice(idx, 1);
+    renderTags();
+  }
+
+  function renderTags() {
+    const box = document.getElementById('tagBox');
+    const input = document.getElementById('emailInput');
+    box.innerHTML = '';
+    recipients.forEach(function(email) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = email + ' <button class="tag-remove" onclick="removeTag(\'' + email + '\')">×</button>';
+      box.appendChild(tag);
+    });
+    box.appendChild(input);
+  }
+
+  document.getElementById('emailInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(this.value);
+    } else if (e.key === 'Backspace' && !this.value && recipients.length > 0) {
+      recipients.pop();
+      renderTags();
+    }
+  });
+
+  document.getElementById('emailInput').addEventListener('blur', function() {
+    if (this.value.trim()) addTag(this.value);
+  });
+
+  // 설정 불러오기
+  async function load() {
+    const res = await fetch('/api/report-email-settings', { credentials: 'include' });
+    const data = await res.json();
+    document.getElementById('enabledToggle').checked = data.enabled;
+    recipients.length = 0;
+    (data.recipients || []).forEach(function(e) { recipients.push(e); });
+    renderTags();
+  }
+
+  async function save() {
+    const btn = document.getElementById('saveBtn');
+    const msg = document.getElementById('msg');
+    btn.disabled = true;
+    msg.textContent = '';
+
+    const res = await fetch('/api/report-email-settings', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: document.getElementById('enabledToggle').checked,
+        recipients: [...recipients]
+      })
+    });
+    const data = await res.json();
+    msg.textContent = data.message;
+    msg.className = 'msg ' + (data.success ? 'ok' : 'err');
+    btn.disabled = false;
+  }
+
+  async function sendTest() {
+    const msg = document.getElementById('msg');
+    if (recipients.length === 0) {
+      msg.textContent = '수신자 이메일을 먼저 입력해주세요.';
+      msg.className = 'msg err';
+      return;
+    }
+    msg.textContent = '테스트 메일 발송 중...';
+    msg.className = 'msg';
+
+    const res = await fetch('/api/report-email-settings/test', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients: [...recipients] })
+    });
+    const data = await res.json();
+    msg.textContent = data.message;
+    msg.className = 'msg ' + (data.success ? 'ok' : 'err');
+  }
+
+  load();
+  loadSidebar();
+</script>
+</body>
+</html>

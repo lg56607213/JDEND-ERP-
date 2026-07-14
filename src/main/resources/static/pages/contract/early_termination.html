@@ -94,6 +94,7 @@
         <button type="button" class="btn btn-primary" id="addTerminationBtn">
           <span>+ 중도상환 추가</span>
         </button>
+        <button type="button" class="btn-excel" onclick="exportTableToExcel('terminationTableBody', '중도상환')">엑셀 내보내기</button>
       </div>
 
       <div class="card-body">
@@ -677,5 +678,6 @@
       await loadList();
     })();
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

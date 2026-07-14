@@ -36,6 +36,10 @@
               <label>&nbsp;</label>
               <button type="button" class="btn-search" id="searchBtn">검색</button>
             </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('salesTableBody', '매각현황')">엑셀 내보내기</button>
+            </div>
           </div>
         </div>
 
@@ -159,5 +163,6 @@
       searchSales();
     });
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

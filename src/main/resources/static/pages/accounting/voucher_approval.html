@@ -71,6 +71,7 @@
 
             <div class="form-group btn-group">
               <button type="button" class="btn-search" onclick="searchVouchers()">조회</button>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('voucherTableBody', '전표승인')">엑셀 내보내기</button>
             </div>
           </div>
         </div>
@@ -280,5 +281,6 @@
       await searchVouchers();
     }
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

@@ -216,6 +216,9 @@ function loadSidebar() {
               <li id="companyUsersMenuItem" style="display:none;">
                 <a href="${basePath}pages/management/company_users.html">사용자관리</a>
               </li>
+              <li id="reportEmailSettingsMenuItem" style="display:none;">
+                <a href="${basePath}pages/management/report_email_settings.html">이메일 보고서 설정</a>
+              </li>
               <li id="taxConsultationMenu" class="has-sub" style="display:none;">
                 <span class="menu-label">세무상담</span>
                 <ul>
@@ -264,6 +267,10 @@ function loadSidebar() {
         // 사용자관리 메뉴
         const item = document.getElementById('companyUsersMenuItem');
         if (item && (role === 'ADMIN' || role === 'COMPANY_ADMIN')) item.style.display = '';
+
+        // 이메일 보고서 설정 메뉴 (회사관리자·책임자 이상 노출)
+        const reportItem = document.getElementById('reportEmailSettingsMenuItem');
+        if (reportItem && (role === 'COMPANY_ADMIN' || role === 'MANAGER')) reportItem.style.display = '';
 
         // 세무상담 메뉴
         const taxMenu = document.getElementById('taxConsultationMenu');

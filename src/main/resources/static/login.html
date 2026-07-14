@@ -76,6 +76,20 @@
       font-size: 12px;
       color: #64748b;
     }
+
+    .legal-links {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .legal-links a {
+      color: #64748b;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+    .legal-links a:hover { text-decoration: underline; }
+    .legal-links .divider { color: #cbd5e1; }
   </style>
 </head>
 <body>
@@ -111,6 +125,14 @@
     <button type="submit" id="loginBtn">로그인</button>
     <div class="msg" id="msg"></div>
   </form>
+
+  <div class="legal-links">
+    <a href="/contact.html">도입 문의</a>
+    <span class="divider">|</span>
+    <a href="/legal/privacy_policy.html" target="_blank">개인정보처리방침</a>
+    <span class="divider">|</span>
+    <a href="/legal/terms_of_service.html" target="_blank">이용약관</a>
+  </div>
 </div>
 
 <script>

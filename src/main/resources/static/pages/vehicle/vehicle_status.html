@@ -43,6 +43,7 @@
             <div class="button-group">
               <button type="button" class="btn-search" onclick="searchVehicle()">조회하기</button>
               <button type="button" class="btn-add" onclick="goToRegister()">+ 등록추가</button>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('vehicleTableBody', '차량현황')">엑셀 내보내기</button>
             </div>
           </div>
         </div>
@@ -176,5 +177,6 @@
       window.location.href = 'vehicle_detail.html?id=' + encodeURIComponent(rowId);
     }
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

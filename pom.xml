@@ -66,6 +66,12 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- 이메일 발송 (문의하기) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

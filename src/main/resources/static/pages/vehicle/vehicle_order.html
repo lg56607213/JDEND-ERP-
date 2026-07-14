@@ -166,6 +166,7 @@
               <button type="button" class="btn-release" id="btnRelease" onclick="bulkSetReleased()" disabled>출고완료 변경 <span id="releaseCount"></span></button>
               <button type="button" class="btn-advance" id="btnAdvance" onclick="goToAdvance()" disabled>선급등록</button>
               <button type="button" class="btn-car-register" id="btnCarRegister" onclick="openCarRegisterModal()" disabled>차량등록</button>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('vehicleTableBody', '발주현황')">엑셀 내보내기</button>
             </div>
           </div>
         </div>
@@ -772,5 +773,6 @@
     renderMakerContractInputs();
   }
 </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

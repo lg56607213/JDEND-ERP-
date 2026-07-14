@@ -101,6 +101,10 @@
             <label>&nbsp;</label>
             <button type="button" class="btn-search" onclick="searchContracts()">조회</button>
           </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-excel" onclick="exportTableToExcel('contractTableBody', '계약현황')">엑셀 내보내기</button>
+          </div>
         </div>
       </div>
 
@@ -243,5 +247,6 @@
 
   window.addEventListener('load', () => searchContracts());
 </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

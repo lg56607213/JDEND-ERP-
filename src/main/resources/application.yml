@@ -19,32 +19,28 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 30MB
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 app:
+  contact:
+    recipient-email: ${MAIL_USERNAME}
   upload-dir: uploads/accounts
   multidb:
     default-db: auth
     datasources:
       auth:
-        url: jdbc:mysql://localhost:3306/erp?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-        username: root
-        password: root1234!
-        driver-class-name: com.mysql.cj.jdbc.Driver
-
-      erp_company_a:
-        url: jdbc:mysql://localhost:3306/erp_company_a?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-        username: root
-        password: root1234!
-        driver-class-name: com.mysql.cj.jdbc.Driver
-
-      erp_company_b:
-        url: jdbc:mysql://localhost:3306/erp_company_b?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-        username: root
-        password: root1234!
-        driver-class-name: com.mysql.cj.jdbc.Driver
-
-      erp_company_c:
-        url: jdbc:mysql://localhost:3306/erp_company_c?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-        username: root
-        password: root1234!
+        url: ${DB_URL_AUTH}
+        username: ${DB_USERNAME}
+        password: ${DB_PASSWORD}
         driver-class-name: com.mysql.cj.jdbc.Driver

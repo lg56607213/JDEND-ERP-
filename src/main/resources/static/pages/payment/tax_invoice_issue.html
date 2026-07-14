@@ -99,6 +99,10 @@
             <label>&nbsp;</label>
             <button type="button" class="btn btn-primary" id="btnSearch">조회</button>
           </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-excel" onclick="exportTableToExcel('taxTableBody', '세금계산서')">엑셀 내보내기</button>
+          </div>
         </div>
 
         <!-- 요약 -->
@@ -322,5 +326,6 @@
     document.getElementById('btnDownload').addEventListener('click', download);
     document.getElementById('taxEnd').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
   </script>
+  <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

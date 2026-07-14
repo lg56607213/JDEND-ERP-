@@ -25,4 +25,7 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
 
   @Query("select u.targetDb from LoginUser u where u.role = 'COMPANY' and u.isActive = true")
   List<String> findAllActiveCompanyTargetDbs();
+
+  @Query("select u from LoginUser u where u.role = 'COMPANY' and u.isActive = true")
+  List<LoginUser> findAllActiveCompanies();
 }
