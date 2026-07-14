@@ -37,6 +37,7 @@ public class TenantDatabaseService {
         validateDbName(targetDb);
         createDatabaseIfNotExists(targetDb);
         copySchemaIfEmpty(targetDb);
+        ensureFinancialStatementAccounts(targetDb);
         registerDataSourceIfMissing(targetDb);
     }
 
@@ -88,14 +89,32 @@ public class TenantDatabaseService {
             );
         }
 
-        seedDefaultFinancialStatementAccounts(targetDb, templateDb);
     }
 
-    // 새 회사(테넌트) DB가 처음 만들어질 때, 템플릿 DB(erp)에 현재 등록되어 있는
-    // 재무제표관리 계정구조(대/중/소/소소분류 전체)를 그대로 복제해 기본값으로 넣어준다.
+    // 재무제표 계정이 비어있는 테넌트(기존 업체 포함)에 기본 계정 트리를 채워준다.
+    // copySchemaIfEmpty와 독립적으로 동작하여 테이블이 이미 있어도 계정이 0건이면 복제한다.
+    private void ensureFinancialStatementAccounts(String targetDb) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM `" + targetDb + "`.`financial_statement_accounts`",
+                Integer.class
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+        seedDefaultFinancialStatementAccounts(targetDb, properties.getTemplateDb());
+    }
+
     // id를 그대로 복제해야 parent_id 트리 연결이 깨지지 않는다.
     private void seedDefaultFinancialStatementAccounts(String targetDb, String templateDb) {
-        jdbcTemplate.execute(
+        Integer templateCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM `" + templateDb + "`.`financial_statement_accounts`",
+                Integer.class
+        );
+        if (templateCount == null || templateCount == 0) {
+            return;
+        }
+
+        jdbcTemplate.update(
                 "INSERT INTO `" + targetDb + "`.`financial_statement_accounts` " +
                 "(id, statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable) " +
                 "SELECT id, statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable " +
