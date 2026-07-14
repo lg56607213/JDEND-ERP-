@@ -79,6 +79,34 @@
       </div>
     </div>
 
+    <!-- 미승인 전표 알림 -->
+    <div class="erp-card" id="pendingVoucherCard" style="display:none; border-left:4px solid #d97706;">
+      <div class="card-header" style="display:flex;align-items:center;gap:12px;">
+        <h2 style="flex:1;">⚠ 미승인 전표</h2>
+        <span id="pendingVoucherBadge" style="background:#d97706;color:#fff;font-size:13px;font-weight:700;padding:3px 12px;border-radius:12px;">0건</span>
+        <a href="pages/accounting/voucher_approval.html" style="font-size:13px;color:#d97706;font-weight:600;text-decoration:none;">전표승인 바로가기 →</a>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:#92400e;margin-bottom:10px;background:#fef3c7;padding:8px 12px;border-radius:4px;">
+          아래 전표는 <strong>대기 상태</strong>입니다. 승인 전까지 재무제표에 반영되지 않습니다. 결재자가 전표승인 화면에서 검토 후 승인해 주세요.
+        </p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>전표번호</th>
+                <th>전표일자</th>
+                <th class="amount-cell">금액</th>
+                <th>메모</th>
+              </tr>
+            </thead>
+            <tbody id="pendingVoucherTbody"></tbody>
+          </table>
+        </div>
+        <p id="pendingVoucherMore" style="display:none;font-size:12px;color:#92400e;margin-top:8px;text-align:right;"></p>
+      </div>
+    </div>
+
     <!-- 보험 · 정기검사 현황 (2열 그리드) -->
     <div class="dashboard-grid">
       <!-- 보험 현황 -->
@@ -196,6 +224,7 @@
         await loadContractStatus(base, contractStatusChart);
         await loadBankSummary(base);
         await loadBankVoucherDiff(base);
+        await loadPendingVouchers(base);
         await loadInsuranceAlert(base);
         await loadInspectionAlert(base);
         await loadMaturitySoon(base);
@@ -513,6 +542,38 @@
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
+    }
+
+    async function loadPendingVouchers(base) {
+      try {
+        const data = await getJson(`${base}/api/dashboard/pending-vouchers`);
+        const count = data.count || 0;
+        if (count === 0) return;
+
+        document.getElementById('pendingVoucherCard').style.display = '';
+        document.getElementById('pendingVoucherBadge').textContent = `${count}건`;
+
+        const tbody = document.getElementById('pendingVoucherTbody');
+        tbody.innerHTML = '';
+        for (const r of (data.recent || [])) {
+          tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${esc(r.voucherNo)}</td>
+              <td>${fmtDate(r.voucherDate)}</td>
+              <td class="amount-cell">${fmtNumber(r.totalAmount)}</td>
+              <td style="color:#64748b;">${esc(r.memo || '-')}</td>
+            </tr>
+          `);
+        }
+
+        if (count > 5) {
+          const moreEl = document.getElementById('pendingVoucherMore');
+          moreEl.style.display = '';
+          moreEl.textContent = `외 ${count - 5}건 더 있습니다. 전표승인 화면에서 전체 확인하세요.`;
+        }
+      } catch (e) {
+        console.warn('미승인 전표 로드 실패:', e);
+      }
     }
   </script>
 </body>

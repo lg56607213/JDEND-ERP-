@@ -66,4 +66,9 @@ public class DashboardController {
   public List<DashboardVehicleInspectionRow> vehicleInspectionAll() {
     return service.vehicleInspectionAll();
   }
+
+  @GetMapping("/pending-vouchers")
+  public DashboardPendingVoucherResponse pendingVouchers() {
+    return service.pendingVoucherSummary();
+  }
 }

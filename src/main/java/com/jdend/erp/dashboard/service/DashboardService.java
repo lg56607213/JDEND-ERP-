@@ -1,5 +1,7 @@
 package com.jdend.erp.dashboard.service;
 
+import com.jdend.erp.accounting.voucher.entity.Voucher;
+import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
 import com.jdend.erp.dashboard.dto.*;
 import com.jdend.erp.dashboard.repository.*;
 import com.jdend.erp.myinfo.entity.BankAccount;
@@ -10,6 +12,7 @@ import com.jdend.erp.vehicle.inspection.repository.VehicleInspectionRepository;
 import com.jdend.erp.vehicle.insurance.entity.VehicleInsurance;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -30,6 +33,7 @@ public class DashboardService {
   private final ReceivableDashboardRepository receivableRepo;
   private final VehicleOrderRepository vehicleOrderRepo;
   private final VehicleInspectionRepository inspectionRepo;
+  private final VoucherRepository voucherRepository;
 
   public DashboardCashResponse cashDaily(LocalDate baseDate) {
     LocalDate d = (baseDate != null) ? baseDate : LocalDate.now().minusDays(1);
@@ -313,6 +317,25 @@ public class DashboardService {
       case "미가입", "미등록" -> 2;
       default       -> 3; // 정상
     };
+  }
+
+  public DashboardPendingVoucherResponse pendingVoucherSummary() {
+    List<Voucher> pending = voucherRepository.searchForApproval(null, "대기");
+    int count = pending.size();
+    List<DashboardPendingVoucherResponse.Row> recent = pending.stream()
+        .limit(5)
+        .map(v -> DashboardPendingVoucherResponse.Row.builder()
+            .id(v.getId())
+            .voucherNo(v.getVoucherNo())
+            .voucherDate(v.getVoucherDate())
+            .totalAmount(v.getTotalAmount())
+            .memo(v.getMemo())
+            .build())
+        .toList();
+    return DashboardPendingVoucherResponse.builder()
+        .count(count)
+        .recent(recent)
+        .build();
   }
 
   // ✅ 차량번호 normalize
