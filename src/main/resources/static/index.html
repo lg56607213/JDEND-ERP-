@@ -208,6 +208,7 @@
     </div>
   </div>
 
+  <style>body { visibility: hidden; }</style>
   <script src="assets/js/sidebar.js"></script>
   <script src="assets/js/config.js"></script>
   <script src="assets/js/auth.js"></script>
@@ -215,6 +216,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', async function () {
       await authCheck();
+      document.body.style.visibility = 'visible';
 
       try {
         const base = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
