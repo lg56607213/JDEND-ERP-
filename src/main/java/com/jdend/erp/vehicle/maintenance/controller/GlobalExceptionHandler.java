@@ -20,6 +20,12 @@ public class GlobalExceptionHandler {
     return new ApiErrorResponse(e.getMessage());
   }
 
+  @ExceptionHandler(RuntimeException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public ApiErrorResponse handleRuntimeError(RuntimeException e) {
+    return new ApiErrorResponse(e.getMessage());
+  }
+
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public ApiErrorResponse handleServerError(Exception e) {
