@@ -1,5 +1,6 @@
 package com.jdend.erp.vehicle.maintenance.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
@@ -14,6 +15,7 @@ import com.jdend.erp.vehicle.maintenance.repository.VehicleMaintenanceItemReposi
 import com.jdend.erp.vehicle.maintenance.repository.VehicleMaintenanceRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleMaintenanceService {
@@ -29,6 +32,7 @@ public class VehicleMaintenanceService {
   private final VehicleMaintenanceRepository maintenanceRepository;
   private final VehicleMaintenanceItemRepository itemRepository;
   private final VoucherService voucherService;
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional(readOnly = true)
   public VehicleMaintenanceVehicleInfoResponse getVehicleInfoByMgmtNo(String mgmtNo) {
@@ -90,24 +94,46 @@ public class VehicleMaintenanceService {
       long vat    = nvlLong(item.getVatAmount());
       long total  = nvlLong(item.getAmount());
 
+      // 차변 계정 설정 확인 — 미설정이면 전표 전체 건너뜀
+      String debitAccount = accountSettings.getMaintenanceDebitAccount();
+      if (debitAccount == null) {
+        log.warn("정비 차변 계정(maintenanceMapping.debit) 미설정으로 전표를 건너뜁니다. description={}", item.getDescription());
+        continue;
+      }
+
+      // 대변 계정 설정 확인 — 미설정이면 전표 전체 건너뜀
+      String creditAccount = resolveCreditAccountWithDetail(item.getPaymentMethod(), item.getPaymentDetail());
+      if (creditAccount == null) {
+        log.warn("정비 대변 계정 미설정으로 전표를 건너뜁니다. paymentMethod={}, description={}",
+            item.getPaymentMethod(), item.getDescription());
+        continue;
+      }
+
+      // 부가세 차변 계정 — 미설정이면 부가세 분개 라인만 생략
+      String vatDebitAccount = accountSettings.getMaintenanceVatDebitAccount();
+
       List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
       if (supply > 0) {
         debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("차량유지비")
+            .account(debitAccount)
             .amount(supply)
             .description(item.getDescription())
             .build());
       }
       if (vat > 0) {
-        debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("부가세대급금")
-            .amount(vat)
-            .description(item.getDescription())
-            .build());
+        if (vatDebitAccount != null) {
+          debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+              .account(vatDebitAccount)
+              .amount(vat)
+              .description(item.getDescription())
+              .build());
+        } else {
+          log.warn("정비 부가세 차변 계정(maintenanceMapping.vatDebit) 미설정으로 부가세 분개를 건너뜁니다. description={}", item.getDescription());
+        }
       }
       if (debits.isEmpty()) {
         debits.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("차량유지비")
+            .account(debitAccount)
             .amount(total)
             .description(item.getDescription())
             .build());
@@ -124,7 +150,7 @@ public class VehicleMaintenanceService {
               .debitEntries(debits)
               .creditEntries(List.of(
                   VoucherCreateRequest.VoucherLineRequest.builder()
-                      .account(resolveCreditAccountWithDetail(item.getPaymentMethod(), item.getPaymentDetail()))
+                      .account(creditAccount)
                       .amount(creditTotal)
                       .description(item.getPaymentMethod())
                       .build()
@@ -168,12 +194,24 @@ public class VehicleMaintenanceService {
     };
   }
 
+  /**
+   * 결제수단별 대변 계정명 반환. suffix("(xxx)") 로직은 기존 그대로 유지.
+   * - 미지급금: suffix 없음
+   * - 법인카드/보통예금: paymentDetail suffix 추가
+   * 설정 미지정 시 null 반환 → 호출부에서 전표 건너뜀 처리.
+   */
   private String resolveCreditAccountWithDetail(String paymentMethod, String paymentDetail) {
     String suffix = (paymentDetail != null && !paymentDetail.isBlank()) ? "(" + paymentDetail.trim() + ")" : "";
     return switch (paymentMethod) {
-      case "미지급금" -> "미지급금";
-      case "법인카드" -> "미지급비용" + suffix;
-      case "보통예금" -> "보통예금" + suffix;
+      case "미지급금" -> accountSettings.getMaintenanceCreditUnpaidAccount();
+      case "법인카드" -> {
+        String base = accountSettings.getMaintenanceCreditCardAccount();
+        yield base == null ? null : base + suffix;
+      }
+      case "보통예금" -> {
+        String base = accountSettings.getMaintenanceCreditBankAccount();
+        yield base == null ? null : base + suffix;
+      }
       default -> throw new IllegalArgumentException("대변 계정 매핑 불가: " + paymentMethod);
     };
   }

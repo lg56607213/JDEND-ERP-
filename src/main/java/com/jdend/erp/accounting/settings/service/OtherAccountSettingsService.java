@@ -121,6 +121,36 @@ public class OtherAccountSettingsService {
   /** 중도해지 상환금액 대변 계정명 */
   public String getEarlyTermAmountCredit()         { return nested3("earlyTermMapping","terminationAmount","credit"); }
 
+  /** 보험 신규/갱신 차변 계정명 */
+  public String getInsuranceDebitAccount()         { return nested("insuranceMapping",       "debit");  }
+  /** 보험 신규/갱신 대변 계정명 */
+  public String getInsuranceCreditAccount()        { return nested("insuranceMapping",       "credit"); }
+  /** 보험 변경 환급 차변 계정명 */
+  public String getInsuranceRefundDebitAccount()   { return nested("insuranceRefundMapping", "debit");  }
+  /** 보험 변경 환급 대변 계정명 */
+  public String getInsuranceRefundCreditAccount()  { return nested("insuranceRefundMapping", "credit"); }
+
+  /** 정비 차변 계정명 (공급가액) */
+  public String getMaintenanceDebitAccount()        { return nested("maintenanceMapping", "debit");        }
+  /** 정비 부가세 차변 계정명 */
+  public String getMaintenanceVatDebitAccount()     { return nested("maintenanceMapping", "vatDebit");     }
+  /** 정비 대변 계정명 (미지급금 결제) */
+  public String getMaintenanceCreditUnpaidAccount() { return nested("maintenanceMapping", "creditUnpaid"); }
+  /** 정비 대변 계정명 (법인카드 결제) */
+  public String getMaintenanceCreditCardAccount()   { return nested("maintenanceMapping", "creditCard");   }
+  /** 정비 대변 계정명 (보통예금 결제) */
+  public String getMaintenanceCreditBankAccount()   { return nested("maintenanceMapping", "creditBank");   }
+  /** 선급 부가세 차변 계정명 */
+  public String getAdvanceVatDebitAccount()         { return nested("advanceVatMapping",  "debit");        }
+  /** 매각 감가상각누계액 차변 계정명 */
+  public String getSaleAccumDeprecAccount()         { return nested("saleDetailMapping",  "accumDeprec");  }
+  /** 매각 미상각잔액 차변 계정명 */
+  public String getSaleUndepreciatedAccount()       { return nested("saleDetailMapping",  "undepreciated"); }
+  /** 매각 부가세예수금 대변 계정명 */
+  public String getSaleVatCreditAccount()           { return nested("saleDetailMapping",  "vatCredit");    }
+  /** 매각 차량운반구 대변 계정명 */
+  public String getSaleVehicleAssetAccount()        { return nested("saleDetailMapping",  "vehicleAsset"); }
+
   private String nested(String section, String key) {
     Object sec = getSettingsMap().get(section);
     if (sec instanceof Map) {

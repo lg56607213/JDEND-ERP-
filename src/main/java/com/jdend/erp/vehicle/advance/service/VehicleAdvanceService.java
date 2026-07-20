@@ -11,6 +11,7 @@ import com.jdend.erp.vehicle.advance.repository.VehicleAdvanceRepository;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleAdvanceService {
@@ -180,13 +182,18 @@ public class VehicleAdvanceService {
         .sortOrder(sortOrder++)
         .build());
 
-      voucher.addLine(VoucherLine.builder()
-        .lineType("DEBIT")
-        .accountName("부가세대급금")
-        .amount(vatAmt)
-        .description(itemName + " 부가세")
-        .sortOrder(sortOrder++)
-        .build());
+      String vatDebitAccount = accountSettings.getAdvanceVatDebitAccount();
+      if (vatDebitAccount != null) {
+        voucher.addLine(VoucherLine.builder()
+          .lineType("DEBIT")
+          .accountName(vatDebitAccount)
+          .amount(vatAmt)
+          .description(itemName + " 부가세")
+          .sortOrder(sortOrder++)
+          .build());
+      } else {
+        log.warn("선급 부가세 차변 계정(advanceVatMapping.debit) 미설정으로 부가세 분개를 건너뜁니다. itemName={}", itemName);
+      }
     } else {
       // 면세/비과세 항목 (취득세, 인지대 등): 단일 차변
       voucher.addLine(VoucherLine.builder()

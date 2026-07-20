@@ -358,20 +358,33 @@ public class VehicleLoanService {
             long interest = (req.interestAmount != null && req.interestAmount > 0) ? req.interestAmount : 0L;
             long principal = req.amount - interest;
 
+            String loanDebitAccount2 = accountSettings.getLoanDebit2Account();
+
             List<VoucherCreateRequest.VoucherLineRequest> debitEntries;
             if (interest > 0 && principal > 0) {
-                debitEntries = List.of(
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account(loanDebitAccount)
-                                .amount(principal)
-                                .description("차입금 원금 상환")
-                                .build(),
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account("이자비용")
-                                .amount(interest)
-                                .description("차입금 이자")
-                                .build()
-                );
+                if (loanDebitAccount2 == null) {
+                    log.warn("이자비용 계정 미설정으로 이자 분개를 건너뜁니다. 기타계정관리 > 차입금상환 이자 계정(차변 두 번째)을 설정하세요.");
+                    debitEntries = List.of(
+                            VoucherCreateRequest.VoucherLineRequest.builder()
+                                    .account(loanDebitAccount)
+                                    .amount(req.amount)
+                                    .description("차입금 상환")
+                                    .build()
+                    );
+                } else {
+                    debitEntries = List.of(
+                            VoucherCreateRequest.VoucherLineRequest.builder()
+                                    .account(loanDebitAccount)
+                                    .amount(principal)
+                                    .description("차입금 원금 상환")
+                                    .build(),
+                            VoucherCreateRequest.VoucherLineRequest.builder()
+                                    .account(loanDebitAccount2)
+                                    .amount(interest)
+                                    .description("차입금 이자")
+                                    .build()
+                    );
+                }
             } else {
                 debitEntries = List.of(
                         VoucherCreateRequest.VoucherLineRequest.builder()

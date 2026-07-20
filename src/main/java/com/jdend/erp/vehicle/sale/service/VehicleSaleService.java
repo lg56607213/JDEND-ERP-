@@ -116,13 +116,18 @@ public class VehicleSaleService {
 
     List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
     debits.add(line(saleDebitAccount, s.getSaleAmount(), memo));
-    if (accumulated > 0) debits.add(line("감가상각누계액", accumulated, memo));
-    if (remaining > 0)   debits.add(line("미상각잔액", remaining, memo));
+    String accumDeprecAccount   = accountSettings.getSaleAccumDeprecAccount();
+    String undepreciatedAccount = accountSettings.getSaleUndepreciatedAccount();
+    if (accumulated > 0 && accumDeprecAccount != null)   debits.add(line(accumDeprecAccount,   accumulated, memo));
+    if (remaining > 0   && undepreciatedAccount != null) debits.add(line(undepreciatedAccount, remaining,   memo));
+
+    String vatCreditAccount    = accountSettings.getSaleVatCreditAccount();
+    String vehicleAssetAccount = accountSettings.getSaleVehicleAssetAccount();
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
     credits.add(line(saleRevenueAccount, s.getSupplyAmount(), memo));
-    credits.add(line("부가세예수금", s.getTaxAmount(), memo));
-    if (acquisitionCost > 0) credits.add(line("차량운반구", acquisitionCost, memo));
+    if (vatCreditAccount != null)                           credits.add(line(vatCreditAccount,    s.getTaxAmount(), memo));
+    if (acquisitionCost > 0 && vehicleAssetAccount != null) credits.add(line(vehicleAssetAccount, acquisitionCost,  memo));
 
     try {
       VoucherCreateResponse resp = voucherService.create(VoucherCreateRequest.builder()

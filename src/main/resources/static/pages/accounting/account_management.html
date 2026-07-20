@@ -299,6 +299,144 @@
         </div>
       </div>
 
+      <!-- 정비 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">정비 전표</h3>
+        <p class="section-note">차량 정비 등록 시 자동 발생하는 전표 계정을 설정합니다.</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <label class="sub-label">공급가액</label>
+              <input type="text" class="account-code" id="maintenanceDebitCode" placeholder="계정코드">
+              <select class="account-select" id="maintenanceDebitAccount"></select>
+            </div>
+            <div class="account-input-group" style="margin-top: 10px;">
+              <label class="sub-label">부가세</label>
+              <input type="text" class="account-code" id="maintenanceVatDebitCode" placeholder="계정코드">
+              <select class="account-select" id="maintenanceVatDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변 (결제수단별)</label>
+            <div class="account-input-group">
+              <label class="sub-label">미지급금</label>
+              <input type="text" class="account-code" id="maintenanceCreditUnpaidCode" placeholder="계정코드">
+              <select class="account-select" id="maintenanceCreditUnpaidAccount"></select>
+            </div>
+            <div class="account-input-group" style="margin-top: 10px;">
+              <label class="sub-label">법인카드</label>
+              <input type="text" class="account-code" id="maintenanceCreditCardCode" placeholder="계정코드">
+              <select class="account-select" id="maintenanceCreditCardAccount"></select>
+            </div>
+            <div class="account-input-group" style="margin-top: 10px;">
+              <label class="sub-label">보통예금</label>
+              <input type="text" class="account-code" id="maintenanceCreditBankCode" placeholder="계정코드">
+              <select class="account-select" id="maintenanceCreditBankAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 차량선급 — 부가세 계정 -->
+      <div class="form-section">
+        <h3 class="section-title">차량선급 — 부가세 계정</h3>
+        <p class="section-note">차량 선급 항목 중 부가세 분개에 사용할 차변 계정을 설정합니다. 미설정 시 부가세 분개는 생략됩니다. (항목별 차변은 위의 선급관리 계정분류에서 설정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변 (부가세)</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="advanceVatDebitCode" placeholder="계정코드">
+              <select class="account-select" id="advanceVatDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow"> </div>
+          <div class="mapping-item"></div>
+        </div>
+      </div>
+
+      <!-- 차량매각 — 장부 계정 -->
+      <div class="form-section">
+        <h3 class="section-title">차량매각 — 장부 계정</h3>
+        <p class="section-note">매각 전표에서 장부 정리에 사용할 계정을 설정합니다. 미설정 항목은 해당 분개 라인이 생략됩니다. (주 차변/대변은 위의 차량매각 전표 섹션에서 설정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변 (장부가 제거)</label>
+            <div class="account-input-group">
+              <label class="sub-label">감가상각누계액</label>
+              <input type="text" class="account-code" id="saleAccumDeprecCode" placeholder="계정코드">
+              <select class="account-select" id="saleAccumDeprecAccount"></select>
+            </div>
+            <div class="account-input-group" style="margin-top: 10px;">
+              <label class="sub-label">미상각잔액</label>
+              <input type="text" class="account-code" id="saleUndepreciatedCode" placeholder="계정코드">
+              <select class="account-select" id="saleUndepreciatedAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변 (장부가 제거)</label>
+            <div class="account-input-group">
+              <label class="sub-label">부가세예수금</label>
+              <input type="text" class="account-code" id="saleVatCreditCode" placeholder="계정코드">
+              <select class="account-select" id="saleVatCreditAccount"></select>
+            </div>
+            <div class="account-input-group" style="margin-top: 10px;">
+              <label class="sub-label">차량운반구</label>
+              <input type="text" class="account-code" id="saleVehicleAssetCode" placeholder="계정코드">
+              <select class="account-select" id="saleVehicleAssetAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 보험 신규/갱신 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">보험 신규/갱신 전표</h3>
+        <p class="section-note">보험 등록·갱신·변경 추가납부 시 자동 발생하는 전표 계정을 설정합니다. (차변: 보험료 비용 계정 / 대변: 미지급 계정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="insuranceDebitCode" placeholder="계정코드">
+              <select class="account-select" id="insuranceDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="insuranceCreditCode" placeholder="계정코드">
+              <select class="account-select" id="insuranceCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 보험 변경 환급 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">보험 변경 환급 전표</h3>
+        <p class="section-note">보험 변경 시 환급이 발생할 때 자동 발생하는 전표 계정을 설정합니다. (차변: 미수금 계정 / 대변: 보험료 비용 계정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="insuranceRefundDebitCode" placeholder="계정코드">
+              <select class="account-select" id="insuranceRefundDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="insuranceRefundCreditCode" placeholder="계정코드">
+              <select class="account-select" id="insuranceRefundCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 버튼 -->
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="resetSettings()">초기화</button>
@@ -517,10 +655,41 @@
       credit: { code: inputVal('paymentCreditCode'), account: selVal('paymentCreditAccount'), accountName: selText('paymentCreditAccount') }
     };
 
+    const insuranceMapping = {
+      debit:  { code: inputVal('insuranceDebitCode'),  account: selVal('insuranceDebitAccount'),  accountName: selText('insuranceDebitAccount')  },
+      credit: { code: inputVal('insuranceCreditCode'), account: selVal('insuranceCreditAccount'), accountName: selText('insuranceCreditAccount') }
+    };
+
+    const insuranceRefundMapping = {
+      debit:  { code: inputVal('insuranceRefundDebitCode'),  account: selVal('insuranceRefundDebitAccount'),  accountName: selText('insuranceRefundDebitAccount')  },
+      credit: { code: inputVal('insuranceRefundCreditCode'), account: selVal('insuranceRefundCreditAccount'), accountName: selText('insuranceRefundCreditAccount') }
+    };
+
+    const maintenanceMapping = {
+      debit:        { code: inputVal('maintenanceDebitCode'),        account: selVal('maintenanceDebitAccount'),        accountName: selText('maintenanceDebitAccount')        },
+      vatDebit:     { code: inputVal('maintenanceVatDebitCode'),     account: selVal('maintenanceVatDebitAccount'),     accountName: selText('maintenanceVatDebitAccount')     },
+      creditUnpaid: { code: inputVal('maintenanceCreditUnpaidCode'), account: selVal('maintenanceCreditUnpaidAccount'), accountName: selText('maintenanceCreditUnpaidAccount') },
+      creditCard:   { code: inputVal('maintenanceCreditCardCode'),   account: selVal('maintenanceCreditCardAccount'),   accountName: selText('maintenanceCreditCardAccount')   },
+      creditBank:   { code: inputVal('maintenanceCreditBankCode'),   account: selVal('maintenanceCreditBankAccount'),   accountName: selText('maintenanceCreditBankAccount')   }
+    };
+
+    const advanceVatMapping = {
+      debit: { code: inputVal('advanceVatDebitCode'), account: selVal('advanceVatDebitAccount'), accountName: selText('advanceVatDebitAccount') }
+    };
+
+    const saleDetailMapping = {
+      accumDeprec:   { code: inputVal('saleAccumDeprecCode'),   account: selVal('saleAccumDeprecAccount'),   accountName: selText('saleAccumDeprecAccount')   },
+      undepreciated: { code: inputVal('saleUndepreciatedCode'), account: selVal('saleUndepreciatedAccount'), accountName: selText('saleUndepreciatedAccount') },
+      vatCredit:     { code: inputVal('saleVatCreditCode'),     account: selVal('saleVatCreditAccount'),     accountName: selText('saleVatCreditAccount')     },
+      vehicleAsset:  { code: inputVal('saleVehicleAssetCode'),  account: selVal('saleVehicleAssetAccount'),  accountName: selText('saleVehicleAssetAccount')  }
+    };
+
     return {
       prepaidAccounts, vehicleMapping, loanMapping, inspectionMapping,
       loanOpenMapping, deprecMapping, earlyTermMapping,
-      legalCostMapping, saleMapping, paymentMapping
+      legalCostMapping, saleMapping, paymentMapping,
+      insuranceMapping, insuranceRefundMapping,
+      maintenanceMapping, advanceVatMapping, saleDetailMapping
     };
   }
 
@@ -614,6 +783,40 @@
     if (settings.paymentMapping) {
       applySelect('paymentDebitAccount',  settings.paymentMapping.debit?.account);
       applySelect('paymentCreditAccount', settings.paymentMapping.credit?.account);
+    }
+
+    // 보험 신규/갱신
+    if (settings.insuranceMapping) {
+      applySelect('insuranceDebitAccount',  settings.insuranceMapping.debit?.account);
+      applySelect('insuranceCreditAccount', settings.insuranceMapping.credit?.account);
+    }
+
+    // 보험 변경 환급
+    if (settings.insuranceRefundMapping) {
+      applySelect('insuranceRefundDebitAccount',  settings.insuranceRefundMapping.debit?.account);
+      applySelect('insuranceRefundCreditAccount', settings.insuranceRefundMapping.credit?.account);
+    }
+
+    // 정비 전표
+    if (settings.maintenanceMapping) {
+      applySelect('maintenanceDebitAccount',        settings.maintenanceMapping.debit?.account);
+      applySelect('maintenanceVatDebitAccount',     settings.maintenanceMapping.vatDebit?.account);
+      applySelect('maintenanceCreditUnpaidAccount', settings.maintenanceMapping.creditUnpaid?.account);
+      applySelect('maintenanceCreditCardAccount',   settings.maintenanceMapping.creditCard?.account);
+      applySelect('maintenanceCreditBankAccount',   settings.maintenanceMapping.creditBank?.account);
+    }
+
+    // 차량선급 부가세
+    if (settings.advanceVatMapping) {
+      applySelect('advanceVatDebitAccount', settings.advanceVatMapping.debit?.account);
+    }
+
+    // 차량매각 장부 계정
+    if (settings.saleDetailMapping) {
+      applySelect('saleAccumDeprecAccount',   settings.saleDetailMapping.accumDeprec?.account);
+      applySelect('saleUndepreciatedAccount', settings.saleDetailMapping.undepreciated?.account);
+      applySelect('saleVatCreditAccount',     settings.saleDetailMapping.vatCredit?.account);
+      applySelect('saleVehicleAssetAccount',  settings.saleDetailMapping.vehicleAsset?.account);
     }
   }
 
