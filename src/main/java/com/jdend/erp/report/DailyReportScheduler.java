@@ -4,7 +4,7 @@ import com.jdend.erp.accounting.cash.dto.DailyFundReportResponse;
 import com.jdend.erp.accounting.cash.service.DailyCashService;
 import com.jdend.erp.auth.entity.LoginUser;
 import com.jdend.erp.auth.repository.LoginUserRepository;
-import com.jdend.erp.config.DbContextHolder;
+import com.jdend.erp.config.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -56,9 +56,9 @@ public class DailyReportScheduler {
             if (company == null) continue;
 
             try {
-                DbContextHolder.set(company.getTargetDb());
+                TenantContext.setCurrentDb(company.getTargetDb());
                 DailyFundReportResponse report = dailyCashService.daily(yesterday);
-                DbContextHolder.clear(); // auth DB로 복원 후 이메일 발송
+                TenantContext.clear(); // auth DB로 복원 후 이메일 발송
 
                 emailService.sendDailyReport(
                         company.getCompanyName(), yesterday, report, recipients);
@@ -67,7 +67,7 @@ public class DailyReportScheduler {
                 log.error("[일일자금보고] 처리 실패 company={} error={}",
                         company.getCompanyName(), e.getMessage());
             } finally {
-                DbContextHolder.clear();
+                TenantContext.clear();
             }
         }
 

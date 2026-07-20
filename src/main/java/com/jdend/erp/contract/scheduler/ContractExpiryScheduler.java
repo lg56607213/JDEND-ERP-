@@ -1,7 +1,7 @@
 package com.jdend.erp.contract.scheduler;
 
 import com.jdend.erp.auth.repository.LoginUserRepository;
-import com.jdend.erp.config.DbContextHolder;
+import com.jdend.erp.config.TenantContext;
 import com.jdend.erp.contract.service.ContractExpiryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +37,7 @@ public class ContractExpiryScheduler {
 
         for (String db : tenantDbs) {
             try {
-                DbContextHolder.set(db);
+                TenantContext.setCurrentDb(db);
                 int count = expiryService.expireForTenant(today);
                 if (count > 0) {
                     log.info("[계약만료] db={} 처리건수={}", db, count);
@@ -45,7 +45,7 @@ public class ContractExpiryScheduler {
             } catch (Exception e) {
                 log.error("[계약만료] db={} 처리 중 오류: {}", db, e.getMessage());
             } finally {
-                DbContextHolder.clear();
+                TenantContext.clear();
             }
         }
     }
