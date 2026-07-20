@@ -12,6 +12,8 @@ public interface LoginUserRepository extends JpaRepository<LoginUser, Long> {
 
   boolean existsByLoginId(String loginId);
 
+  boolean existsByTargetDb(String targetDb);
+
   @Query("""
     select u
     from LoginUser u

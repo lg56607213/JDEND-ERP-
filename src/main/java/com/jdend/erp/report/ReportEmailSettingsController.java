@@ -5,7 +5,7 @@ import com.jdend.erp.accounting.cash.service.DailyCashService;
 import com.jdend.erp.auth.entity.LoginUser;
 import com.jdend.erp.auth.repository.LoginUserRepository;
 import com.jdend.erp.auth.service.AuthService;
-import com.jdend.erp.config.DbContextHolder;
+import com.jdend.erp.config.TenantContext;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -33,16 +33,16 @@ public class ReportEmailSettingsController {
             return Map.of("enabled", false, "recipients", List.of());
         }
 
-        // 로그인 중인 회사 DB 컨텍스트를 auth DB로 임시 전환
-        String savedDb = DbContextHolder.get();
-        DbContextHolder.clear();
+        String savedDb = TenantContext.getCurrentDb();
         try {
+            TenantContext.setCurrentDb("auth");
             ReportEmailSettings s = settingsRepo.findByCompanyId(companyId).orElse(null);
             if (s == null) return Map.of("enabled", false, "recipients", List.of());
             List<String> recipients = parseEmails(s.getRecipientEmails());
             return Map.of("enabled", Boolean.TRUE.equals(s.getEnabled()), "recipients", recipients);
         } finally {
-            if (savedDb != null) DbContextHolder.set(savedDb);
+            if (savedDb != null) TenantContext.setCurrentDb(savedDb);
+            else TenantContext.clear();
         }
     }
 
@@ -63,9 +63,9 @@ public class ReportEmailSettingsController {
         String recipientEmails = String.join(",", recipientList.stream()
                 .map(String::trim).filter(e -> !e.isEmpty()).toList());
 
-        String savedDb = DbContextHolder.get();
-        DbContextHolder.clear();
+        String savedDb = TenantContext.getCurrentDb();
         try {
+            TenantContext.setCurrentDb("auth");
             ReportEmailSettings s = settingsRepo.findByCompanyId(companyId)
                     .orElse(ReportEmailSettings.builder().companyId(companyId).build());
             s.setEnabled(enabled);
@@ -75,7 +75,8 @@ public class ReportEmailSettingsController {
         } catch (Exception e) {
             return Map.of("success", false, "message", "저장 중 오류: " + e.getMessage());
         } finally {
-            if (savedDb != null) DbContextHolder.set(savedDb);
+            if (savedDb != null) TenantContext.setCurrentDb(savedDb);
+            else TenantContext.clear();
         }
     }
 
@@ -94,21 +95,20 @@ public class ReportEmailSettingsController {
             return Map.of("success", false, "message", "수신자 이메일을 입력해주세요.");
         }
 
-        String savedDb = DbContextHolder.get();
         try {
             // 회사 정보 조회 (auth DB)
-            DbContextHolder.clear();
+            TenantContext.setCurrentDb("auth");
             LoginUser company = loginUserRepo.findById(companyId).orElse(null);
             if (company == null) {
                 return Map.of("success", false, "message", "회사 정보를 찾을 수 없습니다.");
             }
 
             // 어제 자금일보 조회 (회사 DB)
-            DbContextHolder.set(company.getTargetDb());
+            TenantContext.setCurrentDb(company.getTargetDb());
             DailyFundReportResponse report = dailyCashService.daily(LocalDate.now().minusDays(1));
 
-            // 이메일 발송 (auth DB 불필요)
-            DbContextHolder.clear();
+            // 이메일 발송
+            TenantContext.clear();
             emailService.sendDailyReport(
                     company.getCompanyName(),
                     LocalDate.now().minusDays(1),
@@ -119,8 +119,7 @@ public class ReportEmailSettingsController {
         } catch (Exception e) {
             return Map.of("success", false, "message", "발송 실패: " + e.getMessage());
         } finally {
-            if (savedDb != null) DbContextHolder.set(savedDb);
-            else DbContextHolder.clear();
+            TenantContext.clear();
         }
     }
 

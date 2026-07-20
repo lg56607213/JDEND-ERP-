@@ -38,7 +38,8 @@ public class VoucherController {
 
     /** POST /api/vouchers */
     @PostMapping
-    public VoucherCreateResponse create(@RequestBody VoucherCreateRequest req) {
+    public VoucherCreateResponse create(@RequestBody VoucherCreateRequest req, HttpSession session) {
+        permissionService.requireManager(session);
         return voucherService.create(req);
     }
 

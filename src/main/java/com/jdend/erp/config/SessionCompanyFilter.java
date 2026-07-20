@@ -6,12 +6,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component
+// @Component 제거 — DbContextHolder는 DB 라우팅에 사용되지 않음. TenantFilter/TenantContext가 역할 담당.
 public class SessionCompanyFilter extends OncePerRequestFilter {
 
   @Override
