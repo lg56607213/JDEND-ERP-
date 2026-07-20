@@ -30,4 +30,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     order by p.paymentDate asc, p.id asc
   """)
   List<Payment> findByContractNumberOrderByPaymentDateAscIdAsc(@Param("contractNumber") String contractNumber);
+
+  /** BUG-07: 연체 조회 N+1 개선 - 계약번호 목록으로 일괄 조회 */
+  @Query("""
+    select p
+    from Payment p
+    where p.contractNumber in :contractNumbers
+    order by p.contractNumber asc, p.paymentDate asc, p.id asc
+  """)
+  List<Payment> findByContractNumberIn(@Param("contractNumbers") List<String> contractNumbers);
 }

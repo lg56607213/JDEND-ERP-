@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -143,6 +144,11 @@ public class ContractService {
     Contract c = contractRepo.findById(id)
         .orElseThrow(() -> new RuntimeException("계약 없음 id=" + id));
 
+    // BUG-05: 월세 변경 여부를 수정 전에 기록한다
+    Long prevMonthlyRent = c.getMonthlyRent();
+    Integer prevBillingCount = c.getBillingCount();
+    LocalDate prevStartDate = c.getStartDate();
+
     if (req.customerNumber != null && !req.customerNumber.isBlank()) {
       c.setCustomerNumber(req.customerNumber);
       c.setCustomer(customerRepo.findByCustomerNumber(req.customerNumber).orElse(null));
@@ -197,7 +203,18 @@ public class ContractService {
     c.setRemarks(req.remarks);
 
     contractRepo.save(c);
-    scheduleAutoGen.ensureGenerated(c);
+
+    // BUG-05: 월세·청구횟수·시작일이 변경된 경우 미래 스케줄을 삭제하고 재생성
+    boolean scheduleKeyChanged =
+        !nvl(prevMonthlyRent).equals(nvl(c.getMonthlyRent()))
+        || !safeEq(prevBillingCount, c.getBillingCount())
+        || !safeEq(prevStartDate, c.getStartDate());
+
+    if (scheduleKeyChanged) {
+      scheduleAutoGen.regenerate(c);
+    } else {
+      scheduleAutoGen.ensureGenerated(c);
+    }
 
     return toResponse(c);
   }
@@ -224,6 +241,13 @@ public class ContractService {
 
   private Long nvl(Long v) {
     return v == null ? 0L : v;
+  }
+
+  /** null-safe 동등비교 */
+  private <T> boolean safeEq(T a, T b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.equals(b);
   }
 
   private String normalizeStatus(String status) {

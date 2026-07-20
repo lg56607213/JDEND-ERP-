@@ -10,6 +10,8 @@ import com.jdend.erp.payment.payment.dto.PaymentResponse;
 import com.jdend.erp.payment.payment.dto.PaymentUpsertRequest;
 import com.jdend.erp.payment.payment.entity.Payment;
 import com.jdend.erp.payment.payment.repository.PaymentRepository;
+import com.jdend.erp.payment.receivable.entity.Receivable;
+import com.jdend.erp.payment.receivable.repository.ReceivableRepository;
 import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,6 +34,7 @@ public class PaymentService {
   private final VoucherRepository voucherRepository;
   private final FinancialStatementAccountRepository accountRepo;
   private final VehicleOrderRepository vehicleOrderRepo;
+  private final ReceivableRepository receivableRepo;  // BUG-10
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -70,8 +74,16 @@ public class PaymentService {
 
     boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
     if (shouldCreateVoucher) {
-      createVoucherIfNeeded(saved);
+      // BUG-03: createVoucherIfNeeded가 생성된 전표 ID를 반환하고 Payment에 저장
+      Long voucherId = createVoucherIfNeeded(saved);
+      if (voucherId != null) {
+        saved.setVoucherId(voucherId);
+        paymentRepo.save(saved);
+      }
     }
+
+    // BUG-10: 수납 등록 후 동일 계약의 미납 미수금 상태 업데이트
+    updateReceivableStatus(saved.getContractNumber(), saved.getPaymentAmount());
 
     return toResponse(saved);
   }
@@ -82,6 +94,15 @@ public class PaymentService {
 
     Payment p = paymentRepo.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id));
+
+    // BUG-03: 기존 연결 전표 삭제
+    if (p.getVoucherId() != null) {
+      voucherRepository.findById(p.getVoucherId()).ifPresent(v -> {
+        voucherRepository.delete(v);
+        log.info("수납 수정: 기존 전표 삭제 voucherId={}", p.getVoucherId());
+      });
+      p.setVoucherId(null);
+    }
 
     String newCn = req.getContractNumber() == null ? "" : req.getContractNumber().trim();
     if (!newCn.isEmpty() && !newCn.equals(p.getContractNumber())) {
@@ -103,27 +124,47 @@ public class PaymentService {
     p.setCompanyAccount(req.getCompanyAccount());
     p.setMemo(req.getMemo());
 
+    // BUG-03: 수정 후 전표 재생성
+    boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
+    if (shouldCreateVoucher) {
+      Long newVoucherId = createVoucherIfNeeded(p);
+      if (newVoucherId != null) {
+        p.setVoucherId(newVoucherId);
+      }
+    }
+
+    paymentRepo.save(p);
     return toResponse(p);
   }
 
   @Transactional
   public void delete(Long id) {
-    if (!paymentRepo.existsById(id)) {
-      throw new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id);
+    Payment p = paymentRepo.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id));
+
+    // BUG-03: 연결 전표 먼저 삭제
+    if (p.getVoucherId() != null) {
+      voucherRepository.findById(p.getVoucherId()).ifPresent(v -> {
+        voucherRepository.delete(v);
+        log.info("수납 삭제: 연결 전표 삭제 voucherId={}", p.getVoucherId());
+      });
     }
+
     paymentRepo.deleteById(id);
   }
 
-  private void createVoucherIfNeeded(Payment payment) {
-    if (payment == null) return;
-    if (payment.getPaymentAmount() == null || payment.getPaymentAmount() <= 0) return;
+  /**
+   * BUG-03: 전표 생성 후 생성된 전표 ID를 반환한다.
+   * @return 생성된 Voucher ID, 생성 조건 미충족 시 null
+   */
+  private Long createVoucherIfNeeded(Payment payment) {
+    if (payment == null) return null;
+    if (payment.getPaymentAmount() == null || payment.getPaymentAmount() <= 0) return null;
 
-    // 현금주의: 수납은 현금 실수령이므로 수단(현금/계좌이체/카드 등)과 무관하게 수익 전표를 생성한다.
-    // (기존에는 현금/계좌이체만 생성하여 카드 등 수납 시 수익이 누락됐음)
+    // 현금주의: 수납은 현금 실수령이므로 수단과 무관하게 수익 전표를 생성한다.
     String method = blankToEmpty(payment.getPaymentMethod());
 
-    // 차변 계정: 현금 수령은 '현금' 계정(존재할 때만), 그 외(이체/카드 등)는 '보통예금'.
-    // 방어적: '현금' 계정이 해당 회사에 없으면 재무제표에서 누락되므로 '보통예금'으로 폴백하고 경고를 남긴다.
+    // 차변 계정: 현금 수령은 '현금' 계정(존재할 때만), 그 외는 '보통예금'.
     String debitAccount = "보통예금";
     if ("현금".equals(method)) {
       if (accountRepo.existsByAccountName("현금")) {
@@ -173,7 +214,32 @@ public class PaymentService {
         .sortOrder(2)
         .build());
 
-    voucherRepository.save(voucher);
+    Voucher saved = voucherRepository.save(voucher);
+    return saved.getId();
+  }
+
+  /**
+   * BUG-10: 수납 등록 시 동일 계약번호의 미납 미수금 상태를 업데이트한다.
+   * 수납액 >= 미수금액이면 '완납'으로 처리한다.
+   */
+  private void updateReceivableStatus(String contractNumber, Long paymentAmount) {
+    if (contractNumber == null || contractNumber.isBlank()) return;
+    if (paymentAmount == null || paymentAmount <= 0) return;
+
+    List<Receivable> unpaid = receivableRepo.findByContractNumberAndStatus(contractNumber, "미납");
+    if (unpaid.isEmpty()) return;
+
+    long remaining = paymentAmount;
+    for (Receivable r : unpaid) {
+      long amt = r.getReceivableAmount() == null ? 0L : r.getReceivableAmount();
+      if (remaining >= amt) {
+        r.setStatus("완납");
+        receivableRepo.save(r);
+        remaining -= amt;
+      } else {
+        break;  // 잔여 수납액이 미수금보다 적으면 중단
+      }
+    }
   }
 
   private String nextVoucherNo(LocalDate date) {

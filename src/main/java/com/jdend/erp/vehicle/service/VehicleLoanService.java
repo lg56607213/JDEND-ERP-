@@ -352,19 +352,41 @@ public class VehicleLoanService {
             String loanCreditAccount = accountSettings.getLoanCreditAccount();
             if (loanCreditAccount == null) loanCreditAccount = "보통예금";
 
+            // BUG-02 fix: 이자금액이 있으면 차변을 원금(장기차입금) + 이자(이자비용)로 분리
+            long interest = (req.interestAmount != null && req.interestAmount > 0) ? req.interestAmount : 0L;
+            long principal = req.amount - interest;
+
+            List<VoucherCreateRequest.VoucherLineRequest> debitEntries;
+            if (interest > 0 && principal > 0) {
+                debitEntries = List.of(
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account(loanDebitAccount)
+                                .amount(principal)
+                                .description("차입금 원금 상환")
+                                .build(),
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account("이자비용")
+                                .amount(interest)
+                                .description("차입금 이자")
+                                .build()
+                );
+            } else {
+                debitEntries = List.of(
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account(loanDebitAccount)
+                                .amount(req.amount)
+                                .description("차입금 상환")
+                                .build()
+                );
+            }
+
             voucherService.create(
                     VoucherCreateRequest.builder()
                             .voucherDate(req.voucherDate)
                             .contractNumber(contractNo)
                             .vehicleNo(vehicleNo)
                             .memo(finalMemo)
-                            .debitEntries(List.of(
-                                    VoucherCreateRequest.VoucherLineRequest.builder()
-                                            .account(loanDebitAccount)
-                                            .amount(req.amount)
-                                            .description("차입금 상환")
-                                            .build()
-                            ))
+                            .debitEntries(debitEntries)
                             .creditEntries(List.of(
                                     VoucherCreateRequest.VoucherLineRequest.builder()
                                             .account(loanCreditAccount)
@@ -399,7 +421,7 @@ public class VehicleLoanService {
                         .memo(memo)
                         .debitEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account("미수금")
+                                        .account("보통예금")
                                         .amount(loan.getLoanPrincipal())
                                         .description("대출원금")
                                         .build()

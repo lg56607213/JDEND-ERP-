@@ -5,6 +5,8 @@ import com.jdend.erp.accounting.depreciation.entity.DepreciationScheduleLine;
 import com.jdend.erp.accounting.depreciation.repository.DepreciationAssetRepository;
 import com.jdend.erp.accounting.depreciation.repository.DepreciationScheduleLineRepository;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
+import com.jdend.erp.accounting.voucher.dto.VoucherCreateResponse;
+import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
@@ -12,6 +14,7 @@ import com.jdend.erp.vehicle.sale.dto.VehicleSaleDtos;
 import com.jdend.erp.vehicle.sale.entity.VehicleSale;
 import com.jdend.erp.vehicle.sale.repository.VehicleSaleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class VehicleSaleService {
 
@@ -28,6 +32,7 @@ public class VehicleSaleService {
   private final DepreciationAssetRepository depAssetRepo;
   private final DepreciationScheduleLineRepository depLineRepo;
   private final VoucherService voucherService;
+  private final VoucherRepository voucherRepository;   // BUG-04: 전표 삭제용
 
   @Transactional
   public VehicleSaleDtos.Response create(VehicleSaleDtos.CreateRequest req) {
@@ -57,16 +62,28 @@ public class VehicleSaleService {
       .build();
 
     VehicleSale saved = saleRepo.save(s);
-    createSaleVoucher(saved);
+
+    // BUG-04: 전표 생성 후 ID를 VehicleSale에 저장
+    Long voucherId = createSaleVoucher(saved);
+    if (voucherId != null) {
+      saved.setVoucherId(voucherId);
+      saleRepo.save(saved);
+    }
+
     return toRes(saved);
   }
 
-  private void createSaleVoucher(VehicleSale s) {
+  /**
+   * BUG-04: 전표 생성 후 Voucher ID 반환
+   * BUG-13: findByVehicleNo → findFirstByVehicleNoOrderByIdDesc (NonUniqueResultException 방지)
+   */
+  private Long createSaleVoucher(VehicleSale s) {
     long acquisitionCost = 0L;
     long accumulated = 0L;
     long remaining = 0L;
 
-    DepreciationAsset asset = depAssetRepo.findByVehicleNo(s.getVehicleNo()).orElse(null);
+    // BUG-13: 동일 차량번호 자산이 여러 건일 때 최신 기준 1건만 사용
+    DepreciationAsset asset = depAssetRepo.findFirstByVehicleNoOrderByIdDesc(s.getVehicleNo()).orElse(null);
     if (asset != null) {
       acquisitionCost = asset.getAcquisitionCost();
       int ver = depLineRepo.findMaxVersion(asset.getId());
@@ -77,7 +94,7 @@ public class VehicleSaleService {
       remaining = (latest == null) ? acquisitionCost : latest.getBalance();
       accumulated = acquisitionCost - remaining;
     } else {
-      // 감가상각 미등록 시 차량 발주 총금액을 취득원가로 사용, 전액 미상각 처리
+      // 감가상각 미등록 시 차량 발주 총금액을 취득원가로 사용
       VehicleOrder vo = vehicleOrderRepo.findById(s.getVehicleOrderId()).orElse(null);
       if (vo != null && vo.getTotalPrice() != null && vo.getTotalPrice() > 0) {
         acquisitionCost = vo.getTotalPrice();
@@ -98,15 +115,21 @@ public class VehicleSaleService {
     credits.add(line("부가세예수금", s.getTaxAmount(), memo));
     if (acquisitionCost > 0) credits.add(line("차량운반구", acquisitionCost, memo));
 
-    voucherService.create(VoucherCreateRequest.builder()
-        .voucherDate(s.getSaleDate())
-        .vehicleNo(s.getVehicleNo())
-        .vehicleMgmtNo(s.getVehicleMgmtNo())
-        .contractNumber(null)
-        .memo(memo)
-        .debitEntries(debits)
-        .creditEntries(credits)
-        .build());
+    try {
+      VoucherCreateResponse resp = voucherService.create(VoucherCreateRequest.builder()
+          .voucherDate(s.getSaleDate())
+          .vehicleNo(s.getVehicleNo())
+          .vehicleMgmtNo(s.getVehicleMgmtNo())
+          .contractNumber(null)
+          .memo(memo)
+          .debitEntries(debits)
+          .creditEntries(credits)
+          .build());
+      return resp != null ? resp.getId() : null;
+    } catch (Exception e) {
+      log.warn("매각 전표 생성 실패 saleId={}: {}", s.getId(), e.getMessage());
+      return null;
+    }
   }
 
   private VoucherCreateRequest.VoucherLineRequest line(String account, long amount, String desc) {
@@ -135,6 +158,15 @@ public class VehicleSaleService {
 
     VehicleSale s = saleRepo.findById(id).orElseThrow(() -> new RuntimeException("매각 없음: " + id));
 
+    // BUG-04: 기존 연결 전표 삭제
+    if (s.getVoucherId() != null) {
+      voucherRepository.findById(s.getVoucherId()).ifPresent(v -> {
+        voucherRepository.delete(v);
+        log.info("매각 수정: 기존 전표 삭제 voucherId={}", s.getVoucherId());
+      });
+      s.setVoucherId(null);
+    }
+
     Calc calc = calcTax(req.saleAmount);
 
     s.setSaleDate(req.saleDate);
@@ -147,6 +179,14 @@ public class VehicleSaleService {
     else if (isBlank(s.getStatus())) s.setStatus("완료");
 
     saleRepo.save(s);
+
+    // BUG-04: 새 금액/날짜로 전표 재생성
+    Long newVoucherId = createSaleVoucher(s);
+    if (newVoucherId != null) {
+      s.setVoucherId(newVoucherId);
+      saleRepo.save(s);
+    }
+
     return toRes(s);
   }
 
@@ -169,9 +209,8 @@ public class VehicleSaleService {
       .build();
   }
 
-  // 매각금액 -> 공급가/세액 (부가세 10%)
+  // 매각금액 -> 공급가/세액 (부가세 10%, 포함가 역산)
   private Calc calcTax(long saleAmount) {
-    // 공급가액 = round(매각금액 / 1.1)
     long supply = Math.round(saleAmount / 1.1d);
     long tax = saleAmount - supply;
     return new Calc(supply, tax);

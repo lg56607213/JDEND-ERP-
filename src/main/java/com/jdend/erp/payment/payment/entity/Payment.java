@@ -50,6 +50,10 @@ public class Payment {
   @Column(name="memo", length=255)
   private String memo;
 
+  /** BUG-03: 수납 등록 시 생성된 전표 ID. 삭제·수정 시 연동 전표 처리에 사용. */
+  @Column(name="voucher_id")
+  private Long voucherId;
+
   @Column(name="created_at", insertable=false, updatable=false)
   private LocalDateTime createdAt;
 

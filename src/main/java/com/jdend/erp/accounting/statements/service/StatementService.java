@@ -224,7 +224,10 @@ public class StatementService {
     return CREDIT_NORMAL_CATEGORIES.contains(category) ? -net : net;
   }
 
+  // BUG-11: 계정명 중간 공백까지 정규화 — Map 키 생성/조회 양쪽에서 동일하게 적용되므로
+  //          연속 공백 불일치로 인한 집계 누락을 방지한다.
   private static String safe(String s) {
-    return s == null ? "" : s.trim();
+    if (s == null) return "";
+    return s.trim().replaceAll("\\s+", " ");
   }
 }

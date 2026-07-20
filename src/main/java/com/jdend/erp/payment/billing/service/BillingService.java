@@ -210,8 +210,9 @@ public class BillingService {
 
     Long rentAmount = b.getRentAmount() == null ? total : b.getRentAmount();
     Long extraAmount = 0L;
-    Long supplyAmount = total;
-    Long taxAmount = Math.round(total / 10.0);
+    // BUG-06: 청구금액은 부가세 포함가이므로 역산으로 공급가액·세액 분리
+    Long supplyAmount = Math.round(total / 1.1);
+    Long taxAmount = total - supplyAmount;
     String memo = safe(b.getMemo()).equals("-") ? "" : b.getMemo();
 
     String baseContractNumber = null;
@@ -303,7 +304,7 @@ public class BillingService {
             <tr>
               <td class="label">고객명</td>
               <td colspan="2" class="value">%s</td>
-              <td class="label">고객명</td>
+              <td class="label">사업자번호</td>
               <td colspan="2" class="value">%s</td>
               <td class="label">고객연락처</td>
               <td class="value">%s</td>
@@ -389,7 +390,7 @@ public class BillingService {
       </html>
       """.formatted(
         safe(customerName),
-        safe(customerName),
+        safe(registrationNumber),   // BUG-12: 두 번째 셀은 사업자번호
         safe(phone),
         safe(registrationNumber),
         safe(address),

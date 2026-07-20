@@ -29,6 +29,31 @@ public class PaymentScheduleAutoGeneratorService {
 
     if (scheduleRepo.existsByContractNumber(c.getContractNumber())) return 0;
 
+    return generateAll(c);
+  }
+
+  /**
+   * BUG-05: 계약 수정 시 미래 미수납 스케줄을 삭제하고 재생성한다.
+   * - 오늘 이후 시작하는 스케줄(billStartDate >= today)만 삭제 → 과거 수납 이력 보존
+   * - 삭제 후 전체 회차를 다시 생성 (existsByContractNumber 체크 우회)
+   */
+  @Transactional
+  public int regenerate(Contract c) {
+    if (c == null || c.getContractNumber() == null || c.getContractNumber().isBlank()) return 0;
+
+    LocalDate today = LocalDate.now();
+    scheduleRepo.deleteByContractNumberAndBillStartDateGreaterThanEqual(
+        c.getContractNumber(), today);
+
+    // 미래 스케줄 삭제 후 잔여 스케줄 유무와 무관하게 전체 회차 재생성
+    return generateAll(c);
+  }
+
+  /**
+   * 계약의 전체 납부 스케줄을 생성해서 저장하는 내부 메서드.
+   * existsByContractNumber 체크 없이 바로 생성하므로 호출 전에 중복 여부를 확인해야 한다.
+   */
+  private int generateAll(Contract c) {
     int billingCount = (c.getBillingCount() == null) ? 0 : c.getBillingCount();
     if (billingCount <= 0) return 0;
 

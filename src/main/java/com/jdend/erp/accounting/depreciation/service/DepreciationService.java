@@ -105,6 +105,13 @@ public class DepreciationService {
 
     List<DepreciationAssetRowResponse> rows = new ArrayList<>();
 
+    // BUG-08: 기준월 전표를 자산 전체에 대해 한 번에 조회 (N+1 → 1 쿼리)
+    List<Long> assetIds = all.stream().map(DepreciationAsset::getId).toList();
+    Map<Long, DepreciationPosting> postingByAssetId =
+        assetIds.isEmpty() ? Map.of() :
+        postingRepo.findByAssetIdInAndBaseMonth(assetIds, ym.toString()).stream()
+            .collect(Collectors.toMap(p -> p.getAsset().getId(), p -> p, (a2, b2) -> a2));
+
     for (DepreciationAsset a : all) {
       int ver = lineRepo.findMaxVersion(a.getId());
       if (ver == 0) ver = 1;
@@ -116,9 +123,12 @@ public class DepreciationService {
       long accumulated = a.getAcquisitionCost() - remaining;
       String lastDepDate = (latest == null || latest.getDepreciationDate() == null) ? "" : latest.getDepreciationDate().toString();
 
-      String voucherDate = postingRepo.findByAsset_IdAndBaseMonth(a.getId(), ym.toString())
-          .map(p -> p.getVoucherDate().toString())
-          .orElse("");
+      // BUG-08: 중복 호출 제거 — Map에서 한 번만 조회
+      DepreciationPosting currentPosting = postingByAssetId.get(a.getId());
+      String voucherDate = (currentPosting != null && currentPosting.getVoucherDate() != null)
+          ? currentPosting.getVoucherDate().toString()
+          : "";
+      boolean currentRoundPosted = (currentPosting != null);
 
       int totalRounds = lineRepo.findMaxPeriodNo(a.getId(), ver);
       int postedRounds = (int) postingRepo.countByAssetId(a.getId());
@@ -128,8 +138,6 @@ public class DepreciationService {
           .findFirst()
           .map(DepreciationScheduleLine::getPeriodNo)
           .orElse(null);
-
-      boolean currentRoundPosted = postingRepo.findByAsset_IdAndBaseMonth(a.getId(), ym.toString()).isPresent();
 
       rows.add(DepreciationAssetRowResponse.builder()
         .id(a.getId())

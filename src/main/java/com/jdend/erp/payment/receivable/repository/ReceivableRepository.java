@@ -10,6 +10,10 @@ import java.util.List;
 
 public interface ReceivableRepository extends JpaRepository<Receivable, Long> {
 
+  /** BUG-10: 계약번호 + 상태로 미수금 조회 (수납 등록 시 완납 처리에 사용) */
+  @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status order by r.receivableDate asc, r.id asc")
+  List<Receivable> findByContractNumberAndStatus(@Param("contractNumber") String contractNumber, @Param("status") String status);
+
   @Query("""
     select r
     from Receivable r
