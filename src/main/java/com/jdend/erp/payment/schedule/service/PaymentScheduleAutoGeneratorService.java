@@ -33,9 +33,10 @@ public class PaymentScheduleAutoGeneratorService {
   }
 
   /**
-   * BUG-05: 계약 수정 시 미래 미수납 스케줄을 삭제하고 재생성한다.
+   * NEW-01 수정: 계약 수정 시 미래 미수납 스케줄을 삭제하고 오늘 이후 회차만 재생성한다.
    * - 오늘 이후 시작하는 스케줄(billStartDate >= today)만 삭제 → 과거 수납 이력 보존
-   * - 삭제 후 전체 회차를 다시 생성 (existsByContractNumber 체크 우회)
+   * - 기존 generateAll() 대신 fromDate 이후 회차만 저장하는 generateFromDate() 호출
+   * - 이미 존재하는 과거 회차(installmentNo 1~N)와 unique constraint 충돌 방지
    */
   @Transactional
   public int regenerate(Contract c) {
@@ -45,8 +46,67 @@ public class PaymentScheduleAutoGeneratorService {
     scheduleRepo.deleteByContractNumberAndBillStartDateGreaterThanEqual(
         c.getContractNumber(), today);
 
-    // 미래 스케줄 삭제 후 잔여 스케줄 유무와 무관하게 전체 회차 재생성
-    return generateAll(c);
+    // 미래 스케줄만 재생성 — generateAll() 루프를 그대로 돌리되 billStart < today인 회차는 건너뜀
+    return generateFromDate(c, today);
+  }
+
+  /**
+   * 전체 회차를 순서대로 날짜 계산하되 fromDate 이후 회차만 저장한다.
+   * generateAll()과 동일한 날짜 계산 로직을 유지하므로 기간 연속성이 보장된다.
+   */
+  private int generateFromDate(Contract c, LocalDate fromDate) {
+    int billingCount = (c.getBillingCount() == null) ? 0 : c.getBillingCount();
+    if (billingCount <= 0) return 0;
+
+    LocalDate contractStart = c.getStartDate();
+    if (contractStart == null) return 0;
+
+    Integer taxDay    = c.getTaxInvoiceDay();
+    Integer billingDay = c.getBillingDay();
+    Integer payDay    = parseDayFromPaymentDueDay(c.getPaymentDueDay());
+
+    List<PaymentSchedule> batch = new ArrayList<>();
+    LocalDate billStart = contractStart;
+
+    for (int i = 1; i <= billingCount; i++) {
+      LocalDate billEnd = billStart.plusMonths(1).minusDays(1);
+
+      // fromDate 이전 회차는 날짜 계산만 진행하고 저장하지 않는다 (과거 회차 skip)
+      if (!billStart.isBefore(fromDate)) {
+        LocalDate taxDate = withDaySafe(billStart,
+            (taxDay != null && taxDay > 0) ? taxDay : billStart.getDayOfMonth());
+
+        int payDayFinal =
+            (payDay    != null && payDay    > 0) ? payDay    :
+            (billingDay != null && billingDay > 0) ? billingDay :
+            billStart.getDayOfMonth();
+
+        LocalDate paymentDate = withDaySafe(billStart, payDayFinal);
+
+        PaymentSchedule ps = PaymentSchedule.builder()
+            .contract(c)
+            .contractNumber(c.getContractNumber())
+            .installmentNo(i)
+            .billStartDate(billStart)
+            .billEndDate(billEnd)
+            .taxInvoiceDate(taxDate)
+            .paymentDate(paymentDate)
+            .rentAmount(c.getMonthlyRent())
+            .principalAmount(null)
+            .interestAmount(null)
+            .remainingPrincipal(null)
+            .build();
+
+        batch.add(ps);
+      }
+
+      billStart = billEnd.plusDays(1);
+    }
+
+    if (!batch.isEmpty()) {
+      scheduleRepo.saveAll(batch);
+    }
+    return batch.size();
   }
 
   /**

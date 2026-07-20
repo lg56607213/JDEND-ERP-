@@ -1,7 +1,9 @@
 package com.jdend.erp.contract.earlytermination.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.contract.earlytermination.dto.*;
 import com.jdend.erp.contract.earlytermination.service.EarlyTerminationService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class EarlyTerminationController {
 
   private final EarlyTerminationService service;
+  private final PermissionService permissionService;
 
   @GetMapping
   public Page<EarlyTerminationRowDto> list(
@@ -33,12 +36,15 @@ public class EarlyTerminationController {
   }
 
   @PutMapping("/{id}")
-  public void update(@PathVariable Long id, @RequestBody EarlyTerminationUpdateRequest req) {
+  public void update(@PathVariable Long id, @RequestBody EarlyTerminationUpdateRequest req,
+      HttpSession session) {
+    permissionService.requireManager(session);
     service.update(id, req);
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 }

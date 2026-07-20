@@ -1,7 +1,9 @@
 package com.jdend.erp.legal.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.legal.dto.*;
 import com.jdend.erp.legal.service.LegalCaseService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import java.util.List;
 public class LegalCaseController {
 
     private final LegalCaseService service;
+    private final PermissionService permissionService;
 
     @GetMapping
     public List<LegalCaseResponse> listByContract(@RequestParam String contractNumber) {
@@ -30,12 +33,15 @@ public class LegalCaseController {
     }
 
     @PutMapping("/{id}")
-    public LegalCaseResponse update(@PathVariable Long id, @RequestBody LegalCaseRequest req) {
+    public LegalCaseResponse update(@PathVariable Long id, @RequestBody LegalCaseRequest req,
+        HttpSession session) {
+        permissionService.requireManager(session);
         return service.update(id, req);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable Long id, HttpSession session) {
+        permissionService.requireManager(session);
         service.delete(id);
     }
 
@@ -45,7 +51,9 @@ public class LegalCaseController {
     }
 
     @DeleteMapping("/{id}/progress/{entryId}")
-    public void deleteProgress(@PathVariable Long id, @PathVariable Long entryId) {
+    public void deleteProgress(@PathVariable Long id, @PathVariable Long entryId,
+        HttpSession session) {
+        permissionService.requireManager(session);
         service.deleteProgress(id, entryId);
     }
 }

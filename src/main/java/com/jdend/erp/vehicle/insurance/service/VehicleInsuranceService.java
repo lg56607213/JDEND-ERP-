@@ -1,5 +1,6 @@
 package com.jdend.erp.vehicle.insurance.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
@@ -11,6 +12,7 @@ import com.jdend.erp.vehicle.insurance.repository.InsuranceChangeRepository;
 import com.jdend.erp.vehicle.insurance.repository.VehicleInsuranceRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleInsuranceService {
@@ -26,6 +29,7 @@ public class VehicleInsuranceService {
   private final VehicleOrderRepository vehicleOrderRepo;
   private final VoucherRepository voucherRepository;
   private final InsuranceChangeRepository insuranceChangeRepo;
+  private final OtherAccountSettingsService accountSettings;
   private final JdbcTemplate jdbcTemplate;
 
   @Transactional
@@ -141,12 +145,22 @@ public class VehicleInsuranceService {
       + (req.changeReason != null && !req.changeReason.isBlank() ? req.changeReason : "");
 
     if (req.additionalPremium != null && req.additionalPremium > 0) {
-      createSingleVoucher(insurance, vd, req.additionalPremium,
-        "보험료", "미지급금(보험료)", baseMemo + " (추가납부)");
+      String debit  = accountSettings.getInsuranceDebitAccount();
+      String credit = accountSettings.getInsuranceCreditAccount();
+      if (debit == null || credit == null) {
+        log.warn("[보험변경] 추가납부 전표 생략: 기타계정관리 > 보험 신규/갱신 계정 미설정. insuranceId={}", insuranceId);
+      } else {
+        createSingleVoucher(insurance, vd, req.additionalPremium, debit, credit, baseMemo + " (추가납부)");
+      }
     }
     if (req.refundPremium != null && req.refundPremium > 0) {
-      createSingleVoucher(insurance, vd, req.refundPremium,
-        "미수금(보험료)", "보험료", baseMemo + " (환급)");
+      String debit  = accountSettings.getInsuranceRefundDebitAccount();
+      String credit = accountSettings.getInsuranceRefundCreditAccount();
+      if (debit == null || credit == null) {
+        log.warn("[보험변경] 환급 전표 생략: 기타계정관리 > 보험 변경 환급 계정 미설정. insuranceId={}", insuranceId);
+      } else {
+        createSingleVoucher(insurance, vd, req.refundPremium, debit, credit, baseMemo + " (환급)");
+      }
     }
   }
 
@@ -188,10 +202,18 @@ public class VehicleInsuranceService {
     Long amount = insurance.getInsurancePremium();
     if (amount == null || amount <= 0) return;
 
+    String debit  = accountSettings.getInsuranceDebitAccount();
+    String credit = accountSettings.getInsuranceCreditAccount();
+    if (debit == null || credit == null) {
+      log.warn("[보험등록] 전표 생략: 기타계정관리 > 보험 신규/갱신 계정 미설정. vehicleMgmtNo={}", insurance.getVehicleMgmtNo());
+      return;
+    }
+
     LocalDate voucherDate = requestedVoucherDate != null ? requestedVoucherDate :
       (insurance.getInsuranceStartDate() != null ? insurance.getInsuranceStartDate() : LocalDate.now());
 
     String voucherNo = nextVoucherNo(voucherDate);
+    String memo = buildInsuranceVoucherMemo(insurance);
 
     Voucher voucher = Voucher.builder()
       .voucherNo(voucherNo)
@@ -201,22 +223,22 @@ public class VehicleInsuranceService {
       .vehicleMgmtNo(emptyToNull(insurance.getVehicleMgmtNo()))
       .totalAmount(amount)
       .status("대기")
-      .memo(buildInsuranceVoucherMemo(insurance))
+      .memo(memo)
       .build();
 
     voucher.addLine(VoucherLine.builder()
       .lineType("DEBIT")
-      .accountName("보험료")
+      .accountName(debit)
       .amount(amount)
-      .description("보험등록 보험료")
+      .description(memo)
       .sortOrder(1)
       .build());
 
     voucher.addLine(VoucherLine.builder()
       .lineType("CREDIT")
-      .accountName("미지급금(보험료)")
+      .accountName(credit)
       .amount(amount)
-      .description("보험등록 보험료")
+      .description(memo)
       .sortOrder(2)
       .build());
 

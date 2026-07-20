@@ -1,7 +1,9 @@
 package com.jdend.erp.contract.maturity.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.contract.maturity.dto.*;
 import com.jdend.erp.contract.maturity.service.MaturityManagementService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class MaturityManagementController {
 
   private final MaturityManagementService service;
+  private final PermissionService permissionService;
 
   @GetMapping
   public Page<MaturityRowDto> list(
@@ -33,12 +36,15 @@ public class MaturityManagementController {
   }
 
   @PutMapping("/{id}")
-  public void update(@PathVariable Long id, @RequestBody MaturityUpdateRequest req) {
+  public void update(@PathVariable Long id, @RequestBody MaturityUpdateRequest req,
+      HttpSession session) {
+    permissionService.requireManager(session);
     service.update(id, req);
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 }

@@ -63,17 +63,31 @@ public class MaturityTerminationService {
         .status(req.getStatus())
         .build();
 
-    return repo.save(t).getId();
+    MaturityTermination saved = repo.save(t);
+
+    // NEW-07: 등록 시 종료완료이면 연관 계약 상태를 "만기종료"로 갱신
+    if ("종료완료".equals(saved.getStatus())) {
+      updateContractStatus(saved.getContractNumber(), "만기종료");
+    }
+
+    return saved.getId();
   }
 
   public void update(Long id, MaturityTerminationUpdateRequest req) {
     MaturityTermination t = repo.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("만기종료 데이터를 찾을 수 없습니다. id=" + id));
 
+    String prevStatus = t.getStatus(); // NEW-07: 이전 상태 저장
+
     t.setTerminationMethod(req.getTerminationMethod());
     t.setTerminationDate(req.getTerminationDate());
     t.setUnpaidAmount(safe(req.getUnpaidAmount()));
     t.setStatus(req.getStatus());
+
+    // NEW-07: 종료완료로 전환되는 시점에 연관 계약 상태를 "만기종료"로 갱신
+    if (!"종료완료".equals(prevStatus) && "종료완료".equals(req.getStatus())) {
+      updateContractStatus(t.getContractNumber(), "만기종료");
+    }
   }
 
   public void delete(Long id) {
@@ -116,6 +130,17 @@ public class MaturityTerminationService {
     if (customerNumber == null || customerNumber.isBlank()) return "-";
     Customer c = customerRepository.findByCustomerNumber(customerNumber).orElse(null);
     return (c != null) ? c.getCustomerName() : "-";
+  }
+
+  /**
+   * NEW-07: 만기종료 처리완료 시 연관 계약의 status를 갱신한다.
+   */
+  private void updateContractStatus(String contractNumber, String newStatus) {
+    if (contractNumber == null || contractNumber.isBlank()) return;
+    contractRepository.findByContractNumber(contractNumber).ifPresent(contract -> {
+      contract.setStatus(newStatus);
+      contractRepository.save(contract);
+    });
   }
 
   private long safe(Long v) {

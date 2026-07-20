@@ -92,6 +92,8 @@ public class EarlyTerminationService {
     // ✅ 중도상환 > 반납 > 처리완료 인 경우 전표 발생
     if (isReturnCompleted(saved)) {
       createReturnVoucher(saved);
+      // NEW-07: 연관 계약 상태를 "해지"로 갱신
+      updateContractStatus(saved.getContractNumber(), "해지");
     }
 
     return saved.getId();
@@ -103,6 +105,8 @@ public class EarlyTerminationService {
 
     EarlyTermination et = earlyTerminationRepository.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("중도상환 데이터를 찾을 수 없습니다. id=" + id));
+
+    String prevStatus = et.getStatus(); // NEW-04: 이전 상태 저장
 
     LocalDate terminationDate = (req.getTerminationDate() != null) ? req.getTerminationDate() : et.getTerminationDate();
 
@@ -119,6 +123,13 @@ public class EarlyTerminationService {
     et.setUncollectedRent(uncollectedRent);  // ✅ 직접 입력값 저장
     et.setTerminationFee(terminationFee);
     et.setTotalAmount(totalAmount);
+
+    // NEW-04: 이전에 처리완료가 아니었고 이번에 반납+처리완료로 전환되면 전표 생성
+    if (!"처리완료".equals(prevStatus) && isReturnCompleted(et)) {
+      createReturnVoucher(et);
+      // NEW-07: 연관 계약 상태를 "해지"로 갱신
+      updateContractStatus(et.getContractNumber(), "해지");
+    }
   }
 
   public void delete(Long id) {
@@ -283,6 +294,17 @@ public class EarlyTerminationService {
             .creditEntries(creditEntries)
             .build()
     );
+  }
+
+  /**
+   * NEW-07: 중도해지 처리완료 시 연관 계약의 status를 갱신한다.
+   */
+  private void updateContractStatus(String contractNumber, String newStatus) {
+    if (contractNumber == null || contractNumber.isBlank()) return;
+    contractRepository.findByContractNumber(contractNumber).ifPresent(contract -> {
+      contract.setStatus(newStatus);
+      contractRepository.save(contract);
+    });
   }
 
   private long safe(Long v) {

@@ -1,7 +1,9 @@
 package com.jdend.erp.payment.receivable.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.payment.receivable.dto.*;
 import com.jdend.erp.payment.receivable.service.ReceivableService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,7 @@ import java.util.List;
 public class ReceivableController {
 
   private final ReceivableService service;
+  private final PermissionService permissionService;
 
   @PostMapping
   public ReceivableResponse create(@RequestBody ReceivableCreateRequest req) {
@@ -45,12 +48,15 @@ public class ReceivableController {
   }
 
   @PutMapping("/{id}")
-  public ReceivableResponse update(@PathVariable Long id, @RequestBody ReceivableUpdateRequest req) {
+  public ReceivableResponse update(@PathVariable Long id, @RequestBody ReceivableUpdateRequest req,
+      HttpSession session) {
+    permissionService.requireManager(session);
     return service.update(id, req);
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 }
