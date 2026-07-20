@@ -27,21 +27,24 @@ public class MonthlyVoucherRuleProcessor {
     private final MonthlyVoucherRuleRepository ruleRepo;
     private final VoucherService voucherService;
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void processOneRule(MonthlyVoucherRule rule, LocalDate today) {
+        createVoucherFromRule(rule, today);
+        rule.setLastRunDate(today);
+        rule.setNextRunDate(calcNextRunDate(today.plusDays(1), rule.getMonthlyDay()));
+        ruleRepo.save(rule);
+        log.info("[월전표] 생성 완료 rule={}", rule.getId());
+    }
+
     public void processRulesForTenant(LocalDate today) {
         List<MonthlyVoucherRule> targets =
                 ruleRepo.findByActiveTrueAndNextRunDateLessThanEqual(today);
 
         for (MonthlyVoucherRule rule : targets) {
             try {
-                createVoucherFromRule(rule, today);
-                rule.setLastRunDate(today);
-                rule.setNextRunDate(calcNextRunDate(today.plusDays(1), rule.getMonthlyDay()));
-                ruleRepo.save(rule);
-                log.info("[월전표] 생성 완료 rule={}", rule.getId());
+                processOneRule(rule, today);
             } catch (Exception e) {
-                log.error("[월전표] 규칙 처리 실패 rule={} error={}", rule.getId(), e.getMessage());
-                throw e; // 트랜잭션 롤백을 위해 re-throw
+                log.error("[월전표] 규칙 처리 실패 rule={} error={} — 다음 규칙으로 계속", rule.getId(), e.getMessage());
             }
         }
     }

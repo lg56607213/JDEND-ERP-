@@ -14,6 +14,10 @@ public interface ReceivableRepository extends JpaRepository<Receivable, Long> {
   @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status order by r.receivableDate asc, r.id asc")
   List<Receivable> findByContractNumberAndStatus(@Param("contractNumber") String contractNumber, @Param("status") String status);
 
+  /** BUG-03: 수납 삭제/수정 시 완납 상태 역순 복구용 (가장 최근 완납 순) */
+  @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status order by r.receivableDate desc, r.id desc")
+  List<Receivable> findByContractNumberAndStatusOrderByIdDesc(@Param("contractNumber") String contractNumber, @Param("status") String status);
+
   @Query("""
     select r
     from Receivable r

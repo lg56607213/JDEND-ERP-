@@ -47,13 +47,14 @@ public class VoucherController {
     // ✅ 전표승인 화면 API
     // ==========================
 
-    // GET /api/vouchers?date=2026-03-03&status=대기
+    // GET /api/vouchers?startDate=2026-03-01&endDate=2026-03-31&status=대기
     @GetMapping
     public List<VoucherApprovalRowResponse> list(
-            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "") String status
     ) {
-        return voucherService.listForApproval(date, status);
+        return voucherService.listForApproval(startDate, endDate, status);
     }
 
     // POST /api/vouchers/approve  { "ids":[1,2,3] }
@@ -87,12 +88,13 @@ public class VoucherController {
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(
-            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "") String status
     ) {
         String[] headers = {"전표일자", "전표번호", "차변계정", "차변금액", "차변적요",
                 "대변계정", "대변금액", "대변적요", "상태"};
-        java.util.List<Object[]> rows = voucherService.listForApproval(date, status).stream()
+        java.util.List<Object[]> rows = voucherService.listForApproval(startDate, endDate, status).stream()
                 .filter(VoucherApprovalRowResponse::isShowMain)
                 .map(v -> new Object[]{
                         v.getVoucherDate(), v.getVoucherNo(),

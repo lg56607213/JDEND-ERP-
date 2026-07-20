@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -95,6 +94,9 @@ public class PaymentService {
     Payment p = paymentRepo.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id));
 
+    // BUG-03: 수정 전 미수금 상태 복구
+    restoreReceivableStatus(p.getContractNumber(), p.getPaymentAmount());
+
     // BUG-03: 기존 연결 전표 삭제
     if (p.getVoucherId() != null) {
       voucherRepository.findById(p.getVoucherId()).ifPresent(v -> {
@@ -134,6 +136,10 @@ public class PaymentService {
     }
 
     paymentRepo.save(p);
+
+    // BUG-03: 수정 후 새 금액으로 미수금 상태 재적용
+    updateReceivableStatus(p.getContractNumber(), req.getPaymentAmount());
+
     return toResponse(p);
   }
 
@@ -149,6 +155,9 @@ public class PaymentService {
         log.info("수납 삭제: 연결 전표 삭제 voucherId={}", p.getVoucherId());
       });
     }
+
+    // BUG-03: 삭제 시 미수금 상태 복구
+    restoreReceivableStatus(p.getContractNumber(), p.getPaymentAmount());
 
     paymentRepo.deleteById(id);
   }
@@ -238,11 +247,37 @@ public class PaymentService {
     }
   }
 
+  /** BUG-03: 수납 삭제/수정 시 완납으로 처리된 미수금을 역순으로 미납으로 되돌린다. */
+  private void restoreReceivableStatus(String contractNumber, Long paymentAmount) {
+    if (contractNumber == null || contractNumber.isBlank()) return;
+    if (paymentAmount == null || paymentAmount <= 0) return;
+
+    List<Receivable> paid = receivableRepo.findByContractNumberAndStatusOrderByIdDesc(contractNumber, "완납");
+    if (paid.isEmpty()) return;
+
+    long toReverse = paymentAmount;
+    for (Receivable r : paid) {
+      long amt = r.getReceivableAmount() == null ? 0L : r.getReceivableAmount();
+      if (toReverse >= amt) {
+        r.setStatus("미납");
+        receivableRepo.save(r);
+        toReverse -= amt;
+      } else {
+        break;
+      }
+    }
+  }
+
   private String nextVoucherNo(LocalDate date) {
     long cnt = voucherRepository.countByVoucherDate(date);
     long next = cnt + 1;
     String ymd = date.toString().replace("-", "");
-    return "V" + ymd + "-" + String.format("%03d", next) + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+    String candidate = ymd + String.format("%05d", next);
+    while (voucherRepository.existsByVoucherNo(candidate)) {
+      next++;
+      candidate = ymd + String.format("%05d", next);
+    }
+    return candidate;
   }
 
   private String buildPaymentVoucherMemo(Payment payment) {

@@ -390,9 +390,9 @@ public class BillingService {
       </html>
       """.formatted(
         safe(customerName),
-        safe(registrationNumber),   // BUG-12: 두 번째 셀은 사업자번호
-        safe(phone),
         safe(registrationNumber),
+        safe(phone),
+        "",
         safe(address),
         safe(vehicleNo),
         safe(vehicleModel),

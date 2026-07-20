@@ -341,9 +341,9 @@
         });
 
         const billingNo = res.billingNo ?? "-";
-        const lineCount = res.lineCount ?? 0;
+        const lineCount = res.createdLines ?? 0;
         const totalAmount = res.totalAmount ?? 0;
-        const skipped = res.skippedCount ?? 0;
+        const skipped = res.skippedLines ?? 0;
 
         alert(
           `청구 생성 완료\n` +

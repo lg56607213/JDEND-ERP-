@@ -23,10 +23,10 @@ public class VoucherService {
         long cnt = voucherRepository.countByVoucherDate(date);
         long next = cnt + 1;
         String ymd = date.toString().replace("-", "");
-        String voucherNo = "V" + ymd + "-" + String.format("%03d", next);
+        String voucherNo = ymd + String.format("%05d", next);
         while (voucherRepository.existsByVoucherNo(voucherNo)) {
             next++;
-            voucherNo = "V" + ymd + "-" + String.format("%03d", next);
+            voucherNo = ymd + String.format("%05d", next);
         }
         return voucherNo;
     }
@@ -118,8 +118,8 @@ public class VoucherService {
      * - 첫 줄만 체크박스/일자/전표번호/상태 표시
      */
     @Transactional(readOnly = true)
-    public List<VoucherApprovalRowResponse> listForApproval(LocalDate date, String status) {
-        return voucherRepository.searchForApproval(date, status).stream()
+    public List<VoucherApprovalRowResponse> listForApproval(LocalDate startDate, LocalDate endDate, String status) {
+        return voucherRepository.searchForApprovalRange(startDate, endDate, status).stream()
                 .flatMap(v -> {
                     List<VoucherLine> lines = v.getLines().stream()
                             .sorted(Comparator.comparing(VoucherLine::getSortOrder, Comparator.nullsLast(Integer::compareTo)))

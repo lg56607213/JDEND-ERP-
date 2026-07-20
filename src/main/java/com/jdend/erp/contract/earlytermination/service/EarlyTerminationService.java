@@ -2,6 +2,8 @@ package com.jdend.erp.contract.earlytermination.service;
 
 import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
+import com.jdend.erp.accounting.voucher.entity.Voucher;
+import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.earlytermination.dto.*;
 import com.jdend.erp.contract.earlytermination.entity.EarlyTermination;
@@ -30,6 +32,7 @@ public class EarlyTerminationService {
   private final ContractRepository contractRepository;
   private final CustomerRepository customerRepository;
   private final VoucherService voucherService;
+  private final VoucherRepository voucherRepository;
   private final OtherAccountSettingsService accountSettings;
 
   @Transactional(readOnly = true)
@@ -106,12 +109,13 @@ public class EarlyTerminationService {
     EarlyTermination et = earlyTerminationRepository.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("중도상환 데이터를 찾을 수 없습니다. id=" + id));
 
-    String prevStatus = et.getStatus(); // NEW-04: 이전 상태 저장
+    String prevStatus = et.getStatus();
+    String prevMethod = et.getTerminationMethod();
 
     LocalDate terminationDate = (req.getTerminationDate() != null) ? req.getTerminationDate() : et.getTerminationDate();
 
     long terminationAmount = safe(req.getTerminationAmount());
-    long uncollectedRent = safe(req.getUncollectedRent());   // ✅ 직접 입력값 사용
+    long uncollectedRent = safe(req.getUncollectedRent());
     long terminationFee = safe(req.getTerminationFee());
     long totalAmount = terminationAmount + uncollectedRent + terminationFee;
 
@@ -120,19 +124,41 @@ public class EarlyTerminationService {
     et.setStatus(req.getStatus());
 
     et.setTerminationAmount(terminationAmount);
-    et.setUncollectedRent(uncollectedRent);  // ✅ 직접 입력값 저장
+    et.setUncollectedRent(uncollectedRent);
     et.setTerminationFee(terminationFee);
     et.setTotalAmount(totalAmount);
 
-    // NEW-04: 이전에 처리완료가 아니었고 이번에 반납+처리완료로 전환되면 전표 생성
-    if (!"처리완료".equals(prevStatus) && isReturnCompleted(et)) {
+    boolean wasReturnCompleted = "반납".equals(prevMethod) && "처리완료".equals(prevStatus);
+    boolean isNowReturnCompleted = isReturnCompleted(et);
+
+    if (wasReturnCompleted && isNowReturnCompleted) {
+      // BUG-F03: 이미 처리완료 상태에서 금액 수정 → 기존 전표 삭제 후 재생성
+      if (et.getContractNumber() != null) {
+        List<Voucher> oldVouchers = voucherRepository.findByContractNumberAndMemo(
+            et.getContractNumber(), "중도상환 반납");
+        voucherRepository.deleteAll(oldVouchers);
+      }
       createReturnVoucher(et);
-      // NEW-07: 연관 계약 상태를 "해지"로 갱신
+    } else if (!wasReturnCompleted && isNowReturnCompleted) {
+      // 처음으로 반납+처리완료 상태가 된 경우
+      createReturnVoucher(et);
       updateContractStatus(et.getContractNumber(), "해지");
     }
   }
 
   public void delete(Long id) {
+    EarlyTermination et = earlyTerminationRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("중도상환 데이터를 찾을 수 없습니다. id=" + id));
+
+    // BUG-06: 연관 전표(중도상환 반납) 삭제
+    if (et.getContractNumber() != null) {
+      List<Voucher> vouchers = voucherRepository.findByContractNumberAndMemo(
+          et.getContractNumber(), "중도상환 반납");
+      if (!vouchers.isEmpty()) {
+        voucherRepository.deleteAll(vouchers);
+      }
+    }
+
     earlyTerminationRepository.deleteById(id);
   }
 

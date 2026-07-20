@@ -69,6 +69,9 @@ public class VehicleInsurance {
   @Column(name = "insurance_premium", nullable = false)
   private Long insurancePremium;
 
+  @Column(name = "voucher_no", length = 30)
+  private String voucherNo;
+
   @Column(name = "created_at", insertable = false, updatable = false)
   private LocalDateTime createdAt;
 

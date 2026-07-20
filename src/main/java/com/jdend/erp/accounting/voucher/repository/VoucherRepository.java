@@ -11,10 +11,18 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
 
     boolean existsByVoucherNo(String voucherNo);
 
+    java.util.Optional<Voucher> findByVoucherNo(String voucherNo);
+
     @Query("select count(v) from Voucher v where v.voucherDate = :date")
     long countByVoucherDate(@Param("date") LocalDate date);
 
     List<Voucher> findByMemoStartingWithOrderByIdAsc(String memoPrefix);
+
+    @Query("select v from Voucher v where v.vehicleMgmtNo = :mgmtNo and v.memo like concat(:prefix, '%') order by v.id asc")
+    List<Voucher> findByVehicleMgmtNoAndMemoStartingWith(@Param("mgmtNo") String mgmtNo, @Param("prefix") String prefix);
+
+    @Query("select v from Voucher v where v.contractNumber = :contractNumber and v.memo = :memo order by v.id asc")
+    List<Voucher> findByContractNumberAndMemo(@Param("contractNumber") String contractNumber, @Param("memo") String memo);
 
     @Query("""
         select v
@@ -24,6 +32,19 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
         order by v.voucherDate desc, v.id desc
     """)
     List<Voucher> searchForApproval(@Param("date") LocalDate date, @Param("status") String status);
+
+    @Query("""
+        select v
+        from Voucher v
+        where (:startDate is null or v.voucherDate >= :startDate)
+          and (:endDate is null or v.voucherDate <= :endDate)
+          and (:status is null or :status = '' or v.status = :status)
+        order by v.voucherDate desc, v.id desc
+    """)
+    List<Voucher> searchForApprovalRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("status") String status);
+
+    @Query("select v from Voucher v where v.voucherDate = :date and v.totalAmount = :amount and v.memo like concat(:prefix, '%') order by v.id asc")
+    List<Voucher> findByVoucherDateAndAmountAndMemoPrefix(@Param("date") LocalDate date, @Param("amount") Long amount, @Param("prefix") String prefix);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

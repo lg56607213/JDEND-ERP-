@@ -72,7 +72,12 @@ public class VehicleInsuranceService {
 
     VehicleInsurance saved = insuranceRepo.save(i);
 
-    createInsuranceVoucher(saved, req.voucherDate);
+    // BUG-F01: 생성된 전표번호를 보험 레코드에 저장 (수정 시 해당 전표만 삭제하기 위해)
+    String voucherNo = createInsuranceVoucher(saved, req.voucherDate);
+    if (voucherNo != null) {
+      saved.setVoucherNo(voucherNo);
+      insuranceRepo.save(saved);
+    }
 
     return toRes(saved);
   }
@@ -120,7 +125,51 @@ public class VehicleInsuranceService {
     i.setInsurancePremium(req.insurancePremium);
 
     insuranceRepo.save(i);
+
+    // BUG-F01: 저장된 전표번호로 해당 건 전표만 삭제 (차량의 다른 연도 보험 전표 보호)
+    if (i.getVoucherNo() != null) {
+      voucherRepository.findByVoucherNo(i.getVoucherNo())
+          .ifPresent(voucherRepository::delete);
+    } else if (i.getVehicleMgmtNo() != null) {
+      // voucherNo 미저장 구형 데이터 fallback: 메모 접두어로 조회
+      List<Voucher> oldVouchers = voucherRepository.findByVehicleMgmtNoAndMemoStartingWith(
+          i.getVehicleMgmtNo(), "보험등록 보험료");
+      if (!oldVouchers.isEmpty()) {
+        voucherRepository.deleteAll(oldVouchers);
+      }
+    }
+
+    String newVoucherNo = createInsuranceVoucher(i, req.insuranceStartDate);
+    if (newVoucherNo != null) {
+      i.setVoucherNo(newVoucherNo);
+      insuranceRepo.save(i);
+    }
+
     return toRes(i);
+  }
+
+  @Transactional(readOnly = true)
+  public List<VehicleInsuranceDtos.ChangeResponse> listChanges(Long insuranceId) {
+    return insuranceChangeRepo.findByInsuranceIdOrderByIdDesc(insuranceId)
+        .stream()
+        .map(c -> VehicleInsuranceDtos.ChangeResponse.builder()
+            .id(c.getId())
+            .insuranceId(c.getInsuranceId())
+            .changeType(c.getChangeType())
+            .changeReason(c.getChangeReason())
+            .additionalPremium(c.getAdditionalPremium())
+            .refundPremium(c.getRefundPremium())
+            .voucherDate(c.getVoucherDate())
+            .createdAt(c.getCreatedAt())
+            .build())
+        .toList();
+  }
+
+  @Transactional
+  public void refund(Long insuranceId, VehicleInsuranceDtos.InsuranceChangeRequest req) {
+    req.setChangeType("환입");
+    if (req.additionalPremium == null) req.additionalPremium = 0L;
+    change(insuranceId, req);
   }
 
   @Transactional
@@ -198,15 +247,15 @@ public class VehicleInsuranceService {
     voucherRepository.save(voucher);
   }
 
-  private void createInsuranceVoucher(VehicleInsurance insurance, LocalDate requestedVoucherDate) {
+  private String createInsuranceVoucher(VehicleInsurance insurance, LocalDate requestedVoucherDate) {
     Long amount = insurance.getInsurancePremium();
-    if (amount == null || amount <= 0) return;
+    if (amount == null || amount <= 0) return null;
 
     String debit  = accountSettings.getInsuranceDebitAccount();
     String credit = accountSettings.getInsuranceCreditAccount();
     if (debit == null || credit == null) {
       log.warn("[보험등록] 전표 생략: 기타계정관리 > 보험 신규/갱신 계정 미설정. vehicleMgmtNo={}", insurance.getVehicleMgmtNo());
-      return;
+      return null;
     }
 
     LocalDate voucherDate = requestedVoucherDate != null ? requestedVoucherDate :
@@ -243,13 +292,19 @@ public class VehicleInsuranceService {
       .build());
 
     voucherRepository.save(voucher);
+    return voucherNo;
   }
 
   private String nextVoucherNo(LocalDate date) {
     long cnt = voucherRepository.countByVoucherDate(date);
     long next = cnt + 1;
     String ymd = date.toString().replace("-", "");
-    return "V" + ymd + "-" + String.format("%03d", next);
+    String candidate = ymd + String.format("%05d", next);
+    while (voucherRepository.existsByVoucherNo(candidate)) {
+      next++;
+      candidate = ymd + String.format("%05d", next);
+    }
+    return candidate;
   }
 
   private String buildInsuranceVoucherMemo(VehicleInsurance insurance) {

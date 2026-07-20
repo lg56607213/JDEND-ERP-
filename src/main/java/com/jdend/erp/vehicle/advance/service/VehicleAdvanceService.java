@@ -173,17 +173,16 @@ public class VehicleAdvanceService {
     int sortOrder = 1;
 
     if (vatAmt > 0) {
-      // 과세 항목: 공급가액 + 부가세대급금으로 분개
-      voucher.addLine(VoucherLine.builder()
-        .lineType("DEBIT")
-        .accountName(debitAccount)
-        .amount(supplyAmt)
-        .description(itemName)
-        .sortOrder(sortOrder++)
-        .build());
-
       String vatDebitAccount = accountSettings.getAdvanceVatDebitAccount();
       if (vatDebitAccount != null) {
+        // 부가세 계정 설정 시: 공급가액 + 부가세 분리 차변 (합계 = totalAmt = 대변)
+        voucher.addLine(VoucherLine.builder()
+          .lineType("DEBIT")
+          .accountName(debitAccount)
+          .amount(supplyAmt)
+          .description(itemName)
+          .sortOrder(sortOrder++)
+          .build());
         voucher.addLine(VoucherLine.builder()
           .lineType("DEBIT")
           .accountName(vatDebitAccount)
@@ -192,7 +191,15 @@ public class VehicleAdvanceService {
           .sortOrder(sortOrder++)
           .build());
       } else {
-        log.warn("선급 부가세 차변 계정(advanceVatMapping.debit) 미설정으로 부가세 분개를 건너뜁니다. itemName={}", itemName);
+        // 부가세 계정 미설정 시: 전체 금액을 단일 차변으로 (차변 = 대변 = totalAmt, 균형 유지)
+        log.warn("선급 부가세 차변 계정(advanceVatMapping.debit) 미설정으로 전체 금액을 단일 차변으로 처리합니다. itemName={}", itemName);
+        voucher.addLine(VoucherLine.builder()
+          .lineType("DEBIT")
+          .accountName(debitAccount)
+          .amount(totalAmt)
+          .description(itemName)
+          .sortOrder(sortOrder++)
+          .build());
       }
     } else {
       // 면세/비과세 항목 (취득세, 인지대 등): 단일 차변
@@ -258,11 +265,11 @@ public class VehicleAdvanceService {
     long seq = voucherRepo.countByVoucherDate(voucherDate) + 1;
     String baseDate = voucherDate.toString().replace("-", "");
 
-    String voucherNo = "V-" + baseDate + "-" + String.format("%03d", seq);
+    String voucherNo = baseDate + String.format("%05d", seq);
 
     while (voucherRepo.existsByVoucherNo(voucherNo)) {
       seq++;
-      voucherNo = "V-" + baseDate + "-" + String.format("%03d", seq);
+      voucherNo = baseDate + String.format("%05d", seq);
     }
 
     return voucherNo;

@@ -125,25 +125,21 @@ public class VehicleSaleService {
     String vehicleAssetAccount = accountSettings.getSaleVehicleAssetAccount();
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
-    credits.add(line(saleRevenueAccount, s.getSupplyAmount(), memo));
+    long revenueAmount = (vatCreditAccount != null) ? s.getSupplyAmount() : s.getSaleAmount();
+    credits.add(line(saleRevenueAccount, revenueAmount, memo));
     if (vatCreditAccount != null)                           credits.add(line(vatCreditAccount,    s.getTaxAmount(), memo));
     if (acquisitionCost > 0 && vehicleAssetAccount != null) credits.add(line(vehicleAssetAccount, acquisitionCost,  memo));
 
-    try {
-      VoucherCreateResponse resp = voucherService.create(VoucherCreateRequest.builder()
-          .voucherDate(s.getSaleDate())
-          .vehicleNo(s.getVehicleNo())
-          .vehicleMgmtNo(s.getVehicleMgmtNo())
-          .contractNumber(null)
-          .memo(memo)
-          .debitEntries(debits)
-          .creditEntries(credits)
-          .build());
-      return resp != null ? resp.getId() : null;
-    } catch (Exception e) {
-      log.warn("매각 전표 생성 실패 saleId={}: {}", s.getId(), e.getMessage());
-      return null;
-    }
+    VoucherCreateResponse resp = voucherService.create(VoucherCreateRequest.builder()
+        .voucherDate(s.getSaleDate())
+        .vehicleNo(s.getVehicleNo())
+        .vehicleMgmtNo(s.getVehicleMgmtNo())
+        .contractNumber(null)
+        .memo(memo)
+        .debitEntries(debits)
+        .creditEntries(credits)
+        .build());
+    return resp != null ? resp.getId() : null;
   }
 
   private VoucherCreateRequest.VoucherLineRequest line(String account, long amount, String desc) {
