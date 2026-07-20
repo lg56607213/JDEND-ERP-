@@ -11,6 +11,7 @@ import com.jdend.erp.vehicle.repository.VehicleLoanRepository;
 import com.jdend.erp.vehicle.repository.VehicleLoanVoucherRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleLoanService {
@@ -405,6 +407,13 @@ public class VehicleLoanService {
     }
 
     private void createLoanOpenVoucher(VehicleLoan loan) {
+        String debitAccount  = accountSettings.getLoanOpenDebitAccount();
+        String creditAccount = accountSettings.getLoanOpenCreditAccount();
+        if (debitAccount == null || creditAccount == null) {
+            log.warn("차입금 개시 전표 생략: 기타계정관리 > 차입금 개시 전표의 차변/대변을 설정해주세요. loanId={}", loan.getId());
+            return;
+        }
+
         VehicleOrder order = loan.getVehicleOrder();
         String vehicleNo = order != null ? order.getVehicleNo() : "";
         String contractNo = order != null ? order.getMakerContractNo() : null;
@@ -421,14 +430,14 @@ public class VehicleLoanService {
                         .memo(memo)
                         .debitEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account("보통예금")
+                                        .account(debitAccount)
                                         .amount(loan.getLoanPrincipal())
                                         .description("대출원금")
                                         .build()
                         ))
                         .creditEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
-                                        .account("장기차입금")
+                                        .account(creditAccount)
                                         .amount(loan.getLoanPrincipal())
                                         .description("대출원금")
                                         .build()

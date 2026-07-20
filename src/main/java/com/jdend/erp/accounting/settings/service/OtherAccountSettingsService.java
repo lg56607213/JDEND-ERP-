@@ -87,6 +87,40 @@ public class OtherAccountSettingsService {
   /** 정기검사 대변 계정명 */
   public String getInspectionCreditAccount() { return nested("inspectionMapping", "credit"); }
 
+  /** 차입금 개시 차변 계정명 */
+  public String getLoanOpenDebitAccount()    { return nested("loanOpenMapping",   "debit");  }
+  /** 차입금 개시 대변 계정명 */
+  public String getLoanOpenCreditAccount()   { return nested("loanOpenMapping",   "credit"); }
+  /** 감가상각 차변 계정명 */
+  public String getDeprecDebitAccount()      { return nested("deprecMapping",     "debit");  }
+  /** 감가상각 대변 계정명 */
+  public String getDeprecCreditAccount()     { return nested("deprecMapping",     "credit"); }
+  /** 법적비용 차변 계정명 */
+  public String getLegalCostDebitAccount()   { return nested("legalCostMapping",  "debit");  }
+  /** 법적비용 대변 계정명 */
+  public String getLegalCostCreditAccount()  { return nested("legalCostMapping",  "credit"); }
+  /** 차량매각 차변 계정명 */
+  public String getSaleDebitAccount()        { return nested("saleMapping",       "debit");  }
+  /** 차량매각 대변 계정명 */
+  public String getSaleCreditAccount()       { return nested("saleMapping",       "credit"); }
+  /** 수납 차변 계정명 */
+  public String getPaymentDebitAccount()     { return nested("paymentMapping",    "debit");  }
+  /** 수납 대변 계정명 */
+  public String getPaymentCreditAccount()    { return nested("paymentMapping",    "credit"); }
+
+  /** 중도해지 미회수렌트료 차변 계정명 */
+  public String getEarlyTermUnrealizedRentDebit()  { return nested3("earlyTermMapping","unrealizedRent",   "debit");  }
+  /** 중도해지 미회수렌트료 대변 계정명 */
+  public String getEarlyTermUnrealizedRentCredit() { return nested3("earlyTermMapping","unrealizedRent",   "credit"); }
+  /** 중도해지 수수료 차변 계정명 */
+  public String getEarlyTermFeeDebit()             { return nested3("earlyTermMapping","terminationFee",   "debit");  }
+  /** 중도해지 수수료 대변 계정명 */
+  public String getEarlyTermFeeCredit()            { return nested3("earlyTermMapping","terminationFee",   "credit"); }
+  /** 중도해지 상환금액 차변 계정명 */
+  public String getEarlyTermAmountDebit()          { return nested3("earlyTermMapping","terminationAmount","debit");  }
+  /** 중도해지 상환금액 대변 계정명 */
+  public String getEarlyTermAmountCredit()         { return nested3("earlyTermMapping","terminationAmount","credit"); }
+
   private String nested(String section, String key) {
     Object sec = getSettingsMap().get(section);
     if (sec instanceof Map) {
@@ -96,6 +130,26 @@ public class OtherAccountSettingsService {
         Map<?, ?> em = (Map<?, ?>) entry;
         Object name = em.get("accountName");
         if (name instanceof String && !((String) name).isBlank()) return (String) name;
+      }
+    }
+    return null;
+  }
+
+  /** earlyTermMapping처럼 section → subKey → key 3단계 구조에서 accountName 반환 */
+  @SuppressWarnings("unchecked")
+  private String nested3(String section, String subKey, String key) {
+    Object sec = getSettingsMap().get(section);
+    if (sec instanceof Map) {
+      Map<?, ?> sm = (Map<?, ?>) sec;
+      Object sub = sm.get(subKey);
+      if (sub instanceof Map) {
+        Map<?, ?> subm = (Map<?, ?>) sub;
+        Object entry = subm.get(key);
+        if (entry instanceof Map) {
+          Map<?, ?> em = (Map<?, ?>) entry;
+          Object name = em.get("accountName");
+          if (name instanceof String && !((String) name).isBlank()) return (String) name;
+        }
       }
     }
     return null;

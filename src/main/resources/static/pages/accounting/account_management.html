@@ -121,6 +121,184 @@
         </div>
       </div>
 
+      <!-- 차입금 개시 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">차입금 개시 전표</h3>
+        <p class="section-note">차입금 등록 시 자동 발생하는 전표 계정을 설정합니다.</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="loanOpenDebitCode" placeholder="계정코드">
+              <select class="account-select" id="loanOpenDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="loanOpenCreditCode" placeholder="계정코드">
+              <select class="account-select" id="loanOpenCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 감가상각 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">감가상각 전표</h3>
+        <p class="section-note">감가상각 실행 시 자동 발생하는 전표 계정을 설정합니다.</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="deprecDebitCode" placeholder="계정코드">
+              <select class="account-select" id="deprecDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="deprecCreditCode" placeholder="계정코드">
+              <select class="account-select" id="deprecCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 중도해지 반납 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">중도해지 반납 전표</h3>
+        <p class="section-note">중도해지 &gt; 반납 &gt; 처리완료 시 자동 발생하는 전표 계정을 설정합니다. 금액이 0인 항목은 분개가 생략됩니다.</p>
+
+        <p class="section-note" style="margin-top:12px;font-weight:600;">① 미회수렌트료 분개</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermUnrealizedRentDebitCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermUnrealizedRentDebit"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermUnrealizedRentCreditCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermUnrealizedRentCredit"></select>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-note" style="margin-top:12px;font-weight:600;">② 중도상환금액 분개</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermAmountDebitCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermAmountDebit"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermAmountCreditCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermAmountCredit"></select>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-note" style="margin-top:12px;font-weight:600;">③ 중도상환수수료 분개</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermFeeDebitCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermFeeDebit"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="earlyTermFeeCreditCode" placeholder="계정코드">
+              <select class="account-select" id="earlyTermFeeCredit"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 법적비용 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">법적비용 전표</h3>
+        <p class="section-note">법적절차 비용 등록 시 자동 발생하는 전표 계정을 설정합니다.</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="legalCostDebitCode" placeholder="계정코드">
+              <select class="account-select" id="legalCostDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="legalCostCreditCode" placeholder="계정코드">
+              <select class="account-select" id="legalCostCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 차량매각 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">차량매각 전표</h3>
+        <p class="section-note">차량 매각 등록 시 자동 발생하는 전표 계정을 설정합니다. (차변: 매각대금 수취 계정 / 대변: 매각수익 계정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="saleDebitCode" placeholder="계정코드">
+              <select class="account-select" id="saleDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="saleCreditCode" placeholder="계정코드">
+              <select class="account-select" id="saleCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수납 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">수납 전표</h3>
+        <p class="section-note">수납 등록 시 자동 발생하는 전표 계정을 설정합니다. (차변: 입금 수취 계정 / 대변: 수익 계정)</p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>차변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="paymentDebitCode" placeholder="계정코드">
+              <select class="account-select" id="paymentDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>대변</label>
+            <div class="account-input-group">
+              <input type="text" class="account-code" id="paymentCreditCode" placeholder="계정코드">
+              <select class="account-select" id="paymentCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 버튼 -->
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="resetSettings()">초기화</button>
@@ -299,7 +477,51 @@
       credit: { code: inputVal('inspectionCreditCode'), account: selVal('inspectionCreditAccount'), accountName: selText('inspectionCreditAccount'), bankAccount: selVal('inspectionBankAccount') }
     };
 
-    return { prepaidAccounts, vehicleMapping, loanMapping, inspectionMapping };
+    const loanOpenMapping = {
+      debit:  { code: inputVal('loanOpenDebitCode'),  account: selVal('loanOpenDebitAccount'),  accountName: selText('loanOpenDebitAccount')  },
+      credit: { code: inputVal('loanOpenCreditCode'), account: selVal('loanOpenCreditAccount'), accountName: selText('loanOpenCreditAccount') }
+    };
+
+    const deprecMapping = {
+      debit:  { code: inputVal('deprecDebitCode'),  account: selVal('deprecDebitAccount'),  accountName: selText('deprecDebitAccount')  },
+      credit: { code: inputVal('deprecCreditCode'), account: selVal('deprecCreditAccount'), accountName: selText('deprecCreditAccount') }
+    };
+
+    const earlyTermMapping = {
+      unrealizedRent: {
+        debit:  { code: inputVal('earlyTermUnrealizedRentDebitCode'),  account: selVal('earlyTermUnrealizedRentDebit'),  accountName: selText('earlyTermUnrealizedRentDebit')  },
+        credit: { code: inputVal('earlyTermUnrealizedRentCreditCode'), account: selVal('earlyTermUnrealizedRentCredit'), accountName: selText('earlyTermUnrealizedRentCredit') }
+      },
+      terminationAmount: {
+        debit:  { code: inputVal('earlyTermAmountDebitCode'),  account: selVal('earlyTermAmountDebit'),  accountName: selText('earlyTermAmountDebit')  },
+        credit: { code: inputVal('earlyTermAmountCreditCode'), account: selVal('earlyTermAmountCredit'), accountName: selText('earlyTermAmountCredit') }
+      },
+      terminationFee: {
+        debit:  { code: inputVal('earlyTermFeeDebitCode'),  account: selVal('earlyTermFeeDebit'),  accountName: selText('earlyTermFeeDebit')  },
+        credit: { code: inputVal('earlyTermFeeCreditCode'), account: selVal('earlyTermFeeCredit'), accountName: selText('earlyTermFeeCredit') }
+      }
+    };
+
+    const legalCostMapping = {
+      debit:  { code: inputVal('legalCostDebitCode'),  account: selVal('legalCostDebitAccount'),  accountName: selText('legalCostDebitAccount')  },
+      credit: { code: inputVal('legalCostCreditCode'), account: selVal('legalCostCreditAccount'), accountName: selText('legalCostCreditAccount') }
+    };
+
+    const saleMapping = {
+      debit:  { code: inputVal('saleDebitCode'),  account: selVal('saleDebitAccount'),  accountName: selText('saleDebitAccount')  },
+      credit: { code: inputVal('saleCreditCode'), account: selVal('saleCreditAccount'), accountName: selText('saleCreditAccount') }
+    };
+
+    const paymentMapping = {
+      debit:  { code: inputVal('paymentDebitCode'),  account: selVal('paymentDebitAccount'),  accountName: selText('paymentDebitAccount')  },
+      credit: { code: inputVal('paymentCreditCode'), account: selVal('paymentCreditAccount'), accountName: selText('paymentCreditAccount') }
+    };
+
+    return {
+      prepaidAccounts, vehicleMapping, loanMapping, inspectionMapping,
+      loanOpenMapping, deprecMapping, earlyTermMapping,
+      legalCostMapping, saleMapping, paymentMapping
+    };
   }
 
   function applySelect(id, code) {
@@ -352,6 +574,46 @@
       applySelect('inspectionCreditAccount', settings.inspectionMapping.credit?.account);
       const bank = document.getElementById('inspectionBankAccount');
       if (bank) bank.value = settings.inspectionMapping.credit?.bankAccount ?? "";
+    }
+
+    // 차입금 개시
+    if (settings.loanOpenMapping) {
+      applySelect('loanOpenDebitAccount',  settings.loanOpenMapping.debit?.account);
+      applySelect('loanOpenCreditAccount', settings.loanOpenMapping.credit?.account);
+    }
+
+    // 감가상각
+    if (settings.deprecMapping) {
+      applySelect('deprecDebitAccount',  settings.deprecMapping.debit?.account);
+      applySelect('deprecCreditAccount', settings.deprecMapping.credit?.account);
+    }
+
+    // 중도해지 반납
+    if (settings.earlyTermMapping) {
+      applySelect('earlyTermUnrealizedRentDebit',  settings.earlyTermMapping.unrealizedRent?.debit?.account);
+      applySelect('earlyTermUnrealizedRentCredit', settings.earlyTermMapping.unrealizedRent?.credit?.account);
+      applySelect('earlyTermAmountDebit',          settings.earlyTermMapping.terminationAmount?.debit?.account);
+      applySelect('earlyTermAmountCredit',         settings.earlyTermMapping.terminationAmount?.credit?.account);
+      applySelect('earlyTermFeeDebit',             settings.earlyTermMapping.terminationFee?.debit?.account);
+      applySelect('earlyTermFeeCredit',            settings.earlyTermMapping.terminationFee?.credit?.account);
+    }
+
+    // 법적비용
+    if (settings.legalCostMapping) {
+      applySelect('legalCostDebitAccount',  settings.legalCostMapping.debit?.account);
+      applySelect('legalCostCreditAccount', settings.legalCostMapping.credit?.account);
+    }
+
+    // 차량매각
+    if (settings.saleMapping) {
+      applySelect('saleDebitAccount',  settings.saleMapping.debit?.account);
+      applySelect('saleCreditAccount', settings.saleMapping.credit?.account);
+    }
+
+    // 수납
+    if (settings.paymentMapping) {
+      applySelect('paymentDebitAccount',  settings.paymentMapping.debit?.account);
+      applySelect('paymentCreditAccount', settings.paymentMapping.credit?.account);
     }
   }
 

@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.depreciation.entity.DepreciationAsset;
 import com.jdend.erp.accounting.depreciation.entity.DepreciationScheduleLine;
 import com.jdend.erp.accounting.depreciation.repository.DepreciationAssetRepository;
 import com.jdend.erp.accounting.depreciation.repository.DepreciationScheduleLineRepository;
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateResponse;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
@@ -33,6 +34,7 @@ public class VehicleSaleService {
   private final DepreciationScheduleLineRepository depLineRepo;
   private final VoucherService voucherService;
   private final VoucherRepository voucherRepository;   // BUG-04: 전표 삭제용
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional
   public VehicleSaleDtos.Response create(VehicleSaleDtos.CreateRequest req) {
@@ -103,15 +105,22 @@ public class VehicleSaleService {
       }
     }
 
+    String saleDebitAccount    = accountSettings.getSaleDebitAccount();
+    String saleRevenueAccount  = accountSettings.getSaleCreditAccount();
+    if (saleDebitAccount == null || saleRevenueAccount == null) {
+      log.warn("차량매각 전표 생략: 기타계정관리 > 차량매각 전표의 차변/대변을 설정해주세요. saleId={}", s.getId());
+      return null;
+    }
+
     String memo = (s.getVehicleNo() != null ? s.getVehicleNo() : s.getVehicleMgmtNo()) + " 차량 매각";
 
     List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
-    debits.add(line("미수금", s.getSaleAmount(), memo));
+    debits.add(line(saleDebitAccount, s.getSaleAmount(), memo));
     if (accumulated > 0) debits.add(line("감가상각누계액", accumulated, memo));
     if (remaining > 0)   debits.add(line("미상각잔액", remaining, memo));
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
-    credits.add(line("매각수익", s.getSupplyAmount(), memo));
+    credits.add(line(saleRevenueAccount, s.getSupplyAmount(), memo));
     credits.add(line("부가세예수금", s.getTaxAmount(), memo));
     if (acquisitionCost > 0) credits.add(line("차량운반구", acquisitionCost, memo));
 

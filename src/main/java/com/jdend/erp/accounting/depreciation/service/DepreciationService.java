@@ -3,10 +3,12 @@ package com.jdend.erp.accounting.depreciation.service;
 import com.jdend.erp.accounting.depreciation.dto.*;
 import com.jdend.erp.accounting.depreciation.entity.*;
 import com.jdend.erp.accounting.depreciation.repository.*;
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateResponse;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DepreciationService {
@@ -23,6 +26,7 @@ public class DepreciationService {
   private final DepreciationScheduleLineRepository lineRepo;
   private final DepreciationPostingRepository postingRepo;
   private final VoucherService voucherService;
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional
   public Long createAsset(DepreciationAssetCreateRequest req) {
@@ -232,6 +236,22 @@ public class DepreciationService {
     LocalDate monthStart = ym.atDay(1);
     LocalDate monthEnd = ym.atEndOfMonth();
 
+    // 기타계정관리 계정 설정 확인 (루프 전에 1회 조회)
+    String depDebitAccount  = accountSettings.getDeprecDebitAccount();
+    String depCreditAccount = accountSettings.getDeprecCreditAccount();
+    if (depDebitAccount == null || depCreditAccount == null) {
+      log.warn("감가상각 전표 생략: 기타계정관리 > 감가상각 전표의 차변/대변을 설정해주세요.");
+      return Map.of(
+          "ok", false,
+          "postingSavedCount", 0,
+          "voucherCreatedCount", 0,
+          "skippedCount", req.assetIds.size(),
+          "processedRounds", List.of(),
+          "voucherNos", List.of(),
+          "message", "기타계정관리에서 감가상각 차변/대변 계정을 먼저 설정해주세요."
+      );
+    }
+
     int postingSavedCount = 0;
     int voucherCreatedCount = 0;
     int skippedCount = 0;
@@ -273,6 +293,7 @@ public class DepreciationService {
       postingRepo.save(posting);
       postingSavedCount++;
 
+      String depDesc = String.format("%s %d회차 감가상각", nz(asset.getVehicleNo()), currentLine.getPeriodNo());
       VoucherCreateRequest voucherReq = VoucherCreateRequest.builder()
           .voucherDate(req.voucherDate)
           .contractNumber(blankToNull(asset.getContractNumber()))
@@ -280,16 +301,16 @@ public class DepreciationService {
           .memo(String.format("감가상각 %s %d회차", req.baseMonth, currentLine.getPeriodNo()))
           .debitEntries(List.of(
               VoucherCreateRequest.VoucherLineRequest.builder()
-                  .account("감가상각비")
+                  .account(depDebitAccount)
                   .amount(currentLine.getAmount())
-                  .description(String.format("%s %d회차 감가상각", nz(asset.getVehicleNo()), currentLine.getPeriodNo()))
+                  .description(depDesc)
                   .build()
           ))
           .creditEntries(List.of(
               VoucherCreateRequest.VoucherLineRequest.builder()
-                  .account("감가상각누계액")
+                  .account(depCreditAccount)
                   .amount(currentLine.getAmount())
-                  .description(String.format("%s %d회차 감가상각", nz(asset.getVehicleNo()), currentLine.getPeriodNo()))
+                  .description(depDesc)
                   .build()
           ))
           .build();

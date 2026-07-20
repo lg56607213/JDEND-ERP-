@@ -1,5 +1,6 @@
 package com.jdend.erp.payment.payment.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
@@ -12,7 +13,6 @@ import com.jdend.erp.payment.payment.entity.Payment;
 import com.jdend.erp.payment.payment.repository.PaymentRepository;
 import com.jdend.erp.payment.receivable.entity.Receivable;
 import com.jdend.erp.payment.receivable.repository.ReceivableRepository;
-import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class PaymentService {
   private final PaymentRepository paymentRepo;
   private final ContractRepository contractRepo;
   private final VoucherRepository voucherRepository;
-  private final FinancialStatementAccountRepository accountRepo;
+  private final OtherAccountSettingsService accountSettings;
   private final VehicleOrderRepository vehicleOrderRepo;
   private final ReceivableRepository receivableRepo;  // BUG-10
 
@@ -162,16 +162,12 @@ public class PaymentService {
     if (payment.getPaymentAmount() == null || payment.getPaymentAmount() <= 0) return null;
 
     // 현금주의: 수납은 현금 실수령이므로 수단과 무관하게 수익 전표를 생성한다.
-    String method = blankToEmpty(payment.getPaymentMethod());
-
-    // 차변 계정: 현금 수령은 '현금' 계정(존재할 때만), 그 외는 '보통예금'.
-    String debitAccount = "보통예금";
-    if ("현금".equals(method)) {
-      if (accountRepo.existsByAccountName("현금")) {
-        debitAccount = "현금";
-      } else {
-        log.warn("수납 전표: '현금' 계정이 없어 '보통예금'으로 대체 계상합니다. paymentId={}", payment.getId());
-      }
+    // 기타계정관리에서 설정한 계정명 사용. 미설정이면 전표를 생성하지 않는다.
+    String debitAccount  = accountSettings.getPaymentDebitAccount();
+    String creditAccount = accountSettings.getPaymentCreditAccount();
+    if (debitAccount == null || creditAccount == null) {
+      log.warn("수납 전표 생략: 기타계정관리 > 수납 전표의 차변/대변을 설정해주세요. paymentId={}", payment.getId());
+      return null;
     }
 
     LocalDate voucherDate = payment.getPaymentDate() != null ? payment.getPaymentDate() : LocalDate.now();
@@ -208,7 +204,7 @@ public class PaymentService {
 
     voucher.addLine(VoucherLine.builder()
         .lineType("CREDIT")
-        .accountName("렌트료수익")
+        .accountName(creditAccount)
         .amount(payment.getPaymentAmount())
         .description("수납등록 입금")
         .sortOrder(2)

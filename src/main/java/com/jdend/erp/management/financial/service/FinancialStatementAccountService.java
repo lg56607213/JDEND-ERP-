@@ -304,9 +304,8 @@ public class FinancialStatementAccountService {
   // ==========================
   // 전표등록 select용: 전기가능 + 사용 leaf 전체
   // ==========================
-  @Transactional
+  @Transactional(readOnly = true)
   public List<FinancialStatementAccountResponse> leavesForVoucher() {
-    ensureVatAccounts();
     List<FinancialStatementAccount> all = repo.findAll();
 
     Map<Long, String> idToName = all.stream()

@@ -1,5 +1,6 @@
 package com.jdend.erp.contract.earlytermination.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.earlytermination.dto.*;
@@ -10,6 +11,7 @@ import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
 import com.jdend.erp.customer.CustomerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +30,7 @@ public class EarlyTerminationService {
   private final ContractRepository contractRepository;
   private final CustomerRepository customerRepository;
   private final VoucherService voucherService;
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional(readOnly = true)
   public Page<EarlyTerminationRowDto> list(String status, int page, int size) {
@@ -208,53 +212,66 @@ public class EarlyTerminationService {
   }
 
   /**
-   * ✅ 중도상환 > 반납 > 전표발생
-   * - 차변: 미수금 (합계금액)
-   * - 대변: 미회수렌트료(고정항목, 직접입력금액) / 중도상환금액 / 중도상환수수료
-   *
-   * 현재 전표승인 화면은 첫 CREDIT 라인만 보여주므로
-   * "미회수렌트료"를 가장 먼저 넣어서 화면에서도 고정 항목처럼 보이게 처리.
+   * 중도해지 > 반납 > 처리완료 시 전표 발생
+   * 기타계정관리 earlyTermMapping 설정 기준으로 각 분개 항목의 차변/대변 계정을 결정한다.
+   * 금액이 0인 항목과 계정이 미설정된 항목은 warn 로그 후 해당 분개를 건너뛴다.
+   * 최종적으로 유효한 분개가 하나도 없으면 전표를 생성하지 않는다.
    */
   private void createReturnVoucher(EarlyTermination et) {
+    long uncollectedRent   = safe(et.getUncollectedRent());
     long terminationAmount = safe(et.getTerminationAmount());
-    long uncollectedRent = safe(et.getUncollectedRent());
-    long terminationFee = safe(et.getTerminationFee());
-    long totalAmount = safe(et.getTotalAmount());
+    long terminationFee    = safe(et.getTerminationFee());
 
-    List<VoucherCreateRequest.VoucherLineRequest> debitEntries = List.of(
-        VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("미수금")
-            .amount(totalAmount)
-            .description("중도상환 반납")
-            .build()
-    );
+    String unrDebit  = accountSettings.getEarlyTermUnrealizedRentDebit();
+    String unrCredit = accountSettings.getEarlyTermUnrealizedRentCredit();
+    String amtDebit  = accountSettings.getEarlyTermAmountDebit();
+    String amtCredit = accountSettings.getEarlyTermAmountCredit();
+    String feeDebit  = accountSettings.getEarlyTermFeeDebit();
+    String feeCredit = accountSettings.getEarlyTermFeeCredit();
 
+    List<VoucherCreateRequest.VoucherLineRequest> debitEntries  = new ArrayList<>();
     List<VoucherCreateRequest.VoucherLineRequest> creditEntries = new ArrayList<>();
 
-    // ✅ 미회수렌트료는 고정 항목명 / 금액은 직접 입력값
-    creditEntries.add(
-        VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("미회수렌트료")
-            .amount(uncollectedRent)
-            .description("미회수렌트료")
-            .build()
-    );
+    // 미회수렌트료 분개
+    if (uncollectedRent > 0) {
+      if (unrDebit == null || unrCredit == null) {
+        log.warn("중도해지 미회수렌트료 분개 생략: 기타계정관리 > 중도해지 > 미회수렌트료 차변/대변을 설정해주세요. etId={}", et.getId());
+      } else {
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(unrDebit).amount(uncollectedRent).description("미회수렌트료").build());
+        creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(unrCredit).amount(uncollectedRent).description("미회수렌트료").build());
+      }
+    }
 
-    creditEntries.add(
-        VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("중도상환금액")
-            .amount(terminationAmount)
-            .description("중도상환금액")
-            .build()
-    );
+    // 중도상환금액 분개
+    if (terminationAmount > 0) {
+      if (amtDebit == null || amtCredit == null) {
+        log.warn("중도해지 상환금액 분개 생략: 기타계정관리 > 중도해지 > 중도상환금액 차변/대변을 설정해주세요. etId={}", et.getId());
+      } else {
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(amtDebit).amount(terminationAmount).description("중도상환금액").build());
+        creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(amtCredit).amount(terminationAmount).description("중도상환금액").build());
+      }
+    }
 
-    creditEntries.add(
-        VoucherCreateRequest.VoucherLineRequest.builder()
-            .account("중도상환수수료")
-            .amount(terminationFee)
-            .description("중도상환수수료")
-            .build()
-    );
+    // 중도상환수수료 분개
+    if (terminationFee > 0) {
+      if (feeDebit == null || feeCredit == null) {
+        log.warn("중도해지 수수료 분개 생략: 기타계정관리 > 중도해지 > 중도상환수수료 차변/대변을 설정해주세요. etId={}", et.getId());
+      } else {
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(feeDebit).amount(terminationFee).description("중도상환수수료").build());
+        creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(feeCredit).amount(terminationFee).description("중도상환수수료").build());
+      }
+    }
+
+    if (debitEntries.isEmpty()) {
+      log.warn("중도해지 전표 생략: 유효한 분개 항목이 없습니다. 기타계정관리에서 earlyTermMapping을 설정해주세요. etId={}", et.getId());
+      return;
+    }
 
     voucherService.create(
         VoucherCreateRequest.builder()

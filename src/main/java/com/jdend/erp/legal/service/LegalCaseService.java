@@ -1,5 +1,6 @@
 package com.jdend.erp.legal.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
@@ -10,7 +11,6 @@ import com.jdend.erp.legal.entity.LegalCase;
 import com.jdend.erp.legal.entity.LegalProgressEntry;
 import com.jdend.erp.legal.repository.LegalCaseRepository;
 import com.jdend.erp.legal.repository.LegalProgressEntryRepository;
-import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class LegalCaseService {
     private final LegalCaseRepository caseRepo;
     private final LegalProgressEntryRepository progressRepo;
     private final VoucherRepository voucherRepository;
-    private final FinancialStatementAccountRepository accountRepo;
+    private final OtherAccountSettingsService accountSettings;
 
     public LegalCaseResponse create(LegalCaseRequest req) {
         String cn = safe(req.getContractNumber());
@@ -134,13 +134,11 @@ public class LegalCaseService {
         long amount = lc.getLegalCostPayment() != null ? lc.getLegalCostPayment() : 0L;
         if (amount <= 0) return;
 
-        // 방어적: 필요한 계정이 해당 회사에 없으면 재무제표에서 누락/불균형이 되므로,
-        // 전표를 만들지 않고 경고만 남긴다(다른 회사 데이터는 손상시키지 않음).
-        String expenseAccount = "법무비용";
-        String creditAccount = accountRepo.existsByAccountName("보통예금") ? "보통예금"
-                : (accountRepo.existsByAccountName("현금") ? "현금" : null);
-        if (!accountRepo.existsByAccountName(expenseAccount) || creditAccount == null) {
-            log.warn("법무비용 전표 생략: 필요한 계정이 없습니다(법무비용 또는 보통예금/현금). legalCaseId={}", lc.getId());
+        // 기타계정관리에서 설정한 계정명 사용. 미설정이면 전표를 만들지 않고 경고만 남긴다.
+        String expenseAccount = accountSettings.getLegalCostDebitAccount();
+        String creditAccount  = accountSettings.getLegalCostCreditAccount();
+        if (expenseAccount == null || creditAccount == null) {
+            log.warn("법무비용 전표 생략: 기타계정관리 > 법적비용 전표의 차변/대변을 설정해주세요. legalCaseId={}", lc.getId());
             return;
         }
 
