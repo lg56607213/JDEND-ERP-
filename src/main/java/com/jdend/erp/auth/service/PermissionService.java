@@ -1,5 +1,6 @@
 package com.jdend.erp.auth.service;
 
+import com.jdend.erp.auth.exception.ForbiddenException;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ public class PermissionService {
     String role = session == null ? null : (String) session.getAttribute(AuthService.SESSION_ROLE);
 
     if (!"ADMIN".equals(role) && !"COMPANY_ADMIN".equals(role) && !"MANAGER".equals(role)) {
-      throw new RuntimeException("책임자 권한이 필요합니다. 등록만 가능한 계정입니다.");
+      throw new ForbiddenException("책임자 권한이 필요합니다. 등록만 가능한 계정입니다.");
     }
   }
 
@@ -24,7 +25,7 @@ public class PermissionService {
     String role = session == null ? null : (String) session.getAttribute(AuthService.SESSION_ROLE);
 
     if (!"ADMIN".equals(role) && !"COMPANY_ADMIN".equals(role)) {
-      throw new RuntimeException("회사관리자 권한이 필요합니다.");
+      throw new ForbiddenException("회사관리자 권한이 필요합니다.");
     }
   }
 
@@ -36,7 +37,7 @@ public class PermissionService {
     Boolean enabled = session == null ? null
         : (Boolean) session.getAttribute(AuthService.SESSION_MAINTENANCE_ENABLED);
     if (!Boolean.TRUE.equals(enabled)) {
-      throw new RuntimeException("MT(정비) 기능 접근 권한이 없습니다. 운영자에게 문의하세요.");
+      throw new ForbiddenException("MT(정비) 기능 접근 권한이 없습니다. 운영자에게 문의하세요.");
     }
   }
 }
