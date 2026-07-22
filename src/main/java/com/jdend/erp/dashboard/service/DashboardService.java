@@ -2,6 +2,8 @@ package com.jdend.erp.dashboard.service;
 
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.contract.repository.ContractRepository;
+import com.jdend.erp.customer.CustomerRepository;
 import com.jdend.erp.dashboard.dto.*;
 import com.jdend.erp.dashboard.repository.*;
 import com.jdend.erp.myinfo.entity.BankAccount;
@@ -34,6 +36,8 @@ public class DashboardService {
   private final VehicleOrderRepository vehicleOrderRepo;
   private final VehicleInspectionRepository inspectionRepo;
   private final VoucherRepository voucherRepository;
+  private final ContractRepository contractRepository;
+  private final CustomerRepository customerRepository;
 
   public DashboardCashResponse cashDaily(LocalDate baseDate) {
     LocalDate d = (baseDate != null) ? baseDate : LocalDate.now().minusDays(1);
@@ -98,6 +102,15 @@ public class DashboardService {
     List<DashboardInsuranceRow> rows = insuranceRepo.findInsuranceExpiring(today, until, limit);
     for (DashboardInsuranceRow r : rows) {
       r.setDday(r.getInsuranceEndDate() == null ? 0 : ChronoUnit.DAYS.between(today, r.getInsuranceEndDate()));
+      // BUG-5차-03: contractNumber로 고객명 조회
+      if (r.getContractNumber() != null && !r.getContractNumber().isBlank()) {
+        contractRepository.findByContractNumber(r.getContractNumber()).ifPresent(contract -> {
+          if (contract.getCustomerNumber() != null && !contract.getCustomerNumber().isBlank()) {
+            customerRepository.findByCustomerNumber(contract.getCustomerNumber())
+                .ifPresent(customer -> r.setCustomerName(customer.getCustomerName()));
+          }
+        });
+      }
     }
     return rows;
   }

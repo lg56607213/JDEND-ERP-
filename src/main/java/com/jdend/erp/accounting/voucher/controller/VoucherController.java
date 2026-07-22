@@ -47,6 +47,16 @@ public class VoucherController {
     // ✅ 전표승인 화면 API
     // ==========================
 
+    // GET /api/vouchers/list-for-approval (alias)
+    @GetMapping("/list-for-approval")
+    public List<VoucherApprovalRowResponse> listForApproval(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            @RequestParam(required = false, defaultValue = "") String status
+    ) {
+        return voucherService.listForApproval(startDate, endDate, status);
+    }
+
     // GET /api/vouchers?startDate=2026-03-01&endDate=2026-03-31&status=대기
     @GetMapping
     public List<VoucherApprovalRowResponse> list(

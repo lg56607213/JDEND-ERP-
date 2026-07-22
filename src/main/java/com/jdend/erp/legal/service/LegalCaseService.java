@@ -106,10 +106,13 @@ public class LegalCaseService {
         if (!caseRepo.existsById(id)) throw new RuntimeException("사건 없음: " + id);
         progressRepo.deleteByLegalCaseId(id);
 
-        // NEW-BUG-01: 비용항목 전표를 먼저 삭제한 후 비용항목 삭제
+        // BUG-5차-01: 비용항목 전표를 voucherId로 직접 삭제 (크로스 케이스 오삭제 방지)
         List<LegalCostItem> items = costItemRepo.findByLegalCaseIdOrderByCostDateAscIdAsc(id);
         for (LegalCostItem item : items) {
-            if (item.getCostDate() != null && item.getAmount() != null) {
+            if (item.getVoucherId() != null) {
+                voucherRepository.findById(item.getVoucherId()).ifPresent(voucherRepository::delete);
+            } else if (item.getCostDate() != null && item.getAmount() != null) {
+                // 구형 데이터 fallback
                 String memoPrefix = "법적절차 " + item.getCostType();
                 List<Voucher> vouchers = voucherRepository.findByVoucherDateAndAmountAndMemoPrefix(
                         item.getCostDate(), item.getAmount(), memoPrefix);
@@ -137,7 +140,11 @@ public class LegalCaseService {
                 .build();
 
         LegalCostItem saved = costItemRepo.save(item);
-        createCostItemVoucher(saved, findCase(caseId));
+        Long voucherId = createCostItemVoucher(saved, findCase(caseId));
+        if (voucherId != null) {
+            saved.setVoucherId(voucherId);
+            costItemRepo.save(saved);
+        }
         return toCostItemResponse(saved);
     }
 
@@ -146,8 +153,11 @@ public class LegalCaseService {
                 .orElseThrow(() -> new RuntimeException("비용항목 없음: " + itemId));
         if (!item.getLegalCaseId().equals(caseId)) throw new RuntimeException("사건 불일치");
 
-        // BUG-NEW-07: 연관 전표 삭제 (BUG-F02: 동일 날짜·금액·유형 중복 시 첫 건만 삭제)
-        if (item.getCostDate() != null && item.getAmount() != null) {
+        // BUG-5차-01: voucherId로 직접 삭제 (크로스 케이스 오삭제 방지)
+        if (item.getVoucherId() != null) {
+            voucherRepository.findById(item.getVoucherId()).ifPresent(voucherRepository::delete);
+        } else if (item.getCostDate() != null && item.getAmount() != null) {
+            // 구형 데이터 fallback: 날짜+금액+유형으로 첫 건 삭제
             String memoPrefix = "법적절차 " + item.getCostType();
             List<Voucher> vouchers = voucherRepository.findByVoucherDateAndAmountAndMemoPrefix(
                     item.getCostDate(), item.getAmount(), memoPrefix);
@@ -184,7 +194,7 @@ public class LegalCaseService {
         return caseRepo.findById(id).orElseThrow(() -> new RuntimeException("사건 없음: " + id));
     }
 
-    private void createCostItemVoucher(LegalCostItem item, LegalCase lc) {
+    private Long createCostItemVoucher(LegalCostItem item, LegalCase lc) {
         boolean isRefund = "환입".equals(item.getCostType());
 
         String debitAccount;
@@ -208,7 +218,7 @@ public class LegalCaseService {
 
         if (debitAccount == null || creditAccount == null) {
             log.warn("법무비용 전표 생략: 기타계정관리 > 법적비용 전표의 차변/대변을 설정해주세요. legalCaseId={}", lc.getId());
-            return;
+            return null;
         }
 
         LocalDate voucherDate = item.getCostDate();
@@ -237,7 +247,7 @@ public class LegalCaseService {
                 .lineType("CREDIT").accountName(creditAccount).amount(item.getAmount())
                 .description(creditDesc).sortOrder(2).build());
 
-        voucherRepository.save(voucher);
+        return voucherRepository.save(voucher).getId();
     }
 
     private String nextVoucherNo(LocalDate date) {

@@ -31,6 +31,9 @@ public class LegalCostItem {
     @Column(name = "memo", length = 200)
     private String memo;
 
+    @Column(name = "voucher_id")
+    private Long voucherId;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }
