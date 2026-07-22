@@ -25,6 +25,13 @@ public class ApiExceptionHandler {
       .body(Map.of("message", e.getMessage()));
   }
 
+  // BUG-7차-04: HTTP 메서드 미지원 → 405
+  @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<?> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException e) {
+    return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+      .body(Map.of("message", "지원하지 않는 HTTP 메서드입니다: " + e.getMethod()));
+  }
+
   // BUG-6차-02: 필수 파라미터 누락 → 400
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ResponseEntity<?> handleMissingParam(MissingServletRequestParameterException e) {

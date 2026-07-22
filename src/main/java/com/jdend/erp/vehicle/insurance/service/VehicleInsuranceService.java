@@ -82,6 +82,16 @@ public class VehicleInsuranceService {
     return toRes(saved);
   }
 
+  @Transactional
+  public void delete(Long id) {
+    VehicleInsurance i = insuranceRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("보험 없음: " + id));
+    if (i.getVoucherNo() != null) {
+      voucherRepository.findByVoucherNo(i.getVoucherNo()).ifPresent(voucherRepository::delete);
+    }
+    insuranceRepo.deleteById(id);
+  }
+
   @Transactional(readOnly = true)
   public List<VehicleInsuranceDtos.Response> list(String contractNumber, String vehicleNo, LocalDate startDate, LocalDate endDate) {
     return insuranceRepo.search(
@@ -296,9 +306,9 @@ public class VehicleInsuranceService {
   }
 
   private String nextVoucherNo(LocalDate date) {
-    long cnt = voucherRepository.countByVoucherDate(date);
-    long next = cnt + 1;
     String ymd = date.toString().replace("-", "");
+    Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
+    long next = (maxSeq == null ? 0L : maxSeq) + 1;
     String candidate = ymd + String.format("%05d", next);
     while (voucherRepository.existsByVoucherNo(candidate)) {
       next++;

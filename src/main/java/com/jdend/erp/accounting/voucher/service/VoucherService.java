@@ -20,9 +20,9 @@ public class VoucherService {
 
     @Transactional(readOnly = true)
     public String nextVoucherNo(LocalDate date) {
-        long cnt = voucherRepository.countByVoucherDate(date);
-        long next = cnt + 1;
         String ymd = date.toString().replace("-", "");
+        Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
+        long next = (maxSeq == null ? 0L : maxSeq) + 1;
         String voucherNo = ymd + String.format("%05d", next);
         while (voucherRepository.existsByVoucherNo(voucherNo)) {
             next++;

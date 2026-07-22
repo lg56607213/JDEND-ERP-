@@ -14,5 +14,6 @@ public class LegalCostItemResponse {
     private Long amount;
     private LocalDate costDate;
     private String memo;
+    private Long voucherId;
     private LocalDateTime createdAt;
 }

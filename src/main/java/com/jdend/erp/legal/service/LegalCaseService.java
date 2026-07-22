@@ -251,9 +251,9 @@ public class LegalCaseService {
     }
 
     private String nextVoucherNo(LocalDate date) {
-        long cnt = voucherRepository.countByVoucherDate(date);
-        long next = cnt + 1;
         String ymd = date.toString().replace("-", "");
+        Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
+        long next = (maxSeq == null ? 0L : maxSeq) + 1;
         String candidate = ymd + String.format("%05d", next);
         while (voucherRepository.existsByVoucherNo(candidate)) {
             next++;
@@ -294,6 +294,7 @@ public class LegalCaseService {
                 .amount(item.getAmount())
                 .costDate(item.getCostDate())
                 .memo(item.getMemo())
+                .voucherId(item.getVoucherId())
                 .createdAt(item.getCreatedAt())
                 .build();
     }

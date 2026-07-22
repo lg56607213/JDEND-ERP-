@@ -48,15 +48,20 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Customer c) {
-        // ✅ registerDate 기본값
+        // BUG-7차-07: JPA 내부 경로 노출 방지 — 필수값 사전 검증
+        if (c.getCustomerName() == null || c.getCustomerName().isBlank())
+            throw new IllegalArgumentException("고객명은 필수입니다.");
+        if (c.getRegistrationNumber() == null || c.getRegistrationNumber().isBlank())
+            throw new IllegalArgumentException("사업자등록번호는 필수입니다.");
+        if (c.getCustomerType() == null || c.getCustomerType().isBlank())
+            throw new IllegalArgumentException("고객구분은 필수입니다.");
+
         if (c.getRegisterDate() == null) c.setRegisterDate(LocalDate.now());
 
-        // ✅ customerNumber가 비어있으면 서버가 자동 채번해서 넣어준다
         if (c.getCustomerNumber() == null || c.getCustomerNumber().isBlank()) {
             c.setCustomerNumber(numberGenerator.next());
         }
 
-        // ✅ customerNumber는 DB에서 NOT NULL + UNIQUE니까 무조건 있어야 함
         return ResponseEntity.ok(repo.save(c));
     }
 

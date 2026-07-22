@@ -16,6 +16,10 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     @Query("select count(v) from Voucher v where v.voucherDate = :date")
     long countByVoucherDate(@Param("date") LocalDate date);
 
+    // BUG-7차-02: 삭제 후 번호 재사용 방지 — 해당 날짜의 최대 시퀀스 조회 (13자리 숫자 전표번호만 대상)
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(voucher_no, 9) AS UNSIGNED)), 0) FROM vouchers WHERE LEFT(voucher_no, 8) = :datePrefix AND voucher_no REGEXP '^[0-9]{13}$'", nativeQuery = true)
+    Long findMaxSequenceForDatePrefix(@Param("datePrefix") String datePrefix);
+
     List<Voucher> findByMemoStartingWithOrderByIdAsc(String memoPrefix);
 
     @Query("select v from Voucher v where v.vehicleMgmtNo = :mgmtNo and v.memo like concat(:prefix, '%') order by v.id asc")

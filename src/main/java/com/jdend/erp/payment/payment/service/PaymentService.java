@@ -269,9 +269,9 @@ public class PaymentService {
   }
 
   private String nextVoucherNo(LocalDate date) {
-    long cnt = voucherRepository.countByVoucherDate(date);
-    long next = cnt + 1;
     String ymd = date.toString().replace("-", "");
+    Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
+    long next = (maxSeq == null ? 0L : maxSeq) + 1;
     String candidate = ymd + String.format("%05d", next);
     while (voucherRepository.existsByVoucherNo(candidate)) {
       next++;
@@ -315,6 +315,7 @@ public class PaymentService {
         .paymentMethod(p.getPaymentMethod())
         .companyAccount(p.getCompanyAccount())
         .memo(p.getMemo())
+        .voucherId(p.getVoucherId())
         .build();
   }
 

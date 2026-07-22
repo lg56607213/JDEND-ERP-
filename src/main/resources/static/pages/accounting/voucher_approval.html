@@ -219,10 +219,10 @@
             <td>${r.showMain ? `<input type="checkbox" class="voucher-checkbox" data-id="${r.id}">` : ``}</td>
             <td>${r.showMain ? (r.voucherDate || "") : ``}</td>
             <td>${r.showMain ? (r.voucherNo || "") : ``}</td>
-            <td class="left">${renderAccountCell(r.debitAccount, r.debitDescription)}</td>
-            <td class="amount-cell">${num(r.debitAmount)}</td>
-            <td class="left">${renderAccountCell(r.creditAccount, r.creditDescription)}</td>
-            <td class="amount-cell">${num(r.creditAmount)}</td>
+            <td class="left">${r.debitAmount != null ? renderAccountCell(r.debitAccount, r.debitDescription) : ''}</td>
+            <td class="amount-cell">${r.debitAmount != null ? num(r.debitAmount) : ''}</td>
+            <td class="left">${r.creditAmount != null ? renderAccountCell(r.creditAccount, r.creditDescription) : ''}</td>
+            <td class="amount-cell">${r.creditAmount != null ? num(r.creditAmount) : ''}</td>
             <td>${r.showMain ? statusBadge(r.status) : ``}</td>
           </tr>
         `);

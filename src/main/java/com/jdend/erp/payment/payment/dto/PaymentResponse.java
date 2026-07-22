@@ -17,4 +17,5 @@ public class PaymentResponse {
   private String paymentMethod;
   private String companyAccount;
   private String memo;
+  private Long voucherId;
 }

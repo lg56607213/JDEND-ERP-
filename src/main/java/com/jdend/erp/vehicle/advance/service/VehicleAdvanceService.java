@@ -262,8 +262,9 @@ public class VehicleAdvanceService {
   }
 
   private String generateVoucherNo(LocalDate voucherDate) {
-    long seq = voucherRepo.countByVoucherDate(voucherDate) + 1;
     String baseDate = voucherDate.toString().replace("-", "");
+    Long maxSeq = voucherRepo.findMaxSequenceForDatePrefix(baseDate);
+    long seq = (maxSeq == null ? 0L : maxSeq) + 1;
 
     String voucherNo = baseDate + String.format("%05d", seq);
 
