@@ -28,6 +28,14 @@ public class LegalCaseController {
         return service.search(kw, status);
     }
 
+    // BUG-6차-01: /search 별칭 — /{id}가 "search"를 Long 변환 시도하는 혼란 방지
+    @GetMapping("/search")
+    public List<LegalCaseResponse> search(
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String status) {
+        return service.search(kw, status);
+    }
+
     @GetMapping("/{id}")
     public LegalCaseResponse getOne(@PathVariable Long id) {
         return service.getOne(id);
