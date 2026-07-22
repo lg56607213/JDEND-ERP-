@@ -1,5 +1,6 @@
 package com.jdend.erp.payment.billing.service;
 
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
@@ -32,6 +33,7 @@ public class BillingService {
   private final PaymentSchedulesRepository paymentSchedulesRepository;
   private final ContractRepository contractRepository;
   private final CustomerRepository customerRepository;
+  private final OtherAccountSettingsService accountSettings;
 
   @Transactional
   public BillingCreateResponse create(BillingCreateRequest req) {
@@ -193,6 +195,12 @@ public class BillingService {
   public String buildPrintHtml(Billings b) {
     DateTimeFormatter f = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     long total = b.getTotalAmount() == null ? 0 : b.getTotalAmount();
+
+    // BUG-9차-01: 회사정보를 기타계정관리에서 동적 조회 (하드코딩 제거)
+    String lessorName    = accountSettings.getCompanyName();
+    String lessorAddress = accountSettings.getCompanyAddress();
+    if (lessorName    == null || lessorName.isBlank())    lessorName    = "(회사정보 미설정)";
+    if (lessorAddress == null || lessorAddress.isBlank()) lessorAddress = "(회사정보 미설정)";
 
     List<BillingLines> lines = billingLineRepository.findByBillingIdOrderByInstallmentNoAsc(b.getId());
 
@@ -376,12 +384,12 @@ public class BillingService {
             </tr>
 
             <tr class="footer-row">
-              <td colspan="7" class="lessor-block">주식회사 제이디엔드렌트카</td>
+              <td colspan="7" class="lessor-block">%s</td>
               <td colspan="2" class="center">(서명 또는 인)</td>
             </tr>
 
             <tr class="footer-row">
-              <td colspan="9" class="lessor-block">서울시 영등포구 여의대방로 379, 605호</td>
+              <td colspan="9" class="lessor-block">%s</td>
             </tr>
           </table>
         </div>
@@ -404,7 +412,9 @@ public class BillingService {
         extraAmount == null ? 0 : extraAmount,
         supplyAmount == null ? 0 : supplyAmount,
         taxAmount == null ? 0 : taxAmount,
-        safe(memo).replace("\n", "<br>")
+        safe(memo).replace("\n", "<br>"),
+        lessorName,
+        lessorAddress
       );
   }
 

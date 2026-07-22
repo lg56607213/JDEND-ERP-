@@ -269,7 +269,15 @@ public class EarlyTerminationService {
     String unrDebit  = accountSettings.getEarlyTermUnrealizedRentDebit();
     String unrCredit = accountSettings.getEarlyTermUnrealizedRentCredit();
     String amtDebit  = accountSettings.getEarlyTermAmountDebit();
-    String amtCredit = accountSettings.getEarlyTermAmountCredit();
+    // BUG-9차-02: 미회수렌트료(uncollectedRent)가 0이면 미수금 잔액이 없는 상태이므로
+    // 별도 대변 계정(creditNoReceivable)을 사용한다. 미설정 시 기본 credit 계정으로 fallback.
+    String amtCredit;
+    if (uncollectedRent == 0) {
+      String noRecCredit = accountSettings.getEarlyTermAmountCreditNoReceivableAccount();
+      amtCredit = (noRecCredit != null) ? noRecCredit : accountSettings.getEarlyTermAmountCredit();
+    } else {
+      amtCredit = accountSettings.getEarlyTermAmountCredit();
+    }
     String feeDebit  = accountSettings.getEarlyTermFeeDebit();
     String feeCredit = accountSettings.getEarlyTermFeeCredit();
 

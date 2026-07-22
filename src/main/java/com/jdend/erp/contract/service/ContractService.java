@@ -234,6 +234,10 @@ public class ContractService {
     if (req.contractCategory == null || req.contractCategory.isBlank()) throw new RuntimeException("계약유형 필수");
     if (req.startDate == null) throw new RuntimeException("계약시작일 필수");
     if (req.endDate == null) throw new RuntimeException("계약종료일 필수");
+    // BUG-9차-04: 계약 종료일이 오늘보다 과거인 경우 오입력 방지
+    if (req.endDate.isBefore(LocalDate.now())) {
+      throw new IllegalArgumentException("계약 종료일이 현재 날짜보다 과거입니다.");
+    }
     if (req.billingCount == null || req.billingCount <= 0) {
       throw new RuntimeException("청구횟수는 1 이상이어야 합니다. 청구횟수가 0이면 청구 스케줄이 생성되지 않아 청구생성에서 누락됩니다.");
     }

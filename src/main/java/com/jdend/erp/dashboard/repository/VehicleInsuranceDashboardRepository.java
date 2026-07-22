@@ -1,5 +1,6 @@
 package com.jdend.erp.dashboard.repository;
 
+import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.dashboard.dto.DashboardInsuranceRow;
 import com.jdend.erp.vehicle.insurance.entity.VehicleInsurance;
 import org.springframework.data.jpa.repository.*;
@@ -10,13 +11,17 @@ import java.util.List;
 
 public interface VehicleInsuranceDashboardRepository extends JpaRepository<VehicleInsurance, Long> {
 
-  // ✅ 계약 테이블을 아예 안 봄
-  // vehicle_insurances 테이블에 보험 등록된 건만 조회
+  // BUG-9차-03: 해지 계약에 연결된 보험은 만기 알림에서 제외
   @Query("""
     select i
     from VehicleInsurance i
     where i.insuranceEndDate is not null
       and i.insuranceEndDate between :from and :to
+      and (i.contractNumber is null
+        or i.contractNumber not in (
+          select c.contractNumber from Contract c where trim(c.status) = '해지'
+        )
+      )
     order by i.insuranceEndDate asc, i.id desc
   """)
   List<VehicleInsurance> findInsuranceEntitiesExpiring(

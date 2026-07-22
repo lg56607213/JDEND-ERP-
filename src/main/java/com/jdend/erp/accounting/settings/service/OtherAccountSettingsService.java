@@ -151,6 +151,30 @@ public class OtherAccountSettingsService {
   /** 매각 차량운반구 대변 계정명 */
   public String getSaleVehicleAssetAccount()        { return nested("saleDetailMapping",  "vehicleAsset"); }
 
+  // ── 회사정보 (청구서 출력용) ───────────────────────────────────────────
+  /** 회사 상호명 */
+  public String getCompanyName()           { return companyInfoField("companyName");    }
+  /** 회사 주소 */
+  public String getCompanyAddress()        { return companyInfoField("companyAddress"); }
+  /** 사업자번호 */
+  public String getCompanyBusinessNumber() { return companyInfoField("businessNumber"); }
+
+  @SuppressWarnings("unchecked")
+  private String companyInfoField(String field) {
+    Object sec = getSettingsMap().get("companyInfo");
+    if (sec instanceof Map) {
+      Object val = ((Map<?, ?>) sec).get(field);
+      if (val instanceof String && !((String) val).isBlank()) return (String) val;
+    }
+    return null;
+  }
+
+  // ── 중도해지 상환금액 (미수금 없을 때 별도 대변 계정) ──────────────────
+  /** 중도해지 상환금액 대변 계정명 (미수금 없을 때) */
+  public String getEarlyTermAmountCreditNoReceivableAccount() {
+    return nested3("earlyTermMapping", "terminationAmount", "creditNoReceivable");
+  }
+
   private String nested(String section, String key) {
     Object sec = getSettingsMap().get(section);
     if (sec instanceof Map) {

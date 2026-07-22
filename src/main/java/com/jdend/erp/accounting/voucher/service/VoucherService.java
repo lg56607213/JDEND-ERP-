@@ -42,14 +42,10 @@ public class VoucherService {
             throw new IllegalArgumentException("전표일자가 오늘로부터 30일 이상 미래입니다. 날짜를 확인해주세요.");
         }
 
-        String voucherNo = (req.getVoucherNo() == null || req.getVoucherNo().isBlank())
-                ? voucherNumberService.next(req.getVoucherDate())
-                : req.getVoucherNo().trim();
-
-        if (voucherRepository.existsByVoucherNo(voucherNo)) {
-            throw new IllegalArgumentException("이미 존재하는 전표번호입니다: " + voucherNo);
-        }
-
+        // BUG-9차-05: 차변/대변 유효성 검증을 채번(REQUIRES_NEW) 이전에 수행하여 시퀀스 갭 최소화.
+        // VoucherNumberService.next()는 별도 트랜잭션으로 시퀀스를 선점·커밋하므로
+        // 이후 롤백이 발생해도 번호는 소비된다. 검증을 먼저 완료해 불필요한 소비를 줄인다.
+        // (설계상 갭 완전 제거는 불가, 중복 없음은 보장)
         long debitSum = sum(req, true);
         long creditSum = sum(req, false);
 
@@ -58,6 +54,14 @@ public class VoucherService {
         }
         if (debitSum != creditSum) {
             throw new IllegalArgumentException("차변과 대변 합계가 일치하지 않습니다. (차변=" + debitSum + ", 대변=" + creditSum + ")");
+        }
+
+        String voucherNo = (req.getVoucherNo() == null || req.getVoucherNo().isBlank())
+                ? voucherNumberService.next(req.getVoucherDate())
+                : req.getVoucherNo().trim();
+
+        if (voucherRepository.existsByVoucherNo(voucherNo)) {
+            throw new IllegalArgumentException("이미 존재하는 전표번호입니다: " + voucherNo);
         }
 
         Voucher voucher = Voucher.builder()
