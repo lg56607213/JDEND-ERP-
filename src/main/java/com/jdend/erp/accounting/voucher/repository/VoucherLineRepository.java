@@ -45,6 +45,7 @@ public interface VoucherLineRepository extends JpaRepository<VoucherLine, Long> 
       where l.lineType = 'CREDIT'
       and (l.accountName like '%미지급%' or l.accountName like '%법인카드%')
       and l.paid = false
+      and v.status = '승인'
       and (:startDate is null or v.voucherDate >= :startDate)
       and (:endDate is null or v.voucherDate <= :endDate)
       and (:accountName is null or :accountName = '' or l.accountName = :accountName)

@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.insurance.dto.VehicleInsuranceDtos;
 import com.jdend.erp.vehicle.insurance.entity.InsuranceChange;
@@ -31,6 +32,7 @@ public class VehicleInsuranceService {
   private final InsuranceChangeRepository insuranceChangeRepo;
   private final OtherAccountSettingsService accountSettings;
   private final JdbcTemplate jdbcTemplate;
+  private final VoucherNumberService voucherNumberService;
 
   @Transactional
   public VehicleInsuranceDtos.Response create(VehicleInsuranceDtos.CreateRequest req) {
@@ -306,15 +308,7 @@ public class VehicleInsuranceService {
   }
 
   private String nextVoucherNo(LocalDate date) {
-    String ymd = date.toString().replace("-", "");
-    Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
-    long next = (maxSeq == null ? 0L : maxSeq) + 1;
-    String candidate = ymd + String.format("%05d", next);
-    while (voucherRepository.existsByVoucherNo(candidate)) {
-      next++;
-      candidate = ymd + String.format("%05d", next);
-    }
-    return candidate;
+    return voucherNumberService.next(date);
   }
 
   private String buildInsuranceVoucherMemo(VehicleInsurance insurance) {

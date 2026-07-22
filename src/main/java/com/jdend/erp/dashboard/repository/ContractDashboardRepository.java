@@ -8,11 +8,11 @@ import java.util.List;
 
 public interface ContractDashboardRepository extends JpaRepository<Contract, Long> {
 
-  // 차량번호 기준으로 장기 계약 차량 (BUG-7차-05: 해지 계약 제외)
+  // 차량번호 기준으로 장기 계약 차량 (BUG-7차-05: 해지 제외, BUG-8차-05: 월렌트 등 구형 타입 포함)
   @Query("""
     select distinct c.vehicleNo
     from Contract c
-    where trim(c.contractType) = '장기'
+    where trim(c.contractType) in ('장기', '월렌트', '장기렌트', '월간렌트')
       and (c.status is null or trim(c.status) <> '해지')
   """)
   List<String> findLongTermVehicleNos();

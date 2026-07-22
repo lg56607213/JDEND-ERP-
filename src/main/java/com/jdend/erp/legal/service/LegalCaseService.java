@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.legal.dto.*;
@@ -34,6 +35,7 @@ public class LegalCaseService {
     private final LegalCostItemRepository costItemRepo;
     private final VoucherRepository voucherRepository;
     private final OtherAccountSettingsService accountSettings;
+    private final VoucherNumberService voucherNumberService;
 
     public LegalCaseResponse create(LegalCaseRequest req) {
         String cn = safe(req.getContractNumber());
@@ -251,15 +253,7 @@ public class LegalCaseService {
     }
 
     private String nextVoucherNo(LocalDate date) {
-        String ymd = date.toString().replace("-", "");
-        Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
-        long next = (maxSeq == null ? 0L : maxSeq) + 1;
-        String candidate = ymd + String.format("%05d", next);
-        while (voucherRepository.existsByVoucherNo(candidate)) {
-            next++;
-            candidate = ymd + String.format("%05d", next);
-        }
-        return candidate;
+        return voucherNumberService.next(date);
     }
 
     private String nullIfBlank(String s) {

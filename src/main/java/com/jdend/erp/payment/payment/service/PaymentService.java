@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
@@ -34,6 +35,7 @@ public class PaymentService {
   private final OtherAccountSettingsService accountSettings;
   private final VehicleOrderRepository vehicleOrderRepo;
   private final ReceivableRepository receivableRepo;  // BUG-10
+  private final VoucherNumberService voucherNumberService;
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -269,15 +271,7 @@ public class PaymentService {
   }
 
   private String nextVoucherNo(LocalDate date) {
-    String ymd = date.toString().replace("-", "");
-    Long maxSeq = voucherRepository.findMaxSequenceForDatePrefix(ymd);
-    long next = (maxSeq == null ? 0L : maxSeq) + 1;
-    String candidate = ymd + String.format("%05d", next);
-    while (voucherRepository.existsByVoucherNo(candidate)) {
-      next++;
-      candidate = ymd + String.format("%05d", next);
-    }
-    return candidate;
+    return voucherNumberService.next(date);
   }
 
   private String buildPaymentVoucherMemo(Payment payment) {

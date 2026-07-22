@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.vehicle.advance.dto.VehicleAdvanceRowDto;
 import com.jdend.erp.vehicle.advance.dto.VehicleAdvanceSaveRequest;
 import com.jdend.erp.vehicle.advance.entity.VehicleAdvance;
@@ -28,6 +29,7 @@ public class VehicleAdvanceService {
   private final VehicleAdvanceRepository advanceRepo;
   private final VoucherRepository voucherRepo;
   private final OtherAccountSettingsService accountSettings;
+  private final VoucherNumberService voucherNumberService;
 
   private static final Set<String> VAT_ZERO_ITEMS = Set.of(
     "취득세", "인지대", "공채할인금액", "공채매입금액"
@@ -262,18 +264,7 @@ public class VehicleAdvanceService {
   }
 
   private String generateVoucherNo(LocalDate voucherDate) {
-    String baseDate = voucherDate.toString().replace("-", "");
-    Long maxSeq = voucherRepo.findMaxSequenceForDatePrefix(baseDate);
-    long seq = (maxSeq == null ? 0L : maxSeq) + 1;
-
-    String voucherNo = baseDate + String.format("%05d", seq);
-
-    while (voucherRepo.existsByVoucherNo(voucherNo)) {
-      seq++;
-      voucherNo = baseDate + String.format("%05d", seq);
-    }
-
-    return voucherNo;
+    return voucherNumberService.next(voucherDate);
   }
 
   private long nvl(Long v) {

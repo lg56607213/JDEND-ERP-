@@ -17,6 +17,7 @@ import java.util.List;
 public class VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final VoucherNumberService voucherNumberService;
 
     @Transactional(readOnly = true)
     public String nextVoucherNo(LocalDate date) {
@@ -36,9 +37,13 @@ public class VoucherService {
         if (req.getVoucherDate() == null) {
             throw new IllegalArgumentException("voucherDate(전표일자)는 필수입니다.");
         }
+        // BUG-8차-04: 오늘로부터 30일 초과 미래 날짜는 입력 오류 방지 차원에서 차단
+        if (req.getVoucherDate().isAfter(LocalDate.now().plusDays(30))) {
+            throw new IllegalArgumentException("전표일자가 오늘로부터 30일 이상 미래입니다. 날짜를 확인해주세요.");
+        }
 
         String voucherNo = (req.getVoucherNo() == null || req.getVoucherNo().isBlank())
-                ? nextVoucherNo(req.getVoucherDate())
+                ? voucherNumberService.next(req.getVoucherDate())
                 : req.getVoucherNo().trim();
 
         if (voucherRepository.existsByVoucherNo(voucherNo)) {
