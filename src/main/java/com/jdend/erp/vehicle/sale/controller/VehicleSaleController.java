@@ -42,4 +42,9 @@ public class VehicleSaleController {
   public VehicleSaleDtos.Response update(@PathVariable Long id, @RequestBody VehicleSaleDtos.UpdateRequest req) {
     return service.update(id, req);
   }
+
+  @DeleteMapping("/{id}")
+  public void delete(@PathVariable Long id) {
+    service.delete(id);
+  }
 }

@@ -131,11 +131,11 @@ public class VehicleInsuranceService {
       voucherRepository.findByVoucherNo(i.getVoucherNo())
           .ifPresent(voucherRepository::delete);
     } else if (i.getVehicleMgmtNo() != null) {
-      // voucherNo 미저장 구형 데이터 fallback: 메모 접두어로 조회
+      // voucherNo 미저장 구형 데이터 fallback: 메모 접두어로 조회 후 첫 건만 삭제 (NEW-BUG-06)
       List<Voucher> oldVouchers = voucherRepository.findByVehicleMgmtNoAndMemoStartingWith(
           i.getVehicleMgmtNo(), "보험등록 보험료");
       if (!oldVouchers.isEmpty()) {
-        voucherRepository.deleteAll(oldVouchers);
+        voucherRepository.delete(oldVouchers.get(0));
       }
     }
 
@@ -363,6 +363,7 @@ public class VehicleInsuranceService {
       .driverRange(i.getDriverRange())
       .specialTerms(i.getSpecialTerms())
       .insurancePremium(i.getInsurancePremium())
+      .voucherNo(i.getVoucherNo())
       .createdAt(i.getCreatedAt())
       .updatedAt(i.getUpdatedAt())
       .build();

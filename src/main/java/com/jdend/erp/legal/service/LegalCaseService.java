@@ -105,6 +105,19 @@ public class LegalCaseService {
     public void delete(Long id) {
         if (!caseRepo.existsById(id)) throw new RuntimeException("사건 없음: " + id);
         progressRepo.deleteByLegalCaseId(id);
+
+        // NEW-BUG-01: 비용항목 전표를 먼저 삭제한 후 비용항목 삭제
+        List<LegalCostItem> items = costItemRepo.findByLegalCaseIdOrderByCostDateAscIdAsc(id);
+        for (LegalCostItem item : items) {
+            if (item.getCostDate() != null && item.getAmount() != null) {
+                String memoPrefix = "법적절차 " + item.getCostType();
+                List<Voucher> vouchers = voucherRepository.findByVoucherDateAndAmountAndMemoPrefix(
+                        item.getCostDate(), item.getAmount(), memoPrefix);
+                if (!vouchers.isEmpty()) {
+                    voucherRepository.delete(vouchers.get(0));
+                }
+            }
+        }
         costItemRepo.deleteByLegalCaseId(id);
         caseRepo.deleteById(id);
     }

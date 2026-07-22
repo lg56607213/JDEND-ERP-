@@ -18,8 +18,14 @@ public class LegalCaseController {
     private final PermissionService permissionService;
 
     @GetMapping
-    public List<LegalCaseResponse> listByContract(@RequestParam String contractNumber) {
-        return service.listByContract(contractNumber);
+    public List<LegalCaseResponse> list(
+            @RequestParam(required = false) String contractNumber,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String status) {
+        if (contractNumber != null && !contractNumber.isBlank()) {
+            return service.listByContract(contractNumber);
+        }
+        return service.search(kw, status);
     }
 
     @GetMapping("/{id}")
@@ -55,5 +61,16 @@ public class LegalCaseController {
         HttpSession session) {
         permissionService.requireManager(session);
         service.deleteProgress(id, entryId);
+    }
+
+    @PostMapping("/{id}/costs")
+    public LegalCostItemResponse addCostItem(@PathVariable Long id, @RequestBody LegalCostItemRequest req) {
+        return service.addCostItem(id, req);
+    }
+
+    @DeleteMapping("/{id}/costs/{costId}")
+    public void deleteCostItem(@PathVariable Long id, @PathVariable Long costId, HttpSession session) {
+        permissionService.requireManager(session);
+        service.deleteCostItem(id, costId);
     }
 }

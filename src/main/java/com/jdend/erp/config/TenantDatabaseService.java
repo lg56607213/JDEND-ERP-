@@ -38,6 +38,7 @@ public class TenantDatabaseService {
         createDatabaseIfNotExists(targetDb);
         copySchemaIfEmpty(targetDb);
         ensureFinancialStatementAccounts(targetDb);
+        ensureDefaultOtherAccountSettings(targetDb);
         registerDataSourceIfMissing(targetDb);
     }
 
@@ -159,6 +160,112 @@ public class TenantDatabaseService {
                 "(jdbc:mysql://[^/]+/)([^?]+)(.*)",
                 "$1" + targetDb + "$3"
         );
+    }
+
+    /**
+     * 신규 테넌트에 기타계정관리 기본 설정이 없으면 렌터카 표준 계정 매핑을 자동으로 삽입한다.
+     * 이미 설정이 있으면 (count > 0) 건너뜀.
+     */
+    private void ensureDefaultOtherAccountSettings(String targetDb) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM `" + targetDb + "`.`accounting_other_account_settings`",
+                    Integer.class
+            );
+            if (count != null && count > 0) {
+                return;
+            }
+            jdbcTemplate.update(
+                    "INSERT INTO `" + targetDb + "`.`accounting_other_account_settings` (settings_json) VALUES (?)",
+                    buildDefaultSettingsJson()
+            );
+        } catch (Exception e) {
+            // 테이블이 아직 없는 경우(스키마 복제 전) 등 예외는 무시
+        }
+    }
+
+    private String buildDefaultSettingsJson() {
+        return """
+{
+  "prepaidAccounts": [
+    {"name": "차량가격",   "account": "100401", "accountName": "차량운반구"},
+    {"name": "취득세",    "account": "500211", "accountName": "세금과공과"},
+    {"name": "등록대행비", "account": "500212", "accountName": "지급수수료"},
+    {"name": "탁송료",    "account": "500212", "accountName": "지급수수료"},
+    {"name": "기타비용",  "account": "500302", "accountName": "기타비용"}
+  ],
+  "vehicleMapping": {
+    "debit":  {"account": "100403", "accountName": "렌트자산"},
+    "credit": {"account": "200101", "accountName": "미지급금"}
+  },
+  "loanOpenMapping": {
+    "debit":  {"account": "100101", "accountName": "보통예금"},
+    "credit": {"account": "200201", "accountName": "차입금"}
+  },
+  "loanMapping": {
+    "debit1": {"account": "200201", "accountName": "차입금"},
+    "debit2": {"account": "500301", "accountName": "이자비용"},
+    "credit": {"account": "100101", "accountName": "보통예금"}
+  },
+  "inspectionMapping": {
+    "debit":  {"account": "500203", "accountName": "차량유지비"},
+    "credit": {"account": "100101", "accountName": "보통예금"}
+  },
+  "deprecMapping": {
+    "debit":  {"account": "500202", "accountName": "감가상각비"},
+    "credit": {"account": "100404", "accountName": "감가상각누계액"}
+  },
+  "paymentMapping": {
+    "debit":  {"account": "100101", "accountName": "보통예금"},
+    "credit": {"account": "400101", "accountName": "렌트수익"}
+  },
+  "saleMapping": {
+    "debit":  {"account": "100101", "accountName": "보통예금"},
+    "credit": {"account": "400102", "accountName": "매각수익"}
+  },
+  "saleDetailMapping": {
+    "accumDeprec":   {"account": "100404", "accountName": "감가상각누계액"},
+    "undepreciated": {"account": "500214", "accountName": "미상각잔액"},
+    "vatCredit":     {"account": "200103", "accountName": "부가세예수금"},
+    "vehicleAsset":  {"account": "100401", "accountName": "차량운반구"}
+  },
+  "maintenanceMapping": {
+    "debit":       {"account": "500203", "accountName": "차량유지비"},
+    "vatDebit":    {"account": "100506", "accountName": "부가세대급금"},
+    "creditUnpaid":{"account": "200101", "accountName": "미지급금"},
+    "creditCard":  {"account": "200104", "accountName": "미지급비용"},
+    "creditBank":  {"account": "100101", "accountName": "보통예금"}
+  },
+  "advanceVatMapping": {
+    "debit": {"account": "100506", "accountName": "부가세대급금"}
+  },
+  "insuranceMapping": {
+    "debit":  {"account": "500204", "accountName": "보험료"},
+    "credit": {"account": "200101", "accountName": "미지급금"}
+  },
+  "insuranceRefundMapping": {
+    "debit":  {"account": "100503", "accountName": "미수금"},
+    "credit": {"account": "500204", "accountName": "보험료"}
+  },
+  "legalCostMapping": {
+    "debit":  {"account": "500303", "accountName": "법무비용"},
+    "credit": {"account": "200101", "accountName": "미지급금"}
+  },
+  "earlyTermMapping": {
+    "unrealizedRent": {
+      "debit":  {"account": "100503", "accountName": "미수금"},
+      "credit": {"account": "400101", "accountName": "렌트수익"}
+    },
+    "terminationFee": {
+      "debit":  {"account": "100101", "accountName": "보통예금"},
+      "credit": {"account": "400203", "accountName": "해지수수료수익"}
+    },
+    "terminationAmount": {
+      "debit":  {"account": "100101", "accountName": "보통예금"},
+      "credit": {"account": "100503", "accountName": "미수금"}
+    }
+  }
+}""";
     }
 
     private void validateDbName(String dbName) {

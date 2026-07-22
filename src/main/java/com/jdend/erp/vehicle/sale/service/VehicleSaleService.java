@@ -114,21 +114,27 @@ public class VehicleSaleService {
 
     String memo = (s.getVehicleNo() != null ? s.getVehicleNo() : s.getVehicleMgmtNo()) + " 차량 매각";
 
-    List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
-    debits.add(line(saleDebitAccount, s.getSaleAmount(), memo));
     String accumDeprecAccount   = accountSettings.getSaleAccumDeprecAccount();
     String undepreciatedAccount = accountSettings.getSaleUndepreciatedAccount();
-    if (accumulated > 0 && accumDeprecAccount != null)   debits.add(line(accumDeprecAccount,   accumulated, memo));
-    if (remaining > 0   && undepreciatedAccount != null) debits.add(line(undepreciatedAccount, remaining,   memo));
+    String vatCreditAccount     = accountSettings.getSaleVatCreditAccount();
+    String vehicleAssetAccount  = accountSettings.getSaleVehicleAssetAccount();
 
-    String vatCreditAccount    = accountSettings.getSaleVatCreditAccount();
-    String vehicleAssetAccount = accountSettings.getSaleVehicleAssetAccount();
+    List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
+    debits.add(line(saleDebitAccount, s.getSaleAmount(), memo));
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
     long revenueAmount = (vatCreditAccount != null) ? s.getSupplyAmount() : s.getSaleAmount();
     credits.add(line(saleRevenueAccount, revenueAmount, memo));
-    if (vatCreditAccount != null)                           credits.add(line(vatCreditAccount,    s.getTaxAmount(), memo));
-    if (acquisitionCost > 0 && vehicleAssetAccount != null) credits.add(line(vehicleAssetAccount, acquisitionCost,  memo));
+    if (vatCreditAccount != null) credits.add(line(vatCreditAccount, s.getTaxAmount(), memo));
+
+    // NEW-BUG-03: 감가상각 3개 계정 모두 설정 시에만 분개 추가 (부분 설정 시 차대변 불균형 방지)
+    if (acquisitionCost > 0 && accumDeprecAccount != null && undepreciatedAccount != null && vehicleAssetAccount != null) {
+      if (accumulated > 0) debits.add(line(accumDeprecAccount,   accumulated,    memo));
+      if (remaining > 0)   debits.add(line(undepreciatedAccount, remaining,      memo));
+      credits.add(line(vehicleAssetAccount, acquisitionCost, memo));
+    } else if (acquisitionCost > 0 && (accumDeprecAccount != null || undepreciatedAccount != null || vehicleAssetAccount != null)) {
+      log.warn("차량매각 감가상각 분개 생략: 기타계정관리 > 차량매각 감가상각 3개 계정(감가상각누계액/미상각잔액/차량운반구) 모두 설정 필요. saleId={}", s.getId());
+    }
 
     VoucherCreateResponse resp = voucherService.create(VoucherCreateRequest.builder()
         .voucherDate(s.getSaleDate())
@@ -145,6 +151,16 @@ public class VehicleSaleService {
   private VoucherCreateRequest.VoucherLineRequest line(String account, long amount, String desc) {
     return VoucherCreateRequest.VoucherLineRequest.builder()
         .account(account).amount(amount).description(desc).build();
+  }
+
+  @Transactional
+  public void delete(Long id) {
+    VehicleSale s = saleRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("매각 없음: " + id));
+    if (s.getVoucherId() != null) {
+      voucherRepository.findById(s.getVoucherId()).ifPresent(voucherRepository::delete);
+    }
+    saleRepo.deleteById(id);
   }
 
   @Transactional(readOnly = true)

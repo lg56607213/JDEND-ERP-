@@ -143,6 +143,13 @@ public class EarlyTerminationService {
       // 처음으로 반납+처리완료 상태가 된 경우
       createReturnVoucher(et);
       updateContractStatus(et.getContractNumber(), "해지");
+    } else if (wasReturnCompleted && !isNowReturnCompleted) {
+      // NEW-BUG-05: 처리완료 → 처리대기 등 취소 시 기존 전표 삭제
+      if (et.getContractNumber() != null) {
+        List<Voucher> oldVouchers = voucherRepository.findByContractNumberAndMemo(
+            et.getContractNumber(), "중도상환 반납");
+        voucherRepository.deleteAll(oldVouchers);
+      }
     }
   }
 

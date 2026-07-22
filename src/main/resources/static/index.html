@@ -7,7 +7,69 @@
   <link rel="stylesheet" href="assets/css/sidebar.css">
   <link rel="stylesheet" href="assets/css/pages.css">
   <link rel="stylesheet" href="assets/css/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* 계약현황 숫자 카드 */
+    .contract-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .contract-stat-item {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 10px 12px;
+      text-align: center;
+    }
+    .contract-stat-item.long  { border-color: #86efac; background: #f0fdf4; }
+    .contract-stat-item.short { border-color: #fde68a; background: #fffbeb; }
+    .contract-stat-item.wait  { border-color: #cbd5e1; background: #f8fafc; }
+    .contract-stat-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .contract-stat-item.long  .contract-stat-label { color: #166534; }
+    .contract-stat-item.short .contract-stat-label { color: #92400e; }
+    .contract-stat-number {
+      font-size: 30px;
+      font-weight: 800;
+      color: #1e293b;
+      line-height: 1;
+    }
+    .contract-stat-item.long  .contract-stat-number { color: #15803d; }
+    .contract-stat-item.short .contract-stat-number { color: #b45309; }
+    .contract-stat-unit {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .contract-total-row {
+      text-align: center;
+      padding: 14px;
+      background: #1e293b;
+      border-radius: 10px;
+      color: #fff;
+    }
+    .contract-total-label {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    .contract-total-number {
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+    .contract-total-unit {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -46,10 +108,31 @@
 
       <div class="chart-card" style="flex:1; min-width:260px; max-width:340px;">
         <div class="card-header">
-          <h2>계약현황 (장기/단기/대기)</h2>
+          <h2>계약현황</h2>
         </div>
         <div class="card-body">
-          <canvas id="contractStatusChart"></canvas>
+          <div class="contract-stat-grid">
+            <div class="contract-stat-item long">
+              <div class="contract-stat-label">장기</div>
+              <div class="contract-stat-number" id="statLongTerm">-</div>
+              <div class="contract-stat-unit">대</div>
+            </div>
+            <div class="contract-stat-item short">
+              <div class="contract-stat-label">단기</div>
+              <div class="contract-stat-number" id="statShortTerm">-</div>
+              <div class="contract-stat-unit">대</div>
+            </div>
+            <div class="contract-stat-item wait">
+              <div class="contract-stat-label">대기</div>
+              <div class="contract-stat-number" id="statWaiting">-</div>
+              <div class="contract-stat-unit">대</div>
+            </div>
+          </div>
+          <div class="contract-total-row">
+            <div class="contract-total-label">총 차량수</div>
+            <div class="contract-total-number" id="statTotal">-</div>
+            <div class="contract-total-unit">대</div>
+          </div>
         </div>
       </div>
     </div>
@@ -221,9 +304,7 @@
       try {
         const base = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '';
 
-        const contractStatusChart = createContractChart();
-
-        await loadContractStatus(base, contractStatusChart);
+        await loadContractStatus(base);
         await loadBankSummary(base);
         await loadBankVoucherDiff(base);
         await loadPendingVouchers(base);
@@ -313,106 +394,24 @@
       }
     }
 
-    function createContractChart() {
-      const ctx = document.getElementById('contractStatusChart').getContext('2d');
-
-      return new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['장기', '단기', '대기'],
-          datasets: [{
-            data: [0, 0, 0],
-            backgroundColor: [
-              'rgba(34, 197, 94, 0.8)',
-              'rgba(250, 204, 21, 0.8)',
-              'rgba(148, 163, 184, 0.8)'
-            ],
-            borderColor: [
-              'rgba(34, 197, 94, 1)',
-              'rgba(250, 204, 21, 1)',
-              'rgba(148, 163, 184, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          aspectRatio: 2,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                generateLabels(chart) {
-                  const data = chart.data;
-                  const dataset = data.datasets[0];
-                  return data.labels.map((label, i) => ({
-                    text: `${label} (${dataset.data[i] || 0})`,
-                    fillStyle: dataset.backgroundColor[i],
-                    strokeStyle: dataset.borderColor[i],
-                    lineWidth: 1,
-                    hidden: false,
-                    index: i
-                  }));
-                }
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  const label = context.label || '';
-                  const value = context.raw || 0;
-                  return `${label}: ${value}건`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    async function loadContractStatus(base, chart) {
+    async function loadContractStatus(base) {
       const data = await getJson(`${base}/api/dashboard/contract-status`);
-      console.log('📌 계약현황 API 응답:', data);
 
       const longTerm = Number(
-        data.longTerm ??
-        data.long_term ??
-        data.longterm ??
-        data.longCount ??
-        data.long_count ??
-        0
+        data.longTerm ?? data.long_term ?? data.longterm ?? data.longCount ?? data.long_count ?? 0
       );
-
       const shortTerm = Number(
-        data.shortTerm ??
-        data.short_term ??
-        data.shortterm ??
-        data.shortCount ??
-        data.short_count ??
-        0
+        data.shortTerm ?? data.short_term ?? data.shortterm ?? data.shortCount ?? data.short_count ?? 0
       );
-
       const waiting = Number(
-        data.waiting ??
-        data.pending ??
-        data.standby ??
-        data.waitCount ??
-        data.waitingCount ??
-        data.wait_count ??
-        data.pendingCount ??
-        data.pending_count ??
-        0
+        data.waiting ?? data.pending ?? data.standby ?? data.waitCount ?? data.waitingCount ?? data.wait_count ?? 0
       );
+      const total = longTerm + shortTerm + waiting;
 
-      chart.data.datasets[0].data = [longTerm, shortTerm, waiting];
-      chart.update();
-
-      console.log('✅ 계약현황 차트 반영값:', {
-        longTerm,
-        shortTerm,
-        waiting
-      });
+      document.getElementById('statLongTerm').textContent = longTerm;
+      document.getElementById('statShortTerm').textContent = shortTerm;
+      document.getElementById('statWaiting').textContent = waiting;
+      document.getElementById('statTotal').textContent = total;
     }
 
     async function loadInsuranceAlert(base) {

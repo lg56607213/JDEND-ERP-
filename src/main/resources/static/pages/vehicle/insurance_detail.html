@@ -32,6 +32,38 @@
     .form-group-column label{font-size:.85rem;color:#6b7280;font-weight:500;}
     .form-input{padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:.95rem;min-height:38px;}
     .form-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+
+    /* ── 비용내역 섹션 ── */
+    .cost-summary-grid{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+    .cost-sum-card{flex:1;min-width:120px;background:#f9fafb;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 16px;text-align:center;}
+    .cost-sum-card .sum-label{font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;}
+    .cost-sum-card .sum-value{font-size:16px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;}
+    .cost-sum-card.refund{border-color:#86efac;background:#f0fdf4;}
+    .cost-sum-card.refund .sum-label{color:#166534;}
+    .cost-sum-card.refund .sum-value{color:#15803d;}
+    .cost-sum-card.net{border-color:#93c5fd;background:#eff6ff;}
+    .cost-sum-card.net .sum-label{color:#1d4ed8;}
+    .cost-sum-card.net .sum-value{color:#1d4ed8;}
+
+    .cost-table{width:100%;border-collapse:collapse;font-size:14px;}
+    .cost-table th{background:#f1f5f9;padding:10px 12px;text-align:center;font-weight:700;color:#334155;border-bottom:2px solid #e2e8f0;white-space:nowrap;}
+    .cost-table td{padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;vertical-align:middle;}
+    .cost-table td.right{text-align:right;font-variant-numeric:tabular-nums;}
+    .cost-table td.left{text-align:left;}
+    .ct-변경{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #93c5fd;}
+    .ct-해지{background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #fca5a5;}
+    .ct-환입{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #86efac;}
+
+    .refund-form{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:14px 0 4px;}
+    .refund-form label{font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:4px;}
+    .refund-form input[type="number"],.refund-form input[type="date"],.refund-form input[type="text"]{
+      height:40px;padding:0 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;
+    }
+    .refund-form input[type="number"]{width:160px;}
+    .refund-form input[type="date"]{width:160px;}
+    .refund-form .refund-memo{flex:1;min-width:140px;}
+    .btn-add-refund{height:40px;padding:0 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
+    .btn-add-refund:hover{background:#15803d;}
   </style>
 </head>
 <body>
@@ -100,6 +132,79 @@
 
         <div class="form-actions">
           <button type="button" class="btn btn-primary" id="editInsuranceBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비용내역 섹션 -->
+    <div class="erp-card" id="costSection" style="margin-top:18px;">
+      <div class="card-header card-header-detail">
+        <h2>비용내역</h2>
+        <span style="font-size:13px;color:#64748b;">신규보험료 + 변경 추가납부 / 환급·환입 이력</span>
+      </div>
+      <div class="card-body card-body-detail">
+
+        <!-- 요약 카드 -->
+        <div class="cost-summary-grid">
+          <div class="cost-sum-card">
+            <div class="sum-label">신규 보험료</div>
+            <div class="sum-value" id="sumPremium">-</div>
+          </div>
+          <div class="cost-sum-card">
+            <div class="sum-label">변경 추가납부</div>
+            <div class="sum-value" id="sumAdditional">-</div>
+          </div>
+          <div class="cost-sum-card refund">
+            <div class="sum-label">환급·환입 합계</div>
+            <div class="sum-value" id="sumRefund">-</div>
+          </div>
+          <div class="cost-sum-card net">
+            <div class="sum-label">순 보험비용</div>
+            <div class="sum-value" id="sumNet">-</div>
+          </div>
+        </div>
+
+        <!-- 환입 등록 폼 -->
+        <div style="border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4;padding:14px 18px;margin-bottom:18px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">환입 등록 (보험료 회수)</div>
+          <div class="refund-form">
+            <div>
+              <label>환입금액 (원) <span style="color:#e11d48;">*</span></label>
+              <input type="number" id="refundAmount" min="1" placeholder="0">
+            </div>
+            <div>
+              <label>일자 <span style="color:#e11d48;">*</span></label>
+              <input type="date" id="refundDate">
+            </div>
+            <div style="flex:1;">
+              <label>사유</label>
+              <input type="text" class="refund-memo" id="refundReason" placeholder="환입 사유 (선택)">
+            </div>
+            <div style="padding-bottom:2px;">
+              <label>&nbsp;</label>
+              <button class="btn-add-refund" id="btnAddRefund">환입 등록</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 변경·해지·환입 이력 테이블 -->
+        <div style="overflow-x:auto;">
+          <table class="cost-table">
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th style="width:90px;">구분</th>
+                <th style="width:140px;">추가납부</th>
+                <th style="width:140px;">환급·환입</th>
+                <th style="width:110px;">전표일자</th>
+                <th>사유</th>
+                <th style="width:130px;">등록일시</th>
+              </tr>
+            </thead>
+            <tbody id="costChangeTbody">
+              <tr><td colspan="7" style="padding:20px;color:#94a3b8;">변경이력이 없습니다.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -263,17 +368,78 @@
       $('editSpecialTerms').value = d.specialTerms || '';
     }
 
+    function fmtMoney(v){ return v != null ? Number(v).toLocaleString() + '원' : '-'; }
+    function fmtDt(dt){ return dt ? String(dt).replace('T',' ').slice(0,16) : '-'; }
+    function escHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function renderCostSection(insurance, changes){
+      const premium = insurance.insurancePremium || 0;
+      const totalAdditional = changes.reduce((s,c)=>s+(c.additionalPremium||0),0);
+      const totalRefund     = changes.reduce((s,c)=>s+(c.refundPremium||0),0);
+      const net = premium + totalAdditional - totalRefund;
+
+      $('sumPremium').textContent   = fmtMoney(premium);
+      $('sumAdditional').textContent= fmtMoney(totalAdditional);
+      $('sumRefund').textContent    = fmtMoney(totalRefund);
+      $('sumNet').textContent       = fmtMoney(net);
+
+      if(!changes.length){
+        $('costChangeTbody').innerHTML = `<tr><td colspan="7" style="padding:20px;color:#94a3b8;">변경이력이 없습니다.</td></tr>`;
+        return;
+      }
+      $('costChangeTbody').innerHTML = changes.map((c,i)=>{
+        const typeCls = c.changeType === '환입' ? 'ct-환입' : c.changeType === '해지' ? 'ct-해지' : 'ct-변경';
+        return `<tr>
+          <td>${i+1}</td>
+          <td><span class="${typeCls}">${escHtml(c.changeType)}</span></td>
+          <td class="right" style="color:${(c.additionalPremium||0)>0?'#dc2626':'#94a3b8'};">${(c.additionalPremium||0)>0?fmtMoney(c.additionalPremium):'-'}</td>
+          <td class="right" style="color:${(c.refundPremium||0)>0?'#16a34a':'#94a3b8'};">${(c.refundPremium||0)>0?fmtMoney(c.refundPremium):'-'}</td>
+          <td>${c.voucherDate??'-'}</td>
+          <td class="left">${escHtml(c.changeReason??'')}</td>
+          <td style="color:#94a3b8;font-size:12px;">${fmtDt(c.createdAt)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function loadChanges(){
+      try{
+        const changes = await fetchJson(`${BASE}/api/insurances/${encodeURIComponent(id)}/changes`);
+        renderCostSection(current, changes);
+      }catch(e){ console.error('변경이력 조회 실패:', e.message); }
+    }
+
     async function load(){
       if(!id){ alert('id 파라미터가 없습니다.'); goBack(); return; }
       try{
         current = await fetchJson(`${BASE}/api/insurances/${encodeURIComponent(id)}`);
         renderDetail(current);
+        $('refundDate').value = new Date().toISOString().slice(0,10);
+        await loadChanges();
       }catch(e){
         console.error(e);
         alert('상세 조회 실패: ' + e.message);
         goBack();
       }
     }
+
+    $('btnAddRefund').addEventListener('click', async ()=>{
+      const amount = parseInt($('refundAmount').value);
+      const date   = $('refundDate').value;
+      if(!amount || amount<=0){ alert('환입금액을 올바르게 입력해주세요.'); $('refundAmount').focus(); return; }
+      if(!date){ alert('일자를 입력해주세요.'); return; }
+      if(!confirm(`보험료 환입 ${amount.toLocaleString()}원을 등록하시겠습니까?\n전표가 자동 생성됩니다.`)) return;
+      try{
+        await fetchJson(`${BASE}/api/insurances/${encodeURIComponent(id)}/refund`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ changeType:'환입', refundPremium:amount, additionalPremium:null, changeReason:$('refundReason').value.trim()||null, voucherDate:date })
+        });
+        $('refundAmount').value = '';
+        $('refundReason').value = '';
+        await loadChanges();
+        alert('환입이 등록되었습니다.');
+      }catch(e){ alert('환입 등록 실패: '+e.message); }
+    });
 
     $('editInsuranceBtn').addEventListener('click', ()=>{
       fillEdit(current);

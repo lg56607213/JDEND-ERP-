@@ -144,6 +144,19 @@ SELECT 'is', 'EXPENSE', 3, id, '500301', '이자비용', '영업외비용', 1, '
 INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
 SELECT 'is', 'EXPENSE', 3, id, '500302', '기타비용', '영업외비용', 2, '사용', '사용' FROM financial_statement_accounts WHERE account_code = '5003';
 
+-- 렌터카 업무에 필요한 추가 계정
+INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
+SELECT 'is', 'REVENUE', 3, id, '400203', '해지수수료수익', '영업외수익', 3, '사용', '사용' FROM financial_statement_accounts WHERE account_code = '4002';
+
+INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
+SELECT 'is', 'EXPENSE', 3, id, '500303', '법무비용', '영업외비용', 3, '사용', '사용' FROM financial_statement_accounts WHERE account_code = '5003';
+
+-- ========== 기존 계정 활성화: 렌터카 업무에 필수적인 계정 ==========
+UPDATE financial_statement_accounts SET is_active = '사용' WHERE account_code = '100401'; -- 차량운반구
+UPDATE financial_statement_accounts SET is_active = '사용' WHERE account_code = '200104'; -- 미지급비용
+UPDATE financial_statement_accounts SET is_active = '사용' WHERE account_code = '500211'; -- 세금과공과
+UPDATE financial_statement_accounts SET is_active = '사용' WHERE account_code = '500212'; -- 지급수수료
+
 -- ========== 4) 소소분류 (대손충당금) ==========
 INSERT IGNORE INTO financial_statement_accounts (statement_type, category, level, parent_id, account_code, account_name, account_type, display_order, is_active, is_postable)
 SELECT 'bs', 'ASSET', 4, id, '10010201', '현금', '현금 및 예치금', 1, '사용', '사용' FROM financial_statement_accounts WHERE account_code = '100102';

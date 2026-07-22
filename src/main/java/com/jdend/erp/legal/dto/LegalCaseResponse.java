@@ -21,4 +21,5 @@ public class LegalCaseResponse {
     private String status;
     private LocalDateTime createdAt;
     private List<LegalProgressResponse> progressEntries;
+    private List<LegalCostItemResponse> costItems;
 }

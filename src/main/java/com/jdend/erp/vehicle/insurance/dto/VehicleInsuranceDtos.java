@@ -62,6 +62,27 @@ public class VehicleInsuranceDtos {
     public Long insurancePremium;         // 필수
   }
 
+  @Getter @Setter
+  public static class InsuranceRefundRequest {
+    public Long refundPremium;
+    public String changeReason;
+    public LocalDate voucherDate;
+    public void setChangeType(String t) {}
+  }
+
+  @Builder
+  @Getter
+  public static class ChangeResponse {
+    private Long id;
+    private Long insuranceId;
+    private String changeType;
+    private String changeReason;
+    private Long additionalPremium;
+    private Long refundPremium;
+    private LocalDate voucherDate;
+    private java.time.LocalDateTime createdAt;
+  }
+
   @Builder
   @Getter
   public static class Response {
@@ -89,6 +110,8 @@ public class VehicleInsuranceDtos {
     private String specialTerms;
 
     private Long insurancePremium;
+
+    private String voucherNo;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

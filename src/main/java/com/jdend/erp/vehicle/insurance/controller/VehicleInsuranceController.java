@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -58,6 +59,19 @@ public class VehicleInsuranceController {
                                         @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
     req.setChangeType("해지");
     service.change(id, req);
+    return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/{id}/changes")
+  public List<VehicleInsuranceDtos.ChangeResponse> listChanges(@PathVariable Long id) {
+    return service.listChanges(id);
+  }
+
+  @PostMapping("/{id}/refund")
+  public ResponseEntity<Void> refund(@PathVariable Long id,
+                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+    req.setChangeType("환입");
+    service.refund(id, req);
     return ResponseEntity.ok().build();
   }
 }
