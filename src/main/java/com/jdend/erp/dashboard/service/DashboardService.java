@@ -79,13 +79,13 @@ public class DashboardService {
         continue;
       }
 
-      if (longSet.contains(vehicleNo)) {
-        longTerm++;
-      } else if (shortSet.contains(vehicleNo)) {
-        shortTerm++;
-      } else {
-        waiting++;
-      }
+      // BUG-10차-05: 동일 차량이 장기+단기 계약을 동시에 보유하면 longTerm만 집계되던 문제 수정.
+      // else-if 대신 독립 if로 각각 카운트하고, 어느 쪽에도 속하지 않을 때만 waiting으로 분류.
+      boolean isLong  = longSet.contains(vehicleNo);
+      boolean isShort = shortSet.contains(vehicleNo);
+      if (isLong)  longTerm++;
+      if (isShort) shortTerm++;
+      if (!isLong && !isShort) waiting++;
     }
 
     return DashboardContractStatusResponse.builder()

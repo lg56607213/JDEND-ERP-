@@ -254,7 +254,13 @@ public class VehicleAdvanceService {
     if (paymentMethod == null || paymentMethod.isBlank()) {
       throw new RuntimeException("지급방법이 결정되지 않은건이 있습니다.");
     }
-
+    // BUG-10차-02: 하드코딩된 계정명("보통예금" 등)이 재무상태표 보통예금 음수 유발.
+    // 기타계정관리 vehicleMapping.credit 설정값을 우선 사용한다.
+    // 설정이 없을 경우에만 지급방법별 기본값으로 fallback.
+    String creditFromSettings = accountSettings.getVehicleCreditAccount();
+    if (creditFromSettings != null) {
+      return creditFromSettings;
+    }
     return switch (paymentMethod) {
       case "미지급금" -> "미지급금";
       case "법인카드" -> "미지급비용";

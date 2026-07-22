@@ -19,7 +19,7 @@ public interface MaturityDashboardRepository extends JpaRepository<Contract, Lon
     )
     from Contract c
     where c.endDate between :from and :to
-      and (c.status is null or c.status <> '종료')
+      and (c.status is null or trim(c.status) not in ('해지', '만기종료', '종료'))
     order by c.endDate asc
   """)
   List<DashboardMaturityRow> findMaturitySoonRaw(@Param("from") LocalDate from,

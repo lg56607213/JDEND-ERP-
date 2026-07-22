@@ -25,7 +25,7 @@ public class OtherAccountSettingsService {
 
   @Transactional(readOnly = true)
   public OtherAccountSettingsResponse get() {
-    return repo.findLatest()
+    return repo.findFirstByOrderByIdDesc()
         .map(s -> {
           try {
             Object obj = objectMapper.readValue(s.getSettingsJson(), Object.class);
@@ -43,7 +43,7 @@ public class OtherAccountSettingsService {
   @Transactional(readOnly = true)
   @SuppressWarnings("unchecked")
   public Map<String, Object> getSettingsMap() {
-    return repo.findLatest()
+    return repo.findFirstByOrderByIdDesc()
         .map(s -> {
           try {
             return (Map<String, Object>) objectMapper.readValue(s.getSettingsJson(), Map.class);
@@ -170,9 +170,14 @@ public class OtherAccountSettingsService {
   }
 
   // ── 중도해지 상환금액 (미수금 없을 때 별도 대변 계정) ──────────────────
-  /** 중도해지 상환금액 대변 계정명 (미수금 없을 때) */
+  /**
+   * 중도해지 상환금액 대변 계정명 (미수금 없을 때).
+   * BUG-10차-04: 미설정 시 null 반환 → EarlyTerminationService에서 terminationAmount.credit(="미수금")으로
+   * fallback되어 미수금 음수 발생. 기본값 "위약금수익"을 반환하도록 수정.
+   */
   public String getEarlyTermAmountCreditNoReceivableAccount() {
-    return nested3("earlyTermMapping", "terminationAmount", "creditNoReceivable");
+    String val = nested3("earlyTermMapping", "terminationAmount", "creditNoReceivable");
+    return (val != null) ? val : "위약금수익";
   }
 
   private String nested(String section, String key) {
@@ -217,9 +222,12 @@ public class OtherAccountSettingsService {
     validateAccountCodesExist(req.getSettings());
     try {
       String json = objectMapper.writeValueAsString(req.getSettings());
-      OtherAccountSettings saved = repo.save(
-          OtherAccountSettings.builder().settingsJson(json).build()
-      );
+      // BUG-10차-01: 매번 INSERT → 중복 레코드 누적 문제 수정.
+      // 기존 레코드가 있으면 ID를 유지한 채 UPDATE, 없으면 신규 INSERT 한다.
+      OtherAccountSettings entity = repo.findFirstByOrderByIdDesc()
+          .orElseGet(() -> OtherAccountSettings.builder().build());
+      entity.setSettingsJson(json);
+      OtherAccountSettings saved = repo.save(entity);
       Object obj = objectMapper.readValue(saved.getSettingsJson(), Object.class);
       return OtherAccountSettingsResponse.builder().settings(obj).build();
     } catch (Exception e) {
