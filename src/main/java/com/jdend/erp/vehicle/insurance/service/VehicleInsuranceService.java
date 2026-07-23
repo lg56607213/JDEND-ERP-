@@ -330,11 +330,13 @@ public class VehicleInsuranceService {
   private String findLatestContractNumberByVehicleNo(String vehicleNo) {
     if (isBlank(vehicleNo)) return null;
 
+    // BUG-11차-01: 해지/만기종료/종료 계약 제외 — 활성 계약에만 보험 연결
     String sql = """
       select contract_number
       from contracts
       where replace(replace(trim(vehicle_no), ' ', ''), '-', '') =
             replace(replace(trim(?), ' ', ''), '-', '')
+        and trim(status) not in ('해지', '만기종료', '종료')
       order by id desc
       limit 1
     """;

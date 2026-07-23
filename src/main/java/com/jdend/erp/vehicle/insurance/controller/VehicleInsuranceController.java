@@ -1,7 +1,9 @@
 package com.jdend.erp.vehicle.insurance.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.vehicle.insurance.dto.VehicleInsuranceDtos;
 import com.jdend.erp.vehicle.insurance.service.VehicleInsuranceService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +19,12 @@ import java.util.Map;
 public class VehicleInsuranceController {
 
   private final VehicleInsuranceService service;
+  private final PermissionService permissionService;
 
   @PostMapping
-  public VehicleInsuranceDtos.Response create(@RequestBody VehicleInsuranceDtos.CreateRequest req) {
+  public VehicleInsuranceDtos.Response create(@RequestBody VehicleInsuranceDtos.CreateRequest req,
+                                               HttpSession session) {
+    permissionService.requireManager(session);
     return service.create(req);
   }
 
@@ -42,13 +47,18 @@ public class VehicleInsuranceController {
   }
 
   @PutMapping("/{id}")
-  public VehicleInsuranceDtos.Response update(@PathVariable Long id, @RequestBody VehicleInsuranceDtos.UpdateRequest req) {
+  public VehicleInsuranceDtos.Response update(@PathVariable Long id,
+                                               @RequestBody VehicleInsuranceDtos.UpdateRequest req,
+                                               HttpSession session) {
+    permissionService.requireManager(session);
     return service.update(id, req);
   }
 
   @PostMapping("/{id}/change")
   public ResponseEntity<Void> change(@PathVariable Long id,
-                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req,
+                                     HttpSession session) {
+    permissionService.requireManager(session);
     if (req.changeType == null || req.changeType.isBlank()) req.setChangeType("변경");
     service.change(id, req);
     return ResponseEntity.ok().build();
@@ -56,7 +66,9 @@ public class VehicleInsuranceController {
 
   @PostMapping("/{id}/terminate")
   public ResponseEntity<Void> terminate(@PathVariable Long id,
-                                        @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+                                        @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req,
+                                        HttpSession session) {
+    permissionService.requireManager(session);
     req.setChangeType("해지");
     service.change(id, req);
     return ResponseEntity.ok().build();
@@ -69,14 +81,17 @@ public class VehicleInsuranceController {
 
   @PostMapping("/{id}/refund")
   public ResponseEntity<Void> refund(@PathVariable Long id,
-                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req) {
+                                     @RequestBody VehicleInsuranceDtos.InsuranceChangeRequest req,
+                                     HttpSession session) {
+    permissionService.requireManager(session);
     req.setChangeType("환입");
     service.refund(id, req);
     return ResponseEntity.ok().build();
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable Long id) {
+  public ResponseEntity<Void> delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
     return ResponseEntity.ok().build();
   }

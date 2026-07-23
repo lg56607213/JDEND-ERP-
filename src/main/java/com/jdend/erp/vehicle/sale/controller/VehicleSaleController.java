@@ -1,7 +1,9 @@
 package com.jdend.erp.vehicle.sale.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.vehicle.sale.dto.VehicleSaleDtos;
 import com.jdend.erp.vehicle.sale.service.VehicleSaleService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +17,12 @@ import java.util.List;
 public class VehicleSaleController {
 
   private final VehicleSaleService service;
+  private final PermissionService permissionService;
 
   @PostMapping
-  public VehicleSaleDtos.Response create(@RequestBody VehicleSaleDtos.CreateRequest req) {
+  public VehicleSaleDtos.Response create(@RequestBody VehicleSaleDtos.CreateRequest req,
+                                          HttpSession session) {
+    permissionService.requireManager(session);
     return service.create(req);
   }
 
@@ -39,12 +44,16 @@ public class VehicleSaleController {
   }
 
   @PutMapping("/{id}")
-  public VehicleSaleDtos.Response update(@PathVariable Long id, @RequestBody VehicleSaleDtos.UpdateRequest req) {
+  public VehicleSaleDtos.Response update(@PathVariable Long id,
+                                          @RequestBody VehicleSaleDtos.UpdateRequest req,
+                                          HttpSession session) {
+    permissionService.requireManager(session);
     return service.update(id, req);
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
+  public void delete(@PathVariable Long id, HttpSession session) {
+    permissionService.requireManager(session);
     service.delete(id);
   }
 }
