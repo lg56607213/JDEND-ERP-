@@ -8,6 +8,7 @@ import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.entity.*;
 import com.jdend.erp.vehicle.repository.*;
 import com.jdend.erp.vehicle.sale.repository.VehicleSaleRepository;
+import com.jdend.erp.vehicle.service.VehicleLoanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class VehicleOrderService {
     private final VehicleSaleRepository saleRepo;
     private final ContractRepository contractRepo;
     private final VehicleNumberGenerator numberGenerator;
+    private final VehicleLoanService vehicleLoanService;
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -421,6 +423,45 @@ public class VehicleOrderService {
                 && hasDisplacement) {
             o.setOrderStatus("등록완료");
         }
+    }
+
+    /**
+     * BUG-1/BUG-2 수정: 차입금 스케줄 등록(실행) 엔드포인트 구현
+     * - 차량번호를 vehicleMgmtNo로 조회한 뒤 req.vehicleNo 세팅
+     * - VehicleLoanService.create() 호출 → 차입금 + 개시전표 자동 생성(BUG-2 해결)
+     * - 차량 상태를 "실행완료"로 변경
+     */
+    @Transactional
+    public VehicleDeliveryExecuteResponse execute(String vehicleMgmtNo, VehicleLoanCreateRequest req) {
+        VehicleOrder o = orderRepo.findByVehicleMgmtNo(vehicleMgmtNo)
+                .orElseThrow(() -> new RuntimeException("차량 없음: " + vehicleMgmtNo));
+
+        String vehicleNo = o.getVehicleNo();
+        if (vehicleNo == null || vehicleNo.isBlank()) {
+            throw new RuntimeException("차량번호가 등록되지 않은 차량입니다. 차량등록 완료 후 실행해주세요.");
+        }
+
+        // 차입금 생성 (내부에서 개시전표도 자동 생성됨)
+        req.vehicleNo = vehicleNo;
+        VehicleLoanListItemResponse loan = vehicleLoanService.create(req);
+
+        // 상태가 아직 실행완료가 아니면 변경
+        if (!"실행완료".equals(o.getOrderStatus())) {
+            o.setOrderStatus("실행완료");
+            orderRepo.save(o);
+            historyRepo.save(VehicleOrderHistory.builder()
+                    .vehicleOrder(o)
+                    .status("실행완료")
+                    .changedAt(LocalDateTime.now())
+                    .note("차입금 스케줄 등록 실행")
+                    .build());
+        }
+
+        return VehicleDeliveryExecuteResponse.builder()
+                .vehicleMgmtNo(o.getVehicleMgmtNo())
+                .orderStatus(o.getOrderStatus())
+                .loanId(loan.getId())
+                .build();
     }
 
     @Transactional

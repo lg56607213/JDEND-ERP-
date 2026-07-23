@@ -258,8 +258,8 @@
         <tr id="row_${idx}">
           <td><input type="text" placeholder="예: 엔진오일교환" id="desc_${idx}"></td>
           <td><input type="number" placeholder="0" id="amount_${idx}" oninput="calculateVAT(${idx})"></td>
-          <td><input type="number" placeholder="0" id="supply_${idx}" disabled></td>
-          <td><input type="number" placeholder="0" id="tax_${idx}" disabled></td>
+          <td><input type="number" placeholder="0" id="supply_${idx}" oninput="calculateTaxFromSupply(${idx})"></td>
+          <td><input type="number" placeholder="0" id="tax_${idx}"></td>
           <td><input type="text" placeholder="예: 에이스공업사" id="vendor_${idx}"></td>
           <td>
             <select id="paymentMethod_${idx}" onchange="onPayMethodChange(${idx})">
@@ -301,6 +301,14 @@
       const vat    = Math.max(0, Math.round(amount - supply));
       document.getElementById(`supply_${idx}`).value = supply;
       document.getElementById(`tax_${idx}`).value    = vat;
+    }
+
+    /* ── 공급가액 직접 입력 시 세액 자동 계산 ── */
+    function calculateTaxFromSupply(idx) {
+      const amount = parseFloat(document.getElementById(`amount_${idx}`)?.value) || 0;
+      const supply = parseFloat(document.getElementById(`supply_${idx}`)?.value) || 0;
+      const vat    = Math.max(0, Math.round(amount - supply));
+      document.getElementById(`tax_${idx}`).value = vat;
     }
 
     /* ── 지급방법 변경 → 피커 버튼 표시/숨김 ── */

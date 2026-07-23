@@ -59,6 +59,17 @@ public class VehicleOrderController {
         return service.detailById(id);
     }
 
+    // 차입금 스케줄 등록 실행 (BUG-1 수정: 누락된 엔드포인트 추가)
+    // 차량을 "실행완료"로 변경하고 차입금과 개시전표를 생성한다.
+    @PostMapping("/{mgmtNo}/execute")
+    public VehicleDeliveryExecuteResponse execute(
+            @PathVariable String mgmtNo,
+            @RequestBody VehicleLoanCreateRequest req,
+            HttpSession session) {
+        permissionService.requireManager(session);
+        return service.execute(mgmtNo, req);
+    }
+
     // 수정 (차량관리번호 기반)
     @PutMapping("/{mgmtNo}")
     public VehicleOrderResponse update(@PathVariable String mgmtNo, @RequestBody VehicleOrderRequest req, HttpSession session) {

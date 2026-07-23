@@ -462,9 +462,8 @@
       document.getElementById("vehicleModal").style.display = "none";
     }
 
-    // ✅ 핵심 수정
-    // 기존: /api/vehicle-orders/search 호출 → 전체 차량 나옴
-    // 변경: /api/vehicle-inspections 호출 → 검사유효기간 등록된 차량만 나옴
+    // 등록 모달에서는 차량번호가 있는 전체 차량을 보여주고,
+    // 조회 필터에서는 검사유효기간이 등록된 차량만 보여준다.
     async function doVehicleSearch(){
       const kw = document.getElementById("vehicleSearchKw").value.trim();
       const tbody = document.getElementById("vehicleSearchTbody");
@@ -472,11 +471,22 @@
       tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">조회중...</td></tr>`;
 
       try{
-        const res = await fetch(`${BASE}/api/vehicle-inspections`);
-        await mustOk(res);
-
-        let list = await res.json();
-        if(!Array.isArray(list)) list = [];
+        let list;
+        if (vehiclePickTarget === "register") {
+          // 정기검사 신규 등록 시: 차량번호가 있는 전체 차량 조회
+          const res = await fetch(`${BASE}/api/vehicle-orders`);
+          await mustOk(res);
+          list = await res.json();
+          if(!Array.isArray(list)) list = [];
+          // 차량번호가 있는 차량만 (발주 완료되어 실물 차량이 있는 것)
+          list = list.filter(v => v.vehicleNo && v.vehicleNo.trim() !== '');
+        } else {
+          // 조회 필터: 검사유효기간이 등록된 차량만
+          const res = await fetch(`${BASE}/api/vehicle-inspections`);
+          await mustOk(res);
+          list = await res.json();
+          if(!Array.isArray(list)) list = [];
+        }
 
         if(kw){
           const keyword = kw.toLowerCase();
@@ -493,7 +503,10 @@
         }
 
         if(list.length === 0){
-          tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">검사유효기간이 등록된 차량이 없습니다.</td></tr>`;
+          const emptyMsg = vehiclePickTarget === "register"
+            ? "차량번호가 등록된 차량이 없습니다."
+            : "검사유효기간이 등록된 차량이 없습니다.";
+          tbody.innerHTML = `<tr><td colspan="4" style="color:#888;">${emptyMsg}</td></tr>`;
           return;
         }
 
