@@ -1,6 +1,7 @@
 package com.jdend.erp.config;
 
 import com.jdend.erp.auth.exception.ForbiddenException;
+import com.jdend.erp.auth.exception.NotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,13 @@ public class ApiExceptionHandler {
   @ExceptionHandler(ForbiddenException.class)
   public ResponseEntity<?> handleForbidden(ForbiddenException e) {
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
+      .body(Map.of("message", e.getMessage()));
+  }
+
+  // BUG-13-06: 리소스 미존재 → 404
+  @ExceptionHandler(NotFoundException.class)
+  public ResponseEntity<?> handleNotFound(NotFoundException e) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
       .body(Map.of("message", e.getMessage()));
   }
 

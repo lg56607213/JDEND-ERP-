@@ -4,6 +4,7 @@ import com.jdend.erp.auth.dto.CompanyUserRequest;
 import com.jdend.erp.auth.dto.CompanyUserResponse;
 import com.jdend.erp.auth.entity.CompanyUser;
 import com.jdend.erp.auth.exception.ForbiddenException;
+import com.jdend.erp.auth.exception.NotFoundException;
 import com.jdend.erp.auth.repository.CompanyUserRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,8 @@ public class CompanyUserService {
     permissionService.requireCompanyAdmin(session);
     Long companyId = requireCompanyId(session);
 
-    return companyUserRepository.findByCompanyIdOrderByIdAsc(companyId).stream()
+    // BUG-13-05: 비활성화 계정 제외
+    return companyUserRepository.findByCompanyIdAndIsActiveTrueOrderByIdAsc(companyId).stream()
         .map(this::toResponse)
         .toList();
   }
@@ -44,7 +46,8 @@ public class CompanyUserService {
 
     String userLoginId = req.getUserLoginId().trim();
 
-    if (companyUserRepository.existsByCompanyIdAndUserLoginId(companyId, userLoginId)) {
+    // BUG-13-04: 소프트 삭제된 계정은 중복 체크에서 제외 (활성 계정만 체크)
+    if (companyUserRepository.existsByCompanyIdAndUserLoginIdAndIsActive(companyId, userLoginId, true)) {
       throw new RuntimeException("이미 존재하는 사용자 아이디입니다.");
     }
 
@@ -79,6 +82,28 @@ public class CompanyUserService {
 
     if (req == null) throw new RuntimeException("요청값이 없습니다.");
 
+    // BUG-13-01/02: 현재 로그인한 계정 자기 자신 보호
+    String currentLoginId = (String) session.getAttribute(AuthService.SESSION_LOGIN_ID);
+    if (user.getUserLoginId().equals(currentLoginId)) {
+      // 자기 자신을 비활성화하려는 시도 차단
+      if (req.getIsActive() != null && !req.getIsActive()) {
+        throw new ForbiddenException("현재 로그인한 계정은 비활성화할 수 없습니다.");
+      }
+      // 자기 자신의 COMPANY_ADMIN 역할을 낮은 역할로 강등 차단
+      if ("COMPANY_ADMIN".equals(user.getRole()) && !isBlank(req.getRole()) && !"COMPANY_ADMIN".equals(normalizeRole(req.getRole()))) {
+        throw new ForbiddenException("현재 로그인한 회사관리자 계정의 역할은 변경할 수 없습니다.");
+      }
+    }
+
+    // BUG-13-03: COMPANY_ADMIN으로 변경 시 기존 COMPANY_ADMIN 중복 방지
+    if (!isBlank(req.getRole()) && "COMPANY_ADMIN".equals(normalizeRole(req.getRole()))
+        && !"COMPANY_ADMIN".equals(user.getRole())) {
+      long count = companyUserRepository.countByCompanyIdAndRole(companyId, "COMPANY_ADMIN");
+      if (count >= 1) {
+        throw new IllegalArgumentException("회사관리자 계정은 1개만 존재할 수 있습니다.");
+      }
+    }
+
     if (!isBlank(req.getUserPassword())) {
       user.setUserPassword(passwordEncoder.encode(req.getUserPassword().trim()));
     }
@@ -111,8 +136,9 @@ public class CompanyUserService {
   }
 
   private CompanyUser findOwnedUser(Long id, Long companyId) {
+    // BUG-13-06: 미존재 리소스 → 404
     CompanyUser user = companyUserRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. id=" + id));
+        .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다. id=" + id));
 
     if (!Objects.equals(user.getCompanyId(), companyId)) {
       // BUG-12-04: 타 회사 접근 → 403
