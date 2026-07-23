@@ -23,6 +23,7 @@ public class AuthService {
   public static final String SESSION_TARGET_DB = "TARGET_DB";
   public static final String SESSION_ROLE = "ROLE";
   public static final String SESSION_COMPANY_ID = "COMPANY_ID";
+  public static final String SESSION_COMPANY_USER_ID = "COMPANY_USER_ID";
   public static final String SESSION_TAX_CONSULTATION_ENABLED = "TAX_CONSULTATION_ENABLED";
   public static final String SESSION_MAINTENANCE_ENABLED = "MAINTENANCE_ENABLED";
 
@@ -65,6 +66,7 @@ public class AuthService {
       session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
       session.setAttribute(SESSION_MAINTENANCE_ENABLED, true);
       session.removeAttribute(SESSION_COMPANY_ID);
+      session.removeAttribute(SESSION_COMPANY_USER_ID);
 
       return LoginResponse.builder()
           .success(true)
@@ -85,6 +87,7 @@ public class AuthService {
       session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, true);
       session.setAttribute(SESSION_MAINTENANCE_ENABLED, false);
       session.removeAttribute(SESSION_COMPANY_ID);
+      session.removeAttribute(SESSION_COMPANY_USER_ID);
 
       return LoginResponse.builder()
           .success(true)
@@ -137,6 +140,7 @@ public class AuthService {
     session.setAttribute(SESSION_TARGET_DB, targetDb);
     session.setAttribute(SESSION_ROLE, role);
     session.setAttribute(SESSION_COMPANY_ID, company.getId());
+    session.setAttribute(SESSION_COMPANY_USER_ID, user.getId());
     session.setAttribute(SESSION_TAX_CONSULTATION_ENABLED, taxEnabled);
     session.setAttribute(SESSION_MAINTENANCE_ENABLED, maintenanceEnabled);
 

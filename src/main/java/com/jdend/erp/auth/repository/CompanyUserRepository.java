@@ -13,4 +13,6 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
   boolean existsByCompanyIdAndUserLoginId(Long companyId, String userLoginId);
 
   List<CompanyUser> findByCompanyIdOrderByIdAsc(Long companyId);
+
+  long countByCompanyIdAndRole(Long companyId, String role);
 }

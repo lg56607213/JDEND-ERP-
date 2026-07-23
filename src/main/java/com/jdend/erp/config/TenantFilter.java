@@ -31,8 +31,18 @@ public class TenantFilter implements Filter {
 
             // login_users/company_users는 운영 DB(auth)에만 있고 회사별 DB로는 복제되지 않으므로,
             // 이 두 테이블을 쓰는 API는 세션의 회사 DB와 무관하게 항상 auth로 라우팅한다.
-            if (uri.startsWith("/api/auth") || uri.startsWith("/api/company-users") || uri.startsWith("/api/tax-consultations")) {
+            if (uri.startsWith("/api/auth") || uri.startsWith("/api/tax-consultations")) {
                 TenantContext.setCurrentDb("auth");
+            } else if (uri.startsWith("/api/company-users")) {
+                // BUG-12-03: /api/company-users는 auth DB지만 인증 필수
+                TenantContext.setCurrentDb("auth");
+                HttpSession session = req.getSession(false);
+                if (session == null || session.getAttribute(AuthService.SESSION_LOGIN_ID) == null) {
+                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
+                    return;
+                }
             } else if (uri.startsWith("/api/")) {
                 HttpSession session = req.getSession(false);
                 boolean isPublic = PUBLIC_API_PREFIXES.stream().anyMatch(uri::startsWith);

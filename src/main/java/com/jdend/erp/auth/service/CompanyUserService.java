@@ -3,6 +3,7 @@ package com.jdend.erp.auth.service;
 import com.jdend.erp.auth.dto.CompanyUserRequest;
 import com.jdend.erp.auth.dto.CompanyUserResponse;
 import com.jdend.erp.auth.entity.CompanyUser;
+import com.jdend.erp.auth.exception.ForbiddenException;
 import com.jdend.erp.auth.repository.CompanyUserRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -47,12 +48,21 @@ public class CompanyUserService {
       throw new RuntimeException("이미 존재하는 사용자 아이디입니다.");
     }
 
+    // BUG-12-06: COMPANY_ADMIN은 회사당 1명만 허용
+    String normalizedRole = normalizeRole(req.getRole());
+    if ("COMPANY_ADMIN".equals(normalizedRole)) {
+      long count = companyUserRepository.countByCompanyIdAndRole(companyId, "COMPANY_ADMIN");
+      if (count >= 1) {
+        throw new IllegalArgumentException("회사관리자 계정은 1개만 생성할 수 있습니다.");
+      }
+    }
+
     CompanyUser saved = companyUserRepository.save(
         CompanyUser.builder()
             .companyId(companyId)
             .userLoginId(userLoginId)
             .userPassword(passwordEncoder.encode(req.getUserPassword().trim()))
-            .role(normalizeRole(req.getRole()))
+            .role(normalizedRole)
             .isActive(req.getIsActive() == null ? true : req.getIsActive())
             .build()
     );
@@ -91,10 +101,13 @@ public class CompanyUserService {
 
     String currentLoginId = (String) session.getAttribute(AuthService.SESSION_LOGIN_ID);
     if (Objects.equals(currentLoginId, user.getUserLoginId())) {
-      throw new RuntimeException("현재 로그인한 계정은 삭제할 수 없습니다.");
+      // BUG-12-04: 자기 삭제 → 403
+      throw new ForbiddenException("현재 로그인한 계정은 삭제할 수 없습니다.");
     }
 
-    companyUserRepository.delete(user);
+    // BUG-12-01: 하드 삭제 대신 소프트 삭제 — 기존 세션 다음 요청 시 인터셉터가 401 반환
+    user.setIsActive(false);
+    companyUserRepository.save(user);
   }
 
   private CompanyUser findOwnedUser(Long id, Long companyId) {
@@ -102,7 +115,8 @@ public class CompanyUserService {
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. id=" + id));
 
     if (!Objects.equals(user.getCompanyId(), companyId)) {
-      throw new RuntimeException("다른 회사의 사용자입니다.");
+      // BUG-12-04: 타 회사 접근 → 403
+      throw new ForbiddenException("다른 회사의 사용자입니다.");
     }
 
     return user;
@@ -111,7 +125,8 @@ public class CompanyUserService {
   private Long requireCompanyId(HttpSession session) {
     Object companyId = session.getAttribute(AuthService.SESSION_COMPANY_ID);
     if (companyId == null) {
-      throw new RuntimeException("회사관리자 계정으로 로그인해야 사용자관리를 이용할 수 있습니다.");
+      // BUG-12-05: 운영자(ADMIN) 접근 시 400 → 403
+      throw new ForbiddenException("운영자 계정은 사용자관리를 사용할 수 없습니다.");
     }
     return (Long) companyId;
   }

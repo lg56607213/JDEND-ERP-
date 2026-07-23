@@ -4,6 +4,8 @@ import com.jdend.erp.auth.dto.*;
 import com.jdend.erp.auth.service.AuthService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -15,15 +17,17 @@ public class AuthController {
 
   private final AuthService service;
 
+  // BUG-12-02: 로그인 실패 시 HTTP 401 반환 (기존 200)
   @PostMapping("/login")
-  public LoginResponse login(@RequestBody LoginRequest req, HttpSession session) {
+  public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpSession session) {
     try {
-      return service.login(req, session);
+      return ResponseEntity.ok(service.login(req, session));
     } catch (Exception e) {
-      return LoginResponse.builder()
-          .success(false)
-          .message(e.getMessage())
-          .build();
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(LoginResponse.builder()
+              .success(false)
+              .message(e.getMessage())
+              .build());
     }
   }
 
