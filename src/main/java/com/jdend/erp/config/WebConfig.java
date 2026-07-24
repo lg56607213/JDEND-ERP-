@@ -14,11 +14,21 @@ public class WebConfig implements WebMvcConfigurer {
 
   @Override
   public void addCorsMappings(CorsRegistry registry) {
+    // ERP 내부 API: rentcarerp.com 에서 세션 쿠키와 함께 호출
     registry.addMapping("/api/**")
       .allowedOriginPatterns("https://rentcarerp.com", "https://www.rentcarerp.com", "http://localhost:8080")
       .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
       .allowedHeaders("*")
       .allowCredentials(true);
+
+    // 구독 결제 공개 API: jdend.co.kr 홈페이지에서 비로그인 호출
+    registry.addMapping("/api/subscription/kiwoom/**")
+      .allowedOriginPatterns(
+          "https://jdend.co.kr", "https://www.jdend.co.kr",
+          "http://localhost:3000", "http://localhost:8080")
+      .allowedMethods("GET", "POST", "OPTIONS")
+      .allowedHeaders("*")
+      .allowCredentials(false);
   }
 
   // BUG-12-01: 삭제된(비활성화된) 사용자의 기존 세션 무효화 인터셉터 등록
@@ -26,6 +36,10 @@ public class WebConfig implements WebMvcConfigurer {
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(authInterceptor)
         .addPathPatterns("/api/**")
-        .excludePathPatterns("/api/auth/**", "/api/company-applications/**");
+        .excludePathPatterns(
+            "/api/auth/**",
+            "/api/company-applications/**",
+            "/api/subscription/kiwoom/**"   // 구독 결제 공개 엔드포인트 (비로그인)
+        );
   }
 }

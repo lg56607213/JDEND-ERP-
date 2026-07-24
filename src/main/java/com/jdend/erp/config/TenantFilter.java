@@ -19,6 +19,11 @@ public class TenantFilter implements Filter {
             "/api/company-applications"
     );
 
+    // 구독 결제 공개 엔드포인트 (jdend.co.kr 호출, 키움페이 서버 통지)
+    private static final Set<String> SUBSCRIPTION_PUBLIC_PREFIXES = Set.of(
+            "/api/subscription/kiwoom/"
+    );
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
@@ -42,6 +47,21 @@ public class TenantFilter implements Filter {
                     res.setContentType("application/json;charset=UTF-8");
                     res.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
                     return;
+                }
+            } else if (uri.startsWith("/api/subscription")) {
+                // 구독 결제: 항상 auth DB 사용 (멀티테넌시 공유 DB)
+                TenantContext.setCurrentDb("auth");
+                // 공개 엔드포인트(/kiwoom/**)는 세션 불필요, 나머지는 ADMIN 세션 필요
+                boolean isPublicSubscription = SUBSCRIPTION_PUBLIC_PREFIXES.stream()
+                        .anyMatch(uri::startsWith);
+                if (!isPublicSubscription) {
+                    HttpSession session = req.getSession(false);
+                    if (session == null || session.getAttribute(AuthService.SESSION_LOGIN_ID) == null) {
+                        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        res.setContentType("application/json;charset=UTF-8");
+                        res.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
+                        return;
+                    }
                 }
             } else if (uri.startsWith("/api/")) {
                 HttpSession session = req.getSession(false);

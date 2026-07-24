@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구독관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css" />
+  <link rel="stylesheet" href="../../assets/css/pages.css" />
+  <style>
+    .erp-card { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); overflow:hidden; }
+    .card-body { padding: 20px; }
+
+    /* 필터 툴바 */
+    .filter-bar { display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+    .filter-btn {
+      height:36px; padding:0 16px; border-radius:20px; border:1.5px solid #d1d5db;
+      background:#fff; cursor:pointer; font-size:13px; font-weight:600; color:#6b7280;
+      transition:all .15s;
+    }
+    .filter-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .filter-btn:hover:not(.active) { border-color:#2563eb; color:#2563eb; }
+
+    /* 테이블 */
+    table { width:100%; border-collapse:collapse; min-width:900px; }
+    th, td { border-bottom:1px solid #edf0f2; padding:10px 12px; text-align:center; font-size:13px; }
+    th { background:#f8fafc; font-weight:700; color:#334155; white-space:nowrap; }
+    td { vertical-align:middle; }
+    tr:hover td { background:#f0f7ff; }
+
+    .table-wrap { overflow-x:auto; }
+
+    /* 뱃지 */
+    .badge { display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .badge-pending  { background:#fef9c3; color:#854d0e; }
+    .badge-success  { background:#dcfce7; color:#166534; }
+    .badge-fail     { background:#fee2e2; color:#991b1b; }
+    .badge-cancel   { background:#f3f4f6; color:#6b7280; }
+
+    /* 요금제 뱃지 */
+    .plan-basic { background:#dbeafe; color:#1d4ed8; }
+    .plan-pro   { background:#d1fae5; color:#065f46; }
+    .plan-max   { background:#fed7aa; color:#9a3412; }
+
+    /* 계정생성 */
+    .badge-created   { background:#d1fae5; color:#065f46; }
+    .badge-uncreated { background:#f3f4f6; color:#9ca3af; }
+
+    /* 액션 버튼 */
+    .btn { height:32px; padding:0 12px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:pointer; font-size:12px; font-weight:600; }
+    .btn-primary  { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .btn-danger   { background:#fff; color:#dc2626; border-color:#fecaca; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+
+    /* 메모 입력 */
+    .memo-input { width:140px; height:30px; padding:0 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; }
+    .memo-save  { height:30px; padding:0 10px; border-radius:6px; border:1px solid #d1d5db; background:#f8fafc; cursor:pointer; font-size:11px; font-weight:600; }
+
+    /* 요약 카드 */
+    .summary-row { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+    .summary-card {
+      background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+      padding:14px 20px; flex:1; min-width:130px; text-align:center;
+    }
+    .summary-num  { font-size:1.5rem; font-weight:900; color:#2563eb; }
+    .summary-lbl  { font-size:12px; color:#64748b; margin-top:2px; }
+
+    .empty-row td { padding:40px; color:#9ca3af; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+
+<div class="content-wrapper">
+  <div class="page-header">
+    <h1>구독관리</h1>
+    <p>총괄관리 &gt; 구독관리</p>
+  </div>
+
+  <!-- 요약 카드 -->
+  <div class="summary-row" id="summaryRow">
+    <div class="summary-card"><div class="summary-num" id="cntTotal">-</div><div class="summary-lbl">전체</div></div>
+    <div class="summary-card"><div class="summary-num" id="cntSuccess" style="color:#166534">-</div><div class="summary-lbl">결제완료</div></div>
+    <div class="summary-card"><div class="summary-num" id="cntPending" style="color:#854d0e">-</div><div class="summary-lbl">대기</div></div>
+    <div class="summary-card"><div class="summary-num" id="cntFail"   style="color:#991b1b">-</div><div class="summary-lbl">실패</div></div>
+    <div class="summary-card"><div class="summary-num" id="cntCancel" style="color:#6b7280">-</div><div class="summary-lbl">취소</div></div>
+    <div class="summary-card"><div class="summary-num" id="cntUncreated" style="color:#d97706">-</div><div class="summary-lbl">계정미생성</div></div>
+  </div>
+
+  <div class="erp-card">
+    <div class="card-body">
+
+      <!-- 상태 필터 -->
+      <div class="filter-bar">
+        <button class="filter-btn active" data-status="">전체</button>
+        <button class="filter-btn" data-status="SUCCESS">결제완료</button>
+        <button class="filter-btn" data-status="PENDING">대기</button>
+        <button class="filter-btn" data-status="FAIL">실패</button>
+        <button class="filter-btn" data-status="CANCEL">취소</button>
+        <button class="btn" style="margin-left:auto" onclick="loadList()">새로고침</button>
+      </div>
+
+      <!-- 목록 테이블 -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>신청일시</th>
+              <th>회사명</th>
+              <th>신청자</th>
+              <th>연락처</th>
+              <th>이메일</th>
+              <th>요금제</th>
+              <th>결제금액</th>
+              <th>상태</th>
+              <th>계정생성</th>
+              <th>메모</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody id="listBody">
+            <tr class="empty-row"><td colspan="11">로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script>
+  const API = '';
+  let currentStatus = '';
+  let allData = [];
+
+  // ── 상태 필터 버튼 ──────────────────────────────
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentStatus = this.dataset.status;
+      renderTable(currentStatus ? allData.filter(r => r.status === currentStatus) : allData);
+    });
+  });
+
+  // ── 데이터 로드 ─────────────────────────────────
+  async function loadList() {
+    const tbody = document.getElementById('listBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">로딩 중...</td></tr>';
+
+    try {
+      const res = await fetch(API + '/api/subscription/list', { credentials: 'include' });
+      if (res.status === 401 || res.status === 403) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="11">ADMIN 권한이 필요합니다.</td></tr>';
+        return;
+      }
+      allData = await res.json();
+      updateSummary(allData);
+      renderTable(currentStatus ? allData.filter(r => r.status === currentStatus) : allData);
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="11">데이터 로딩 실패: ' + e.message + '</td></tr>';
+    }
+  }
+
+  // ── 요약 카드 업데이트 ──────────────────────────
+  function updateSummary(data) {
+    document.getElementById('cntTotal').textContent     = data.length;
+    document.getElementById('cntSuccess').textContent   = data.filter(r => r.status === 'SUCCESS').length;
+    document.getElementById('cntPending').textContent   = data.filter(r => r.status === 'PENDING').length;
+    document.getElementById('cntFail').textContent      = data.filter(r => r.status === 'FAIL').length;
+    document.getElementById('cntCancel').textContent    = data.filter(r => r.status === 'CANCEL').length;
+    document.getElementById('cntUncreated').textContent =
+      data.filter(r => r.status === 'SUCCESS' && !r.accountCreated).length;
+  }
+
+  // ── 테이블 렌더링 ───────────────────────────────
+  function renderTable(data) {
+    const tbody = document.getElementById('listBody');
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="11">데이터가 없습니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(r => {
+      const createdAt = r.createdAt ? r.createdAt.replace('T', ' ').substring(0, 16) : '-';
+      const amount    = r.amount ? Number(r.amount).toLocaleString() + '원' : '-';
+
+      // 상태 뱃지
+      const statusBadge = {
+        'SUCCESS': '<span class="badge badge-success">결제완료</span>',
+        'PENDING': '<span class="badge badge-pending">대기</span>',
+        'FAIL':    '<span class="badge badge-fail">실패</span>',
+        'CANCEL':  '<span class="badge badge-cancel">취소</span>',
+      }[r.status] || '<span class="badge">' + (r.status || '-') + '</span>';
+
+      // 요금제 뱃지
+      const planClass = r.planName === 'Basic' ? 'plan-basic' : r.planName === 'Max' ? 'plan-max' : 'plan-pro';
+      const planBadge = r.planName
+        ? '<span class="badge ' + planClass + '">' + escHtml(r.planName) + '</span>'
+        : '-';
+
+      // 계정생성 뱃지
+      const createdBadge = r.accountCreated
+        ? '<span class="badge badge-created">생성완료</span>'
+        : '<span class="badge badge-uncreated">미생성</span>';
+
+      // 계정생성 버튼 (SUCCESS + 미생성만 활성)
+      const canComplete = r.status === 'SUCCESS' && !r.accountCreated;
+      const completeBtn = '<button class="btn btn-primary" '
+        + (canComplete ? '' : 'disabled ')
+        + 'onclick="markComplete(' + r.id + ', this)">계정생성완료</button>';
+
+      // 환불 버튼 (SUCCESS만 활성)
+      const canCancel = r.status === 'SUCCESS';
+      const cancelBtn = '<button class="btn btn-danger" '
+        + (canCancel ? '' : 'disabled ')
+        + 'onclick="cancelPayment(' + r.id + ', this)">환불</button>';
+
+      // 메모
+      const memoHtml = '<input class="memo-input" id="memo-' + r.id + '" value="'
+        + escHtml(r.memo || '') + '" placeholder="메모 입력">'
+        + '<button class="memo-save" onclick="saveMemo(' + r.id + ')">저장</button>';
+
+      return '<tr>'
+        + '<td>' + createdAt + '</td>'
+        + '<td style="font-weight:700">' + escHtml(r.companyName || '') + '</td>'
+        + '<td>' + escHtml(r.applicantName || '') + '</td>'
+        + '<td>' + escHtml(r.phone || '') + '</td>'
+        + '<td style="font-size:12px">' + escHtml(r.email || '') + '</td>'
+        + '<td>' + planBadge + '</td>'
+        + '<td style="font-weight:700">' + amount + '</td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + createdBadge + '</td>'
+        + '<td>' + memoHtml + '</td>'
+        + '<td style="white-space:nowrap;display:flex;gap:4px;justify-content:center">'
+        + completeBtn + cancelBtn + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // ── 계정생성완료 처리 ────────────────────────────
+  async function markComplete(id, btn) {
+    if (!confirm('계정 생성을 완료 처리하시겠습니까?')) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch(API + '/api/subscription/' + id + '/complete', {
+        method: 'PATCH', credentials: 'include'
+      });
+      if (!res.ok) throw new Error((await res.json()).message || '처리 실패');
+      alert('계정 생성 완료 처리되었습니다.');
+      loadList();
+    } catch (e) {
+      alert('오류: ' + e.message);
+      btn.disabled = false;
+    }
+  }
+
+  // ── 환불(취소) 처리 ──────────────────────────────
+  async function cancelPayment(id, btn) {
+    const reason = prompt('취소 사유를 입력하세요 (기본: 구독취소)', '구독취소');
+    if (reason === null) return; // 취소 버튼
+    btn.disabled = true;
+    try {
+      const res = await fetch(API + '/api/subscription/' + id + '/cancel', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason || '구독취소' }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || '취소 실패');
+      alert('환불 처리가 완료되었습니다.');
+      loadList();
+    } catch (e) {
+      alert('환불 오류: ' + e.message);
+      btn.disabled = false;
+    }
+  }
+
+  // ── 메모 저장 ────────────────────────────────────
+  async function saveMemo(id) {
+    const input = document.getElementById('memo-' + id);
+    const memo  = input ? input.value : '';
+    try {
+      const res = await fetch(API + '/api/subscription/' + id + '/memo', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memo }),
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error((await res.json()).message || '저장 실패');
+      // 저장 성공 시 간단한 시각적 피드백
+      input.style.borderColor = '#22c55e';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    } catch (e) {
+      alert('메모 저장 오류: ' + e.message);
+    }
+  }
+
+  // ── 유틸 ─────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // 초기 로드
+  loadList();
+</script>
+</body>
+</html>

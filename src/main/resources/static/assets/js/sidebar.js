@@ -230,6 +230,9 @@ function loadSidebar() {
                   </li>
                 </ul>
               </li>
+              <li id="subscriptionMenuItem" style="display:none;">
+                <a href="${basePath}pages/admin/subscription_list.html">구독관리</a>
+              </li>
             </ul>
           </li>
         </ul>
@@ -283,6 +286,10 @@ function loadSidebar() {
           if (taxMenu) taxMenu.style.display = '';
           if (taxUserItem) taxUserItem.style.display = '';
         }
+
+        // 구독관리 메뉴 — ADMIN 전용
+        const subscriptionItem = document.getElementById('subscriptionMenuItem');
+        if (subscriptionItem && role === 'ADMIN') subscriptionItem.style.display = '';
 
         // MT 메뉴 — 운영자이거나 maintenanceEnabled 권한이 있는 업체만 노출
         if (role === 'ADMIN' || maintenanceEnabled) {
