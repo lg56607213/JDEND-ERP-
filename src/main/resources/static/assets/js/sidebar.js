@@ -200,6 +200,12 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/accounting/payable_management.html">미지급현황</a></li>
                 </ul>
               </li>
+              <li class="has-sub">
+                <span class="menu-label">보증금/선수금관리</span>
+                <ul>
+                  <li><a href="${basePath}pages/accounting/deposit_management.html">보증금/선수금관리</a></li>
+                </ul>
+              </li>
             </ul>
           </li>
           <li class="has-sub">

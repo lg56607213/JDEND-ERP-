@@ -140,4 +140,21 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
       @Param("today") LocalDate today,
       @Param("terminated") Collection<String> terminated
   );
+
+  // ✅ 보증금/선수금 관리: deposit > 0 OR advancePayment > 0 인 계약 조회 (고객 fetch join)
+  @Query("""
+    select c
+    from Contract c
+    left join fetch c.customer cust
+    where (c.deposit > 0 or c.advancePayment > 0)
+      and (:customerName = '' or lower(cust.customerName) like concat('%', lower(:customerName), '%'))
+      and (:startDate is null or c.endDate >= :startDate)
+      and (:endDate is null or c.startDate <= :endDate)
+    order by c.id desc
+  """)
+  List<Contract> findDepositContracts(
+      @Param("customerName") String customerName,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate
+  );
 }

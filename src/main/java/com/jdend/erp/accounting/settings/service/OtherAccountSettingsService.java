@@ -130,6 +130,11 @@ public class OtherAccountSettingsService {
   /** 보험 변경 환급 대변 계정명 */
   public String getInsuranceRefundCreditAccount()  { return nested("insuranceRefundMapping", "credit"); }
 
+  /** 보증금/선수금 수납 시 대변 계정명 (임대보증금 - 부채) */
+  public String getDepositDebitAccount()     { return nested("depositMapping",    "debit");  }
+  /** 보증금/선수금 수납 시 차변 계정명 (보통예금 - 현금성) */
+  public String getDepositCreditAccount()    { return nested("depositMapping",    "credit"); }
+
   /** 정비 차변 계정명 (공급가액) */
   public String getMaintenanceDebitAccount()        { return nested("maintenanceMapping", "debit");        }
   /** 정비 부가세 차변 계정명 */
