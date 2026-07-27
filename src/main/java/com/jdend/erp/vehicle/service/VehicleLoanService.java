@@ -354,37 +354,29 @@ public class VehicleLoanService {
             String loanCreditAccount = accountSettings.getLoanCreditAccount();
             if (loanCreditAccount == null) loanCreditAccount = "보통예금";
 
-            // BUG-02 fix: 이자금액이 있으면 차변을 원금(장기차입금) + 이자(이자비용)로 분리
+            // BUG-3 수정: 이자금액이 있으면 차변을 원금(차입금) + 이자(이자비용)로 분리.
+            // loanDebitAccount2(이자비용 계정)가 기타계정관리에 미설정이면 "이자비용"을 기본값으로 사용.
             long interest = (req.interestAmount != null && req.interestAmount > 0) ? req.interestAmount : 0L;
             long principal = req.amount - interest;
 
             String loanDebitAccount2 = accountSettings.getLoanDebit2Account();
+            if (loanDebitAccount2 == null) loanDebitAccount2 = "이자비용"; // 기본값: 이자비용 계정
 
             List<VoucherCreateRequest.VoucherLineRequest> debitEntries;
             if (interest > 0 && principal > 0) {
-                if (loanDebitAccount2 == null) {
-                    log.warn("이자비용 계정 미설정으로 이자 분개를 건너뜁니다. 기타계정관리 > 차입금상환 이자 계정(차변 두 번째)을 설정하세요.");
-                    debitEntries = List.of(
-                            VoucherCreateRequest.VoucherLineRequest.builder()
-                                    .account(loanDebitAccount)
-                                    .amount(req.amount)
-                                    .description("차입금 상환")
-                                    .build()
-                    );
-                } else {
-                    debitEntries = List.of(
-                            VoucherCreateRequest.VoucherLineRequest.builder()
-                                    .account(loanDebitAccount)
-                                    .amount(principal)
-                                    .description("차입금 원금 상환")
-                                    .build(),
-                            VoucherCreateRequest.VoucherLineRequest.builder()
-                                    .account(loanDebitAccount2)
-                                    .amount(interest)
-                                    .description("차입금 이자")
-                                    .build()
-                    );
-                }
+                // BUG-3 수정: 원금 → 차입금 계정, 이자 → 이자비용 계정으로 별도 분개
+                debitEntries = List.of(
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account(loanDebitAccount)
+                                .amount(principal)
+                                .description("차입금 원금 상환")
+                                .build(),
+                        VoucherCreateRequest.VoucherLineRequest.builder()
+                                .account(loanDebitAccount2)
+                                .amount(interest)
+                                .description("차입금 이자")
+                                .build()
+                );
             } else {
                 debitEntries = List.of(
                         VoucherCreateRequest.VoucherLineRequest.builder()

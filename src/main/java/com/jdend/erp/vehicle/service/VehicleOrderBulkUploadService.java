@@ -69,6 +69,9 @@ public class VehicleOrderBulkUploadService {
 
   private VehicleOrderRequest toRequest(Map<String, String> row) {
     return VehicleOrderRequest.builder()
+        // BUG-1 수정: 엑셀 업로드는 이미 실물이 존재하는 차량이므로 상태를 "등록완료"로 고정.
+        // VehicleOrderService.create() 에서 req.orderStatus 를 존중하도록 함께 수정됨.
+        .orderStatus("등록완료")
         .carModel(str(row, "차종"))
         .vehiclePrice(longVal(row, "차량가격"))
         .optionPrice(longVal(row, "옵션가격"))

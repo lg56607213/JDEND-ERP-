@@ -11,6 +11,24 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
 
     Optional<VehicleOrder> findByVehicleMgmtNo(String vehicleMgmtNo);
 
+    /**
+     * BUG-2 수정: 발주(N대) 시 동일 vehicleMgmtNo(…000) 공유로 findByVehicleMgmtNo가
+     * "Query did not return a unique result" 예외를 던지는 문제 해결용.
+     * id ASC 정렬로 가장 먼저 등록된 미실행 행을 반환한다.
+     */
+    Optional<VehicleOrder> findFirstByVehicleMgmtNoOrderByIdAsc(String vehicleMgmtNo);
+
+    /**
+     * BUG-2 수정: 순차 차량관리번호 채번용.
+     * 순수 숫자로만 이루어진 vehicleMgmtNo 중 최대값(정수 변환 기준)을 반환한다.
+     * 값이 없으면 0 반환.
+     */
+    @Query(nativeQuery = true,
+           value = "SELECT COALESCE(MAX(CAST(vehicle_mgmt_no AS UNSIGNED)), 0) " +
+                   "FROM vehicle_orders " +
+                   "WHERE vehicle_mgmt_no REGEXP '^[0-9]+$'")
+    int findMaxSequentialMgmtNo();
+
     Optional<VehicleOrder> findTopByOrderByVehicleMgmtNoDesc();
 
     boolean existsByVehicleMgmtNo(String vehicleMgmtNo);

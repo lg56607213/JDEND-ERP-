@@ -114,7 +114,9 @@ public class VehicleOrderService {
             VehicleOrder o = VehicleOrder.builder()
                     .vehicleMgmtNo(mgmtNo)
                     .orderNo(orderNo)
-                    .orderStatus("발주전")
+                    // BUG-1 수정: 요청에 orderStatus 가 있으면 그대로 사용, 없으면 "발주전" 기본값
+                    .orderStatus(req.orderStatus != null && !req.orderStatus.isBlank()
+                            ? req.orderStatus : "발주전")
                     .makerContractNo(pickMakerContractNo(req, unit))
                     .carModel(req.carModel)
                     .optionName(emptyToNull(req.optionName))
@@ -138,6 +140,15 @@ public class VehicleOrderService {
                     .build();
 
             VehicleOrder saved = orderRepo.save(o);
+
+            // BUG-1+BUG-2 수정: 엑셀 업로드 등 "등록완료" 상태로 직접 생성 시
+            // 발주 단계 임시번호(…000)를 즉시 순차 차량관리번호로 확정한다.
+            if ("등록완료".equals(saved.getOrderStatus())
+                    && saved.getVehicleMgmtNo() != null
+                    && saved.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
+                confirmVehicleMgmtNo(saved);
+                orderRepo.save(saved);
+            }
 
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(saved)
@@ -163,8 +174,9 @@ public class VehicleOrderService {
 
     @Transactional(readOnly = true)
     public VehicleOrderResponse detail(String mgmtNo) {
-        // 주의: 발주(미실행) …000은 공유값이라 여러 행이면 NonUnique. 실행 후 유니크 번호에만 안전.
-        VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
+        // BUG-2 수정: 발주(N대) 시 동일 …000 공유값으로 findByVehicleMgmtNo 가
+        // "Query did not return a unique result" 예외를 던지므로 findFirst 로 변경.
+        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
         return buildDetailResponse(o);
     }
@@ -202,8 +214,9 @@ public class VehicleOrderService {
     // req에 들어온 값만 수정하고, 안 들어온 값은 기존 DB 값을 그대로 유지함.
     @Transactional
     public VehicleOrderResponse update(String mgmtNo, VehicleOrderRequest req) {
-        // 주의: 발주(미실행) …000 공유값에는 부적합(NonUnique). 실행 후 유니크 번호에만 사용.
-        VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
+        // BUG-2 수정: 발주(N대) …000 공유값에서 NonUnique 예외 방지 → findFirst 사용.
+        // 실행 후 유니크 번호에서는 findFirst = findBy 와 동일 동작.
+        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
         return applyUpdate(o, req);
     }
@@ -466,7 +479,9 @@ public class VehicleOrderService {
 
     @Transactional
     public void registerVehicle(String mgmtNo, VehicleRegisterRequest req, MultipartFile file) {
-        VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
+        // BUG-2 수정: N대 발주 시 동일 …000 공유값으로 findByVehicleMgmtNo 가
+        // "Query did not return a unique result" 예외를 던지므로 findFirst 로 변경.
+        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
 
         if (!"출고완료".equals(o.getOrderStatus())) {
@@ -476,14 +491,18 @@ public class VehicleOrderService {
         if (req.getVehicleNo() == null || req.getVehicleNo().isBlank()) {
             throw new RuntimeException("차량번호(vehicleNo)는 필수");
         }
-        if (req.getRegisterDate() == null) {
-            throw new RuntimeException("등록일자(registerDate)은 필수");
+        // BUG-07 수정: firstRegDate(최초등록일) 필수 — registerDate 는 optional(시스템 등록일)
+        if (req.getFirstRegDate() == null) {
+            throw new RuntimeException("최초등록일(firstRegDate)은 필수");
         }
 
         String oldStatus = o.getOrderStatus();
 
         o.setVehicleNo(req.getVehicleNo());
-        o.setRegisterDate(req.getRegisterDate());
+        // BUG-07: firstRegDate(자동차등록증 상 최초등록일)를 엔티티에 저장
+        o.setFirstRegDate(req.getFirstRegDate());
+        // registerDate 는 시스템 등록완료일 — 미제공 시 오늘
+        o.setRegisterDate(req.getRegisterDate() != null ? req.getRegisterDate() : LocalDate.now());
 
         if (file != null && !file.isEmpty()) {
             String savedPath = saveFile(mgmtNo, file);
@@ -492,6 +511,13 @@ public class VehicleOrderService {
         }
 
         o.setOrderStatus("등록완료");
+
+        // BUG-2 수정: 발주 임시번호(…000) 상태라면 순차 차량관리번호로 확정
+        if (o.getVehicleMgmtNo() != null
+                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
+            confirmVehicleMgmtNo(o);
+        }
+
         orderRepo.save(o);
 
         if (!Objects.equals(oldStatus, "등록완료")) {
@@ -515,15 +541,18 @@ public class VehicleOrderService {
         if (req.getVehicleNo() == null || req.getVehicleNo().isBlank()) {
             throw new RuntimeException("차량번호(vehicleNo)는 필수");
         }
-        if (req.getRegisterDate() == null) {
-            throw new RuntimeException("등록일자(registerDate)은 필수");
+        // BUG-07 수정: firstRegDate(최초등록일) 필수 체크
+        if (req.getFirstRegDate() == null) {
+            throw new RuntimeException("최초등록일(firstRegDate)은 필수");
         }
 
         String oldStatus = o.getOrderStatus();
         String oldMgmtNo = o.getVehicleMgmtNo();
 
         o.setVehicleNo(req.getVehicleNo());
-        o.setRegisterDate(req.getRegisterDate());
+        // BUG-07: firstRegDate(자동차등록증 상 최초등록일) 저장
+        o.setFirstRegDate(req.getFirstRegDate());
+        o.setRegisterDate(req.getRegisterDate() != null ? req.getRegisterDate() : LocalDate.now());
         if (req.getInspectionStart() != null) o.setInspectionStart(req.getInspectionStart());
         if (req.getInspectionEnd() != null)   o.setInspectionEnd(req.getInspectionEnd());
         if (req.getModelYear() != null)        o.setModelYear(req.getModelYear());
@@ -564,16 +593,10 @@ public class VehicleOrderService {
     }
 
     private void confirmVehicleMgmtNo(VehicleOrder o) {
-        String orderNo = o.getVehicleMgmtNo().substring(0, 10); // 발주번호 10자리
-        // 같은 발주 내 이미 확정된(실번호, 000이 아닌) 대 수 = 다음 대순번 계산
-        long confirmedCount = orderRepo.findByOrderNoOrderByVehicleMgmtNoAsc(orderNo)
-                .stream()
-                .filter(v -> !v.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)
-                        && !v.getId().equals(o.getId()))
-                .count();
-        int unitSeq = (int) confirmedCount + 1; // 1-based
-        String realMgmtNo = VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq);
-        o.setVehicleMgmtNo(realMgmtNo);
+        // BUG-2 수정: J260721003000 형식 제거 → 회사 DB 내 전체 순차 번호(001, 002, …) 방식으로 대체.
+        // VehicleNumberGenerator.nextSequentialMgmtNo() 는 synchronized 로 단일 인스턴스 내 중복 방지.
+        int seq = numberGenerator.nextSequentialMgmtNo();
+        o.setVehicleMgmtNo(String.format("%03d", seq));
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {

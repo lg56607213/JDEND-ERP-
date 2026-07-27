@@ -42,6 +42,12 @@ public class VehicleNumberGenerator {
     private final Map<String, Integer> lastSeqByPrefix = new HashMap<>();
 
     /**
+     * BUG-2 수정: 순차 차량관리번호(회사 DB 내 전체 순번) 마지막 발급값.
+     * DB 커밋 전 중복 방지용 인메모리 캐시.
+     */
+    private volatile int lastMgmtNoSeq = 0;
+
+    /**
      * 해당 날짜의 다음 발주번호(10자리)를 채번한다. 같은 날짜의 마지막 발주순번 + 1.
      */
     public synchronized String nextOrderNo(LocalDate date) {
@@ -99,6 +105,18 @@ public class VehicleNumberGenerator {
             throw new IllegalArgumentException("대순번은 1~99만 가능합니다: " + unitSeq);
         }
         return orderNo + rerentRound + String.format("%02d", unitSeq);
+    }
+
+    /**
+     * BUG-2 수정: 회사 DB 내 전체 순번(순수 숫자 vehicleMgmtNo) 기준으로
+     * 다음 차량관리번호 순번을 채번한다.
+     * 결과 형식: 001, 002, ..., 099, 100, 101 (3자리 이상, 패딩은 호출 측에서 처리).
+     */
+    public synchronized int nextSequentialMgmtNo() {
+        int dbMax = orderRepo.findMaxSequentialMgmtNo();
+        int next = Math.max(dbMax, lastMgmtNoSeq) + 1;
+        lastMgmtNoSeq = next;
+        return next;
     }
 
     private int parseOrderSeq(String orderNo) {

@@ -39,8 +39,9 @@ public class VehicleAdvanceService {
 
   @Transactional(readOnly = true)
   public List<VehicleAdvanceRowDto> list(String mgmtNo) {
-    // 주의: 발주(미실행) …000 공유값에는 부적합(NonUnique). pre-실행은 listById(id) 사용.
-    VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
+    // BUG-2 수정: N대 발주 시 동일 …000 공유값으로 NonUnique 예외 방지 → findFirst 사용.
+    // 정확한 대별 조회는 listById(id) 사용 권장.
+    VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
       .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
     return listFor(o);
   }
@@ -71,8 +72,9 @@ public class VehicleAdvanceService {
 
   @Transactional
   public int saveAll(String mgmtNo, VehicleAdvanceSaveRequest req) {
-    // 주의: 발주(미실행) …000 공유값에는 부적합(NonUnique). pre-실행은 saveAllById(id) 사용.
-    VehicleOrder o = orderRepo.findByVehicleMgmtNo(mgmtNo)
+    // BUG-2 수정: N대 발주 시 동일 …000 공유값으로 NonUnique 예외 방지 → findFirst 사용.
+    // 정확한 대별 저장은 saveAllById(id) 사용 권장.
+    VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
       .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
     return saveAllFor(o, req);
   }
@@ -254,13 +256,10 @@ public class VehicleAdvanceService {
     if (paymentMethod == null || paymentMethod.isBlank()) {
       throw new RuntimeException("지급방법이 결정되지 않은건이 있습니다.");
     }
-    // BUG-10차-02: 하드코딩된 계정명("보통예금" 등)이 재무상태표 보통예금 음수 유발.
-    // 기타계정관리 vehicleMapping.credit 설정값을 우선 사용한다.
-    // 설정이 없을 경우에만 지급방법별 기본값으로 fallback.
-    String creditFromSettings = accountSettings.getVehicleCreditAccount();
-    if (creditFromSettings != null) {
-      return creditFromSettings;
-    }
+    // BUG-4 수정: vehicleMapping.credit(차량 실행 대변 계정)을 선급 대변에 재사용하던 로직 제거.
+    // vehicleMapping.credit 이 "차량운반구"처럼 차변 자산 계정으로 설정된 경우
+    // 선급 전표의 차변·대변이 동일 계정이 되는 오류가 발생했음.
+    // 선급(advance) 대변은 반드시 사용자가 선택한 지급방법(paymentMethod) 기준으로만 결정한다.
     return switch (paymentMethod) {
       case "미지급금" -> "미지급금";
       case "법인카드" -> "미지급비용";
