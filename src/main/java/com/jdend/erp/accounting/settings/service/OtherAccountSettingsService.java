@@ -135,6 +135,13 @@ public class OtherAccountSettingsService {
   /** 보증금/선수금 수납 시 차변 계정명 (보통예금 - 현금성) */
   public String getDepositCreditAccount()    { return nested("depositMapping",    "credit"); }
 
+  /** 선수금 계정명 — 선수금 입금 시 대변, 적용 시 차변 (기본값: 선수금) */
+  public String getPrepaidDebitAccount()     { return nested("prepaidMapping",    "debit");  }
+  /** 선수금 적용 시 대변 계정명 (기본값: 임대수익) */
+  public String getPrepaidCreditAccount()    { return nested("prepaidMapping",    "credit"); }
+  /** 선수금 입금 시 차변 계정명 (기본값: 보통예금) */
+  public String getPrepaidBankAccount()      { return nested("prepaidMapping",    "bank");   }
+
   /** 정비 차변 계정명 (공급가액) */
   public String getMaintenanceDebitAccount()        { return nested("maintenanceMapping", "debit");        }
   /** 정비 부가세 차변 계정명 */

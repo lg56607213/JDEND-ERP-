@@ -157,4 +157,22 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
       @Param("startDate") LocalDate startDate,
       @Param("endDate") LocalDate endDate
   );
+
+  // ✅ 선수금 관리: 지정 ID 목록 중 필터 조건에 맞는 계약 조회 (고객 fetch join)
+  @Query("""
+    select c
+    from Contract c
+    left join fetch c.customer cust
+    where c.id in :ids
+      and (:customerName = '' or lower(cust.customerName) like concat('%', lower(:customerName), '%'))
+      and (:startDate is null or c.endDate >= :startDate)
+      and (:endDate is null or c.startDate <= :endDate)
+    order by c.id desc
+  """)
+  List<Contract> findByIdsWithCustomerAndFilter(
+      @Param("ids") List<Long> ids,
+      @Param("customerName") String customerName,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate
+  );
 }

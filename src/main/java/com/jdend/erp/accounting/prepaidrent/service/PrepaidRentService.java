@@ -1,0 +1,274 @@
+package com.jdend.erp.accounting.prepaidrent.service;
+
+import com.jdend.erp.accounting.prepaidrent.dto.PrepaidRentCreateRequest;
+import com.jdend.erp.accounting.prepaidrent.dto.PrepaidRentHistoryResponse;
+import com.jdend.erp.accounting.prepaidrent.dto.PrepaidRentListItemResponse;
+import com.jdend.erp.accounting.prepaidrent.entity.PrepaidRent;
+import com.jdend.erp.accounting.prepaidrent.repository.PrepaidRentRepository;
+import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
+import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
+import com.jdend.erp.accounting.voucher.service.VoucherService;
+import com.jdend.erp.contract.entity.Contract;
+import com.jdend.erp.contract.repository.ContractRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class PrepaidRentService {
+
+    private final PrepaidRentRepository prepaidRepo;
+    private final ContractRepository contractRepo;
+    private final VoucherService voucherService;
+    private final OtherAccountSettingsService settingsService;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 목록 조회
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<PrepaidRentListItemResponse> list(LocalDate startDate, LocalDate endDate, String customerName) {
+        // 1. 선수금 거래가 있는 계약 ID 조회
+        List<Long> contractIds = prepaidRepo.findDistinctContractIds();
+        if (contractIds.isEmpty()) return Collections.emptyList();
+
+        // 2. 계약 정보 조회 (고객명·기간 필터 포함)
+        String custNameParam = (customerName == null) ? "" : customerName.trim();
+        List<Contract> contracts = contractRepo.findByIdsWithCustomerAndFilter(
+                contractIds, custNameParam, startDate, endDate);
+        if (contracts.isEmpty()) return Collections.emptyList();
+
+        // 3. 필터된 계약 ID로 집계 쿼리 실행
+        List<Long> filteredIds = contracts.stream().map(Contract::getId).toList();
+
+        // [contractId|transactionType → sum]
+        Map<String, Long> sumMap = new HashMap<>();
+        for (Object[] row : prepaidRepo.sumByContractIds(filteredIds)) {
+            Long cid = toLong(row[0]);
+            String tt = (String) row[1];
+            sumMap.put(cid + "|" + tt, toLong(row[2]));
+        }
+
+        // [contractId → 최근입금일]
+        Map<Long, LocalDate> lastDepositMap = new HashMap<>();
+        for (Object[] row : prepaidRepo.lastDepositDateByContractIds(filteredIds)) {
+            lastDepositMap.put(toLong(row[0]), (LocalDate) row[1]);
+        }
+
+        // 4. 응답 생성
+        List<PrepaidRentListItemResponse> result = new ArrayList<>();
+        for (Contract c : contracts) {
+            String custName = c.getCustomer() != null ? c.getCustomer().getCustomerName() : "";
+            long deposited = Optional.ofNullable(sumMap.get(c.getId() + "|입금")).orElse(0L);
+            long applied   = Optional.ofNullable(sumMap.get(c.getId() + "|적용")).orElse(0L);
+
+            result.add(PrepaidRentListItemResponse.builder()
+                    .contractId(c.getId())
+                    .contractNumber(c.getContractNumber())
+                    .customerName(custName)
+                    .vehicleNo(c.getVehicleNo())
+                    .monthlyRent(c.getMonthlyRent())
+                    .balance(deposited - applied)
+                    .lastDepositDate(lastDepositMap.get(c.getId()))
+                    .build());
+        }
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 거래 이력 조회
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<PrepaidRentHistoryResponse> history(Long contractId) {
+        List<PrepaidRent> txList =
+                prepaidRepo.findByContractIdOrderByTransactionDateAscIdAsc(contractId);
+
+        List<PrepaidRentHistoryResponse> result = new ArrayList<>();
+        long cumulative = 0L;
+
+        for (PrepaidRent p : txList) {
+            if ("입금".equals(p.getTransactionType())) {
+                cumulative += p.getAmount();
+            } else {
+                cumulative -= p.getAmount();
+            }
+            result.add(PrepaidRentHistoryResponse.builder()
+                    .id(p.getId())
+                    .transactionDate(p.getTransactionDate())
+                    .transactionType(p.getTransactionType())
+                    .amount(p.getAmount())
+                    .cumulativeBalance(cumulative)
+                    .memo(p.getMemo())
+                    .voucherCreated(p.getVoucherCreated())
+                    .build());
+        }
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 선수금 입금 등록
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void deposit(PrepaidRentCreateRequest req) {
+        validateRequest(req);
+
+        PrepaidRent p = PrepaidRent.builder()
+                .contractId(req.getContractId())
+                .transactionType("입금")
+                .amount(req.getAmount())
+                .transactionDate(req.getTransactionDate())
+                .memo(req.getMemo())
+                .voucherCreated(Boolean.TRUE.equals(req.getCreateVoucher()))
+                .build();
+        prepaidRepo.save(p);
+
+        if (Boolean.TRUE.equals(req.getCreateVoucher())) {
+            createDepositVoucher(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 선수금 적용(지급처리) 등록
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void apply(PrepaidRentCreateRequest req) {
+        validateRequest(req);
+
+        // 잔액 초과 적용 방지
+        List<Long> ids = List.of(req.getContractId());
+        Map<String, Long> sumMap = new HashMap<>();
+        for (Object[] row : prepaidRepo.sumByContractIds(ids)) {
+            sumMap.put(toLong(row[0]) + "|" + row[1], toLong(row[2]));
+        }
+        long deposited = Optional.ofNullable(sumMap.get(req.getContractId() + "|입금")).orElse(0L);
+        long applied   = Optional.ofNullable(sumMap.get(req.getContractId() + "|적용")).orElse(0L);
+        long balance   = deposited - applied;
+
+        if (req.getAmount() > balance) {
+            throw new IllegalArgumentException(
+                    "적용 금액(" + fmt(req.getAmount()) + "원)이 선수금 잔액(" + fmt(balance) + "원)을 초과합니다.");
+        }
+
+        PrepaidRent p = PrepaidRent.builder()
+                .contractId(req.getContractId())
+                .transactionType("적용")
+                .amount(req.getAmount())
+                .transactionDate(req.getTransactionDate())
+                .memo(req.getMemo())
+                .voucherCreated(Boolean.TRUE.equals(req.getCreateVoucher()))
+                .build();
+        prepaidRepo.save(p);
+
+        if (Boolean.TRUE.equals(req.getCreateVoucher())) {
+            createApplyVoucher(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 전표 생성 헬퍼
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * 선수금 입금 전표
+     *   차변: 보통예금  (getPrepaidBankAccount)
+     *   대변: 선수금    (getPrepaidDebitAccount)
+     */
+    private void createDepositVoucher(PrepaidRentCreateRequest req) {
+        String bankAcct    = nvl(settingsService.getPrepaidBankAccount(),  "보통예금");
+        String prepaidAcct = nvl(settingsService.getPrepaidDebitAccount(), "선수금");
+
+        Contract contract = findContract(req.getContractId());
+        String memoText = "선수금 입금" + appendMemo(req.getMemo());
+
+        voucherService.create(VoucherCreateRequest.builder()
+                .voucherDate(req.getTransactionDate())
+                .contractNumber(contract.getContractNumber())
+                .vehicleNo(contract.getVehicleNo())
+                .memo(memoText)
+                .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(bankAcct)
+                        .amount(req.getAmount())
+                        .description(memoText)
+                        .build()))
+                .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(prepaidAcct)
+                        .amount(req.getAmount())
+                        .description(memoText)
+                        .build()))
+                .build());
+    }
+
+    /**
+     * 선수금 적용 전표
+     *   차변: 선수금    (getPrepaidDebitAccount)
+     *   대변: 임대수익  (getPrepaidCreditAccount)
+     */
+    private void createApplyVoucher(PrepaidRentCreateRequest req) {
+        String prepaidAcct = nvl(settingsService.getPrepaidDebitAccount(),  "선수금");
+        String revenueAcct = nvl(settingsService.getPrepaidCreditAccount(), "임대수익");
+
+        Contract contract = findContract(req.getContractId());
+        String memoText = "선수금 적용" + appendMemo(req.getMemo());
+
+        voucherService.create(VoucherCreateRequest.builder()
+                .voucherDate(req.getTransactionDate())
+                .contractNumber(contract.getContractNumber())
+                .vehicleNo(contract.getVehicleNo())
+                .memo(memoText)
+                .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(prepaidAcct)
+                        .amount(req.getAmount())
+                        .description(memoText)
+                        .build()))
+                .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(revenueAcct)
+                        .amount(req.getAmount())
+                        .description(memoText)
+                        .build()))
+                .build());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 내부 유틸
+    // ─────────────────────────────────────────────────────────────────────
+
+    private void validateRequest(PrepaidRentCreateRequest req) {
+        if (req.getContractId() == null)
+            throw new IllegalArgumentException("계약 ID는 필수입니다.");
+        if (req.getAmount() == null || req.getAmount() <= 0)
+            throw new IllegalArgumentException("금액은 0보다 커야 합니다.");
+        if (req.getTransactionDate() == null)
+            throw new IllegalArgumentException("거래일자는 필수입니다.");
+    }
+
+    private Contract findContract(Long contractId) {
+        return contractRepo.findById(contractId)
+                .orElseThrow(() -> new IllegalArgumentException("계약을 찾을 수 없습니다: " + contractId));
+    }
+
+    private Long toLong(Object o) {
+        if (o == null) return 0L;
+        if (o instanceof Long l) return l;
+        if (o instanceof Number n) return n.longValue();
+        return 0L;
+    }
+
+    private String nvl(String value, String defaultValue) {
+        return (value != null && !value.isBlank()) ? value : defaultValue;
+    }
+
+    private String appendMemo(String memo) {
+        return (memo != null && !memo.isBlank()) ? " - " + memo : "";
+    }
+
+    private String fmt(long amount) {
+        return String.format("%,d", amount);
+    }
+}

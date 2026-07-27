@@ -9,7 +9,20 @@
   <style>
     .content-wrapper { margin-left: 220px; padding: 32px; }
     h1 { font-size: 1.4rem; font-weight: 700; color: #1b253a; margin-bottom: 4px; }
-    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 24px; }
+    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 20px; }
+
+    /* 탭 */
+    .tab-nav { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
+    .tab-btn {
+      padding: 10px 28px; border: none; background: none; cursor: pointer;
+      font-size: 0.95rem; font-weight: 700; color: #6b7280;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn.active { color: #23304e; border-bottom-color: #23304e; }
+    .tab-btn:hover:not(.active) { color: #374151; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     /* 검색 */
     .search-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 18px 24px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
@@ -22,14 +35,16 @@
 
     /* 버튼 */
     .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
-    .btn-search  { background: #23304e; color: #fff; }
+    .btn-search   { background: #23304e; color: #fff; }
     .btn-search:hover  { background: #1b253a; }
-    .btn-collect { background: #2563eb; color: #fff; }
+    .btn-collect  { background: #2563eb; color: #fff; }
     .btn-collect:hover { background: #1d4ed8; }
-    .btn-refund  { background: #dc2626; color: #fff; }
+    .btn-refund   { background: #dc2626; color: #fff; }
     .btn-refund:hover  { background: #b91c1c; }
-    .btn-history { background: #6b7280; color: #fff; }
+    .btn-history  { background: #6b7280; color: #fff; }
     .btn-history:hover { background: #4b5563; }
+    .btn-apply    { background: #059669; color: #fff; }
+    .btn-apply:hover   { background: #047857; }
     .btn-sm { padding: 5px 11px; font-size: 0.82rem; }
     .btn-secondary { background: #e5e7eb; color: #374151; }
     .btn-secondary:hover { background: #d1d5db; }
@@ -41,7 +56,7 @@
     .list-info strong { color: #1b253a; }
 
     /* 테이블 */
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table { width: 100%; border-collapse: collapse; min-width: 860px; }
     thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
     th { padding: 10px 10px; font-size: 0.82rem; font-weight: 700; color: #374151; background: #f8fafc; text-align: center; white-space: nowrap; }
     td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; color: #374151; white-space: nowrap; }
@@ -54,8 +69,8 @@
     .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
     .badge-deposit  { background: #ede9fe; color: #5b21b6; }
     .badge-advance  { background: #fef3c7; color: #92400e; }
-    .balance-pos { color: #059669; font-weight: 700; }
-    .balance-zero { color: #9ca3af; }
+    .balance-pos    { color: #059669; font-weight: 700; }
+    .balance-zero   { color: #9ca3af; }
 
     /* 모달 공통 */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 2000; align-items: center; justify-content: center; }
@@ -84,6 +99,10 @@
     .err-msg { background: #fef2f2; color: #b91c1c; border-radius: 6px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
     .err-msg.show { display: block; }
 
+    /* 선수금 잔액 강조 */
+    .prepaid-balance-pos  { color: #059669; font-weight: 700; }
+    .prepaid-balance-warn { color: #d97706; font-weight: 700; }
+
     @media(max-width:768px){
       .content-wrapper { margin-left: 0; padding: 16px; }
     }
@@ -93,69 +112,129 @@
 <div id="sidebar-container"></div>
 <div class="content-wrapper">
   <h1>보증금/선수금관리</h1>
-  <p class="page-sub">회계관리 &gt; 보증금/선수금관리 — 계약별 보증금·선수금 수납·반환 현황 및 거래 이력</p>
+  <p class="page-sub">회계관리 &gt; 보증금/선수금관리 — 계약별 보증금·선납금 수납/반환 현황 및 선수금 입금/적용 관리</p>
 
-  <!-- 검색 영역 -->
-  <div class="search-card">
-    <div class="fg">
-      <label>기간 (계약기간 기준)</label>
-      <div class="date-row">
-        <input type="date" id="startDate" placeholder="시작일">
-        <span class="date-sep">~</span>
-        <input type="date" id="endDate" placeholder="종료일">
+  <!-- 탭 네비게이션 -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tabBtn1" onclick="switchTab(1)">보증금/선납금</button>
+    <button class="tab-btn"        id="tabBtn2" onclick="switchTab(2)">선수금 관리</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       탭1: 보증금/선납금
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab1" class="tab-content active">
+    <!-- 검색 -->
+    <div class="search-card">
+      <div class="fg">
+        <label>기간 (계약기간 기준)</label>
+        <div class="date-row">
+          <input type="date" id="t1StartDate">
+          <span class="date-sep">~</span>
+          <input type="date" id="t1EndDate">
+        </div>
       </div>
+      <div class="fg">
+        <label>유형</label>
+        <select id="t1FilterType">
+          <option value="">전체</option>
+          <option value="보증금">보증금</option>
+          <option value="선수금">선납금</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>고객명</label>
+        <input type="text" id="t1FilterCustomer" placeholder="고객명 검색" style="width:150px;">
+      </div>
+      <button class="btn btn-search" onclick="loadTab1()">조회</button>
     </div>
-    <div class="fg">
-      <label>유형</label>
-      <select id="filterType">
-        <option value="">전체</option>
-        <option value="보증금">보증금</option>
-        <option value="선수금">선수금</option>
-      </select>
-    </div>
-    <div class="fg">
-      <label>고객명</label>
-      <input type="text" id="filterCustomer" placeholder="고객명 검색" style="width:150px;">
-    </div>
-    <button class="btn btn-search" onclick="loadList()">조회</button>
-  </div>
 
-  <!-- 목록 -->
-  <div class="list-card">
-    <div class="list-header">
-      <span class="list-info">총 <strong id="totalCount">0</strong>건</span>
+    <!-- 목록 -->
+    <div class="list-card">
+      <div class="list-header">
+        <span class="list-info">총 <strong id="t1TotalCount">0</strong>건</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>계약번호</th>
+            <th>고객명</th>
+            <th>차량번호</th>
+            <th>유형</th>
+            <th>계약보증금</th>
+            <th>수납액</th>
+            <th>지급액</th>
+            <th>잔액</th>
+            <th>계약기간</th>
+            <th>수납</th>
+            <th>지급</th>
+            <th>이력</th>
+          </tr>
+        </thead>
+        <tbody id="t1Tbody">
+          <tr><td colspan="12" class="empty">조회 버튼을 눌러 데이터를 불러오세요.</td></tr>
+        </tbody>
+      </table>
     </div>
-    <table id="mainTable">
-      <thead>
-        <tr>
-          <th>계약번호</th>
-          <th>고객명</th>
-          <th>차량번호</th>
-          <th>유형</th>
-          <th>계약보증금</th>
-          <th>총수납액</th>
-          <th>총지급액</th>
-          <th>보증금잔액</th>
-          <th>계약시작일</th>
-          <th>계약종료일</th>
-          <th>최근거래일</th>
-          <th>이력</th>
-          <th>수납</th>
-          <th>지급</th>
-        </tr>
-      </thead>
-      <tbody id="mainTbody">
-        <tr><td colspan="14" class="empty">조회 버튼을 눌러 데이터를 불러오세요.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+  </div><!-- /tab1 -->
 
-<!-- 거래이력 모달 -->
-<div class="modal-overlay" id="historyModal">
-  <div class="modal" style="width:660px;">
-    <h3 id="historyTitle">거래 이력</h3>
-    <div class="info-box" id="historyInfo"></div>
+  <!-- ═══════════════════════════════════════════════════════════════
+       탭2: 선수금 관리
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab2" class="tab-content">
+    <!-- 검색 -->
+    <div class="search-card">
+      <div class="fg">
+        <label>기간 (계약기간 기준)</label>
+        <div class="date-row">
+          <input type="date" id="t2StartDate">
+          <span class="date-sep">~</span>
+          <input type="date" id="t2EndDate">
+        </div>
+      </div>
+      <div class="fg">
+        <label>고객명</label>
+        <input type="text" id="t2FilterCustomer" placeholder="고객명 검색" style="width:150px;">
+      </div>
+      <button class="btn btn-search" onclick="loadTab2()">조회</button>
+    </div>
+
+    <!-- 목록 -->
+    <div class="list-card">
+      <div class="list-header">
+        <span class="list-info">총 <strong id="t2TotalCount">0</strong>건</span>
+        <span style="font-size:0.82rem;color:#6b7280;">선수금 입금 등록 후 목록에 표시됩니다.</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>계약번호</th>
+            <th>고객명</th>
+            <th>차량번호</th>
+            <th>월렌트료</th>
+            <th>선수금잔액</th>
+            <th>최근입금일</th>
+            <th>입금</th>
+            <th>적용</th>
+            <th>이력</th>
+          </tr>
+        </thead>
+        <tbody id="t2Tbody">
+          <tr><td colspan="9" class="empty">조회 버튼을 눌러 데이터를 불러오세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /tab2 -->
+</div><!-- /content-wrapper -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     탭1 모달 — 이력
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t1HistoryModal">
+  <div class="modal" style="width:680px;">
+    <h3 id="t1HistoryTitle">거래 이력</h3>
+    <div class="info-box" id="t1HistoryInfo"></div>
     <div class="history-wrap">
       <table>
         <thead>
@@ -163,97 +242,210 @@
             <th>거래일자</th><th>유형</th><th>금액</th><th>누적잔액</th><th>메모</th><th>전표</th>
           </tr>
         </thead>
-        <tbody id="historyTbody">
+        <tbody id="t1HistoryTbody">
           <tr><td colspan="6" class="empty">이력 없음</td></tr>
         </tbody>
       </table>
     </div>
     <div class="modal-footer" style="margin-top:18px;">
-      <button class="btn btn-secondary" onclick="closeModal('historyModal')">닫기</button>
+      <button class="btn btn-secondary" onclick="closeModal('t1HistoryModal')">닫기</button>
     </div>
   </div>
 </div>
 
-<!-- 수납 등록 모달 -->
-<div class="modal-overlay" id="collectModal">
+<!-- ═══════════════════════════════════════════════════════════════
+     탭1 모달 — 수납
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t1CollectModal">
   <div class="modal">
-    <h3>보증금/선수금 수납 등록</h3>
-    <div class="err-msg" id="collectErr"></div>
-    <div class="info-box" id="collectInfo"></div>
-    <input type="hidden" id="collectContractId">
-    <input type="hidden" id="collectDepositType">
+    <h3>보증금/선납금 수납 등록</h3>
+    <div class="err-msg" id="t1CollectErr"></div>
+    <div class="info-box" id="t1CollectInfo"></div>
+    <input type="hidden" id="t1CollectContractId">
+    <input type="hidden" id="t1CollectDepositType">
     <div class="mfg">
       <label>거래일자 <span style="color:#dc2626">*</span></label>
-      <input type="date" id="collectDate">
+      <input type="date" id="t1CollectDate">
     </div>
     <div class="mfg">
       <label>금액 <span style="color:#dc2626">*</span></label>
-      <input type="number" id="collectAmount" placeholder="0" min="1">
+      <input type="number" id="t1CollectAmount" placeholder="0" min="1">
     </div>
     <div class="mfg">
       <label>메모</label>
-      <textarea id="collectMemo" placeholder="메모 입력 (선택)"></textarea>
+      <textarea id="t1CollectMemo" placeholder="메모 입력 (선택)"></textarea>
     </div>
     <div class="mfg">
       <label>전표 자동 생성</label>
       <div class="radio-row">
-        <label><input type="radio" name="collectVoucher" value="true"> 예 (전표 생성)</label>
-        <label><input type="radio" name="collectVoucher" value="false" checked> 아니오</label>
+        <label><input type="radio" name="t1CollectVoucher" value="true"> 예 (차변 보통예금 / 대변 임대보증금)</label>
+        <label><input type="radio" name="t1CollectVoucher" value="false" checked> 아니오</label>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('collectModal')">취소</button>
-      <button class="btn btn-collect" onclick="submitCollect()">수납 등록</button>
+      <button class="btn btn-secondary" onclick="closeModal('t1CollectModal')">취소</button>
+      <button class="btn btn-collect" onclick="submitT1Collect()">수납 등록</button>
     </div>
   </div>
 </div>
 
-<!-- 지급 등록 모달 -->
-<div class="modal-overlay" id="refundModal">
+<!-- ═══════════════════════════════════════════════════════════════
+     탭1 모달 — 지급
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t1RefundModal">
   <div class="modal">
-    <h3>보증금/선수금 지급(반환) 등록</h3>
-    <div class="err-msg" id="refundErr"></div>
-    <div class="info-box" id="refundInfo"></div>
-    <input type="hidden" id="refundContractId">
-    <input type="hidden" id="refundDepositType">
+    <h3>보증금/선납금 지급(반환) 등록</h3>
+    <div class="err-msg" id="t1RefundErr"></div>
+    <div class="info-box" id="t1RefundInfo"></div>
+    <input type="hidden" id="t1RefundContractId">
+    <input type="hidden" id="t1RefundDepositType">
     <div class="mfg">
       <label>거래일자 <span style="color:#dc2626">*</span></label>
-      <input type="date" id="refundDate">
+      <input type="date" id="t1RefundDate">
     </div>
     <div class="mfg">
       <label>금액 <span style="color:#dc2626">*</span></label>
-      <input type="number" id="refundAmount" placeholder="0" min="1">
+      <input type="number" id="t1RefundAmount" placeholder="0" min="1">
     </div>
     <div class="mfg">
       <label>메모</label>
-      <textarea id="refundMemo" placeholder="메모 입력 (선택)"></textarea>
+      <textarea id="t1RefundMemo" placeholder="메모 입력 (선택)"></textarea>
     </div>
     <div class="mfg">
       <label>전표 자동 생성</label>
       <div class="radio-row">
-        <label><input type="radio" name="refundVoucher" value="true"> 예 (전표 생성)</label>
-        <label><input type="radio" name="refundVoucher" value="false" checked> 아니오</label>
+        <label><input type="radio" name="t1RefundVoucher" value="true"> 예 (차변 임대보증금 / 대변 보통예금)</label>
+        <label><input type="radio" name="t1RefundVoucher" value="false" checked> 아니오</label>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('refundModal')">취소</button>
-      <button class="btn btn-refund" onclick="submitRefund()">지급 등록</button>
+      <button class="btn btn-secondary" onclick="closeModal('t1RefundModal')">취소</button>
+      <button class="btn btn-refund" onclick="submitT1Refund()">지급 등록</button>
     </div>
   </div>
 </div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     탭2 모달 — 이력
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t2HistoryModal">
+  <div class="modal" style="width:680px;">
+    <h3 id="t2HistoryTitle">선수금 거래 이력</h3>
+    <div class="info-box" id="t2HistoryInfo"></div>
+    <div class="history-wrap">
+      <table>
+        <thead>
+          <tr style="border-top:2px solid #23304e;border-bottom:2px solid #e5e7eb;">
+            <th>거래일자</th><th>유형</th><th>금액</th><th>누적잔액</th><th>메모</th><th>전표</th>
+          </tr>
+        </thead>
+        <tbody id="t2HistoryTbody">
+          <tr><td colspan="6" class="empty">이력 없음</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="margin-top:18px;">
+      <button class="btn btn-secondary" onclick="closeModal('t2HistoryModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     탭2 모달 — 입금
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t2DepositModal">
+  <div class="modal">
+    <h3>선수금 입금 등록</h3>
+    <div class="err-msg" id="t2DepositErr"></div>
+    <div class="info-box" id="t2DepositInfo"></div>
+    <input type="hidden" id="t2DepositContractId">
+    <div class="mfg">
+      <label>거래일자 <span style="color:#dc2626">*</span></label>
+      <input type="date" id="t2DepositDate">
+    </div>
+    <div class="mfg">
+      <label>금액 <span style="color:#dc2626">*</span></label>
+      <input type="number" id="t2DepositAmount" placeholder="0" min="1">
+    </div>
+    <div class="mfg">
+      <label>메모</label>
+      <textarea id="t2DepositMemo" placeholder="메모 입력 (선택)"></textarea>
+    </div>
+    <div class="mfg">
+      <label>전표 자동 생성</label>
+      <div class="radio-row">
+        <label><input type="radio" name="t2DepositVoucher" value="true"> 예 (차변 보통예금 / 대변 선수금)</label>
+        <label><input type="radio" name="t2DepositVoucher" value="false" checked> 아니오</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('t2DepositModal')">취소</button>
+      <button class="btn btn-collect" onclick="submitT2Deposit()">입금 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     탭2 모달 — 적용(지급처리)
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="t2ApplyModal">
+  <div class="modal">
+    <h3>선수금 적용(렌트료 차감)</h3>
+    <div class="err-msg" id="t2ApplyErr"></div>
+    <div class="info-box" id="t2ApplyInfo"></div>
+    <input type="hidden" id="t2ApplyContractId">
+    <input type="hidden" id="t2ApplyBalance">
+    <div class="mfg">
+      <label>거래일자 <span style="color:#dc2626">*</span></label>
+      <input type="date" id="t2ApplyDate">
+    </div>
+    <div class="mfg">
+      <label>금액 <span style="color:#dc2626">*</span>
+        <span style="font-size:0.8rem;font-weight:400;color:#6b7280;">— 기본값: 월렌트료, 잔액 초과 불가</span>
+      </label>
+      <input type="number" id="t2ApplyAmount" placeholder="0" min="1">
+    </div>
+    <div class="mfg">
+      <label>메모</label>
+      <textarea id="t2ApplyMemo" placeholder="메모 입력 (선택)"></textarea>
+    </div>
+    <div class="mfg">
+      <label>전표 자동 생성</label>
+      <div class="radio-row">
+        <label><input type="radio" name="t2ApplyVoucher" value="true"> 예 (차변 선수금 / 대변 임대수익)</label>
+        <label><input type="radio" name="t2ApplyVoucher" value="false" checked> 아니오</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('t2ApplyModal')">취소</button>
+      <button class="btn btn-apply" onclick="submitT2Apply()">적용 등록</button>
+    </div>
+  </div>
+</div>
+
 
 <script src="../../assets/js/sidebar.js"></script>
 <script>
-  const API_BASE_URL = '';
+  // ─────────────────────────────────────────────────────────────
+  // 탭 전환
+  // ─────────────────────────────────────────────────────────────
+  function switchTab(n) {
+    [1, 2].forEach(i => {
+      document.getElementById('tab' + i).classList.toggle('active', i === n);
+      document.getElementById('tabBtn' + i).classList.toggle('active', i === n);
+    });
+  }
 
-  // ─────────────────────────────────────────────────────────────
-  // 목록 조회
-  // ─────────────────────────────────────────────────────────────
-  function loadList() {
-    const startDate   = document.getElementById('startDate').value;
-    const endDate     = document.getElementById('endDate').value;
-    const type        = document.getElementById('filterType').value;
-    const customerName = document.getElementById('filterCustomer').value.trim();
+  // ═══════════════════════════════════════════════════════════════
+  // 탭1: 보증금/선납금
+  // ═══════════════════════════════════════════════════════════════
+
+  function loadTab1() {
+    const startDate    = document.getElementById('t1StartDate').value;
+    const endDate      = document.getElementById('t1EndDate').value;
+    const type         = document.getElementById('t1FilterType').value;
+    const customerName = document.getElementById('t1FilterCustomer').value.trim();
 
     const params = new URLSearchParams();
     if (startDate)    params.set('startDate',    startDate);
@@ -261,219 +453,378 @@
     if (type)         params.set('type',         type);
     if (customerName) params.set('customerName', customerName);
 
-    fetch(`${API_BASE_URL}/api/deposit-transactions?${params}`, { credentials: 'include' })
+    fetch('/api/deposit-transactions?' + params, { credentials: 'include' })
       .then(r => r.json())
-      .then(data => renderList(data))
+      .then(data => renderTab1(data))
       .catch(e => { console.error(e); alert('데이터 조회 중 오류가 발생했습니다.'); });
   }
 
-  function renderList(rows) {
-    const tbody = document.getElementById('mainTbody');
-    document.getElementById('totalCount').textContent = rows.length;
+  function renderTab1(rows) {
+    document.getElementById('t1TotalCount').textContent = rows.length;
+    const tbody = document.getElementById('t1Tbody');
 
     if (!rows || rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="14" class="empty">조회된 데이터가 없습니다.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="empty">조회된 데이터가 없습니다.</td></tr>';
       return;
     }
 
     tbody.innerHTML = rows.map(r => {
       const typeBadge = r.depositType === '보증금'
         ? `<span class="badge badge-deposit">보증금</span>`
-        : `<span class="badge badge-advance">선수금</span>`;
-
+        : `<span class="badge badge-advance">선납금</span>`;
       const balanceCls = r.balance > 0 ? 'balance-pos' : 'balance-zero';
-      const balance    = `<span class="${balanceCls}">${fmt(r.balance)}</span>`;
+      const period = (r.startDate || '') + (r.startDate && r.endDate ? ' ~ ' : '') + (r.endDate || '');
 
-      return `
-        <tr>
-          <td class="center">${esc(r.contractNumber)}</td>
-          <td>${esc(r.customerName)}</td>
-          <td class="center">${esc(r.vehicleNo)}</td>
-          <td class="center">${typeBadge}</td>
-          <td class="amount">${fmt(r.contractDepositAmount)}</td>
-          <td class="amount">${fmt(r.totalCollected)}</td>
-          <td class="amount">${fmt(r.totalRefunded)}</td>
-          <td class="amount">${balance}</td>
-          <td class="center">${r.startDate || ''}</td>
-          <td class="center">${r.endDate || ''}</td>
-          <td class="center">${r.lastTransactionDate || '-'}</td>
-          <td class="center">
-            <button class="btn btn-history btn-sm"
-              onclick="openHistory(${r.contractId}, '${esc(r.depositType)}', '${esc(r.customerName)}', '${esc(r.vehicleNo)}', ${r.balance})">
-              이력
-            </button>
-          </td>
-          <td class="center">
-            <button class="btn btn-collect btn-sm"
-              onclick="openCollect(${r.contractId}, '${esc(r.depositType)}', '${esc(r.customerName)}', '${esc(r.vehicleNo)}', ${r.contractDepositAmount}, ${r.balance})">
-              수납
-            </button>
-          </td>
-          <td class="center">
-            <button class="btn btn-refund btn-sm"
-              onclick="openRefund(${r.contractId}, '${esc(r.depositType)}', '${esc(r.customerName)}', '${esc(r.vehicleNo)}', ${r.contractDepositAmount}, ${r.balance})">
-              지급
-            </button>
-          </td>
-        </tr>`;
+      return `<tr>
+        <td class="center">${esc(r.contractNumber)}</td>
+        <td>${esc(r.customerName)}</td>
+        <td class="center">${esc(r.vehicleNo)}</td>
+        <td class="center">${typeBadge}</td>
+        <td class="amount">${fmt(r.contractDepositAmount)}</td>
+        <td class="amount">${fmt(r.totalCollected)}</td>
+        <td class="amount">${fmt(r.totalRefunded)}</td>
+        <td class="amount"><span class="${balanceCls}">${fmt(r.balance)}</span></td>
+        <td class="center" style="font-size:0.82rem;">${esc(period)}</td>
+        <td class="center">
+          <button class="btn btn-collect btn-sm"
+            onclick="openT1Collect(${r.contractId},'${esc(r.depositType)}','${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.contractDepositAmount},${r.balance})">
+            수납
+          </button>
+        </td>
+        <td class="center">
+          <button class="btn btn-refund btn-sm"
+            onclick="openT1Refund(${r.contractId},'${esc(r.depositType)}','${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.contractDepositAmount},${r.balance})">
+            지급
+          </button>
+        </td>
+        <td class="center">
+          <button class="btn btn-history btn-sm"
+            onclick="openT1History(${r.contractId},'${esc(r.depositType)}','${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.balance})">
+            이력
+          </button>
+        </td>
+      </tr>`;
     }).join('');
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 거래이력 모달
-  // ─────────────────────────────────────────────────────────────
-  function openHistory(contractId, depositType, customerName, vehicleNo, balance) {
-    document.getElementById('historyTitle').textContent =
-      `거래 이력 — ${customerName} / ${vehicleNo} (${depositType})`;
+  // 탭1 이력 모달
+  function openT1History(contractId, depositType, customerName, vehicleNo, balance) {
+    document.getElementById('t1HistoryTitle').textContent =
+      '거래 이력 — ' + customerName + ' / ' + vehicleNo + ' (' + depositType + ')';
+    document.getElementById('t1HistoryInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRowHtml('현재 잔액', `<span class="info-val" style="color:#059669">${fmt(balance)}</span>`);
 
-    document.getElementById('historyInfo').innerHTML =
-      `<div class="info-row"><span class="info-label">고객명</span><span class="info-val">${esc(customerName)}</span></div>
-       <div class="info-row"><span class="info-label">차량번호</span><span class="info-val">${esc(vehicleNo)}</span></div>
-       <div class="info-row"><span class="info-label">현재 잔액</span><span class="info-val" style="color:#059669">${fmt(balance)}원</span></div>`;
-
-    const tbody = document.getElementById('historyTbody');
+    const tbody = document.getElementById('t1HistoryTbody');
     tbody.innerHTML = '<tr><td colspan="6" class="empty" style="padding:24px">불러오는 중...</td></tr>';
-    openModal('historyModal');
+    openModal('t1HistoryModal');
 
-    fetch(`${API_BASE_URL}/api/deposit-transactions/${contractId}/history?depositType=${encodeURIComponent(depositType)}`,
+    fetch('/api/deposit-transactions/' + contractId + '/history?depositType=' + encodeURIComponent(depositType),
           { credentials: 'include' })
       .then(r => r.json())
-      .then(rows => {
-        if (!rows || rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="empty">거래 이력이 없습니다.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = rows.map(h => {
-          const typeCls = h.transactionType === '수납' ? 'color:#2563eb;font-weight:700' : 'color:#dc2626;font-weight:700';
-          const cumCls  = h.cumulativeBalance > 0 ? 'color:#059669;font-weight:700' : 'color:#6b7280';
-          const voucher = h.voucherCreated
-            ? `<span style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:4px;font-size:0.78rem;font-weight:700">생성</span>`
-            : `<span style="background:#f3f4f6;color:#9ca3af;padding:2px 7px;border-radius:4px;font-size:0.78rem;">없음</span>`;
-          return `<tr>
-            <td class="center">${h.transactionDate || ''}</td>
-            <td class="center"><span style="${typeCls}">${esc(h.transactionType)}</span></td>
-            <td class="amount">${fmt(h.amount)}</td>
-            <td class="amount"><span style="${cumCls}">${fmt(h.cumulativeBalance)}</span></td>
-            <td>${esc(h.memo || '')}</td>
-            <td class="center">${voucher}</td>
-          </tr>`;
-        }).join('');
-      })
-      .catch(e => {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty" style="color:#dc2626">이력 조회 실패</td></tr>';
-        console.error(e);
-      });
+      .then(rows => { tbody.innerHTML = renderHistoryRows(rows, 6); })
+      .catch(() => { tbody.innerHTML = '<tr><td colspan="6" class="empty" style="color:#dc2626">이력 조회 실패</td></tr>'; });
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 수납 모달
-  // ─────────────────────────────────────────────────────────────
-  function openCollect(contractId, depositType, customerName, vehicleNo, contractAmt, balance) {
-    document.getElementById('collectContractId').value  = contractId;
-    document.getElementById('collectDepositType').value = depositType;
-    document.getElementById('collectDate').value   = today();
-    document.getElementById('collectAmount').value = '';
-    document.getElementById('collectMemo').value   = '';
-    document.querySelectorAll('input[name="collectVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
-    hideErr('collectErr');
-
-    document.getElementById('collectInfo').innerHTML =
-      `<div class="info-row"><span class="info-label">고객명</span><span class="info-val">${esc(customerName)}</span></div>
-       <div class="info-row"><span class="info-label">차량번호</span><span class="info-val">${esc(vehicleNo)}</span></div>
-       <div class="info-row"><span class="info-label">유형</span><span class="info-val">${esc(depositType)}</span></div>
-       <div class="info-row"><span class="info-label">계약보증금</span><span class="info-val">${fmt(contractAmt)}원</span></div>
-       <div class="info-row"><span class="info-label">현재 잔액</span><span class="info-val" style="color:#059669">${fmt(balance)}원</span></div>`;
-
-    openModal('collectModal');
+  // 탭1 수납 모달
+  function openT1Collect(contractId, depositType, customerName, vehicleNo, contractAmt, balance) {
+    document.getElementById('t1CollectContractId').value  = contractId;
+    document.getElementById('t1CollectDepositType').value = depositType;
+    document.getElementById('t1CollectDate').value        = today();
+    document.getElementById('t1CollectAmount').value      = '';
+    document.getElementById('t1CollectMemo').value        = '';
+    document.querySelectorAll('input[name="t1CollectVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
+    hideErr('t1CollectErr');
+    document.getElementById('t1CollectInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRow('유형', depositType) + infoRow('계약보증금', fmt(contractAmt)) +
+      infoRowHtml('현재 잔액', `<span class="info-val" style="color:#059669">${fmt(balance)}</span>`);
+    openModal('t1CollectModal');
   }
 
-  function submitCollect() {
-    hideErr('collectErr');
-    const contractId  = parseInt(document.getElementById('collectContractId').value);
-    const depositType = document.getElementById('collectDepositType').value;
-    const date        = document.getElementById('collectDate').value;
-    const amount      = parseInt(document.getElementById('collectAmount').value);
-    const memo        = document.getElementById('collectMemo').value.trim();
-    const createVoucher = document.querySelector('input[name="collectVoucher"]:checked').value === 'true';
+  function submitT1Collect() {
+    hideErr('t1CollectErr');
+    const contractId    = parseInt(document.getElementById('t1CollectContractId').value);
+    const depositType   = document.getElementById('t1CollectDepositType').value;
+    const date          = document.getElementById('t1CollectDate').value;
+    const amount        = parseInt(document.getElementById('t1CollectAmount').value);
+    const memo          = document.getElementById('t1CollectMemo').value.trim();
+    const createVoucher = document.querySelector('input[name="t1CollectVoucher"]:checked').value === 'true';
 
-    if (!date)         { showErr('collectErr', '거래일자를 입력하세요.'); return; }
-    if (!amount || amount <= 0) { showErr('collectErr', '금액을 올바르게 입력하세요.'); return; }
+    if (!date)              { showErr('t1CollectErr', '거래일자를 입력하세요.'); return; }
+    if (!amount || amount <= 0) { showErr('t1CollectErr', '금액을 올바르게 입력하세요.'); return; }
 
-    fetch(`${API_BASE_URL}/api/deposit-transactions/collect`, {
+    fetch('/api/deposit-transactions/collect', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
-      if (!ok) { showErr('collectErr', data.message || '수납 등록 실패'); return; }
-      closeModal('collectModal');
+      if (!ok) { showErr('t1CollectErr', data.message || '수납 등록 실패'); return; }
+      closeModal('t1CollectModal');
       alert('수납이 등록되었습니다.');
-      loadList();
+      loadTab1();
     })
-    .catch(e => { showErr('collectErr', '서버 오류가 발생했습니다.'); console.error(e); });
+    .catch(() => showErr('t1CollectErr', '서버 오류가 발생했습니다.'));
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 지급 모달
-  // ─────────────────────────────────────────────────────────────
-  function openRefund(contractId, depositType, customerName, vehicleNo, contractAmt, balance) {
-    document.getElementById('refundContractId').value  = contractId;
-    document.getElementById('refundDepositType').value = depositType;
-    document.getElementById('refundDate').value   = today();
-    document.getElementById('refundAmount').value = '';
-    document.getElementById('refundMemo').value   = '';
-    document.querySelectorAll('input[name="refundVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
-    hideErr('refundErr');
-
-    document.getElementById('refundInfo').innerHTML =
-      `<div class="info-row"><span class="info-label">고객명</span><span class="info-val">${esc(customerName)}</span></div>
-       <div class="info-row"><span class="info-label">차량번호</span><span class="info-val">${esc(vehicleNo)}</span></div>
-       <div class="info-row"><span class="info-label">유형</span><span class="info-val">${esc(depositType)}</span></div>
-       <div class="info-row"><span class="info-label">계약보증금</span><span class="info-val">${fmt(contractAmt)}원</span></div>
-       <div class="info-row"><span class="info-label">현재 잔액 (최대 지급 가능)</span><span class="info-val" style="color:#dc2626">${fmt(balance)}원</span></div>`;
-
-    openModal('refundModal');
+  // 탭1 지급 모달
+  function openT1Refund(contractId, depositType, customerName, vehicleNo, contractAmt, balance) {
+    document.getElementById('t1RefundContractId').value  = contractId;
+    document.getElementById('t1RefundDepositType').value = depositType;
+    document.getElementById('t1RefundDate').value        = today();
+    document.getElementById('t1RefundAmount').value      = '';
+    document.getElementById('t1RefundMemo').value        = '';
+    document.querySelectorAll('input[name="t1RefundVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
+    hideErr('t1RefundErr');
+    document.getElementById('t1RefundInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRow('유형', depositType) + infoRow('계약보증금', fmt(contractAmt)) +
+      infoRowHtml('현재 잔액 (최대 지급 가능)', `<span class="info-val" style="color:#dc2626">${fmt(balance)}</span>`);
+    openModal('t1RefundModal');
   }
 
-  function submitRefund() {
-    hideErr('refundErr');
-    const contractId  = parseInt(document.getElementById('refundContractId').value);
-    const depositType = document.getElementById('refundDepositType').value;
-    const date        = document.getElementById('refundDate').value;
-    const amount      = parseInt(document.getElementById('refundAmount').value);
-    const memo        = document.getElementById('refundMemo').value.trim();
-    const createVoucher = document.querySelector('input[name="refundVoucher"]:checked').value === 'true';
+  function submitT1Refund() {
+    hideErr('t1RefundErr');
+    const contractId    = parseInt(document.getElementById('t1RefundContractId').value);
+    const depositType   = document.getElementById('t1RefundDepositType').value;
+    const date          = document.getElementById('t1RefundDate').value;
+    const amount        = parseInt(document.getElementById('t1RefundAmount').value);
+    const memo          = document.getElementById('t1RefundMemo').value.trim();
+    const createVoucher = document.querySelector('input[name="t1RefundVoucher"]:checked').value === 'true';
 
-    if (!date)         { showErr('refundErr', '거래일자를 입력하세요.'); return; }
-    if (!amount || amount <= 0) { showErr('refundErr', '금액을 올바르게 입력하세요.'); return; }
+    if (!date)              { showErr('t1RefundErr', '거래일자를 입력하세요.'); return; }
+    if (!amount || amount <= 0) { showErr('t1RefundErr', '금액을 올바르게 입력하세요.'); return; }
 
-    fetch(`${API_BASE_URL}/api/deposit-transactions/refund`, {
+    fetch('/api/deposit-transactions/refund', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
-      if (!ok) { showErr('refundErr', data.message || '지급 등록 실패'); return; }
-      closeModal('refundModal');
+      if (!ok) { showErr('t1RefundErr', data.message || '지급 등록 실패'); return; }
+      closeModal('t1RefundModal');
       alert('지급(반환)이 등록되었습니다.');
-      loadList();
+      loadTab1();
     })
-    .catch(e => { showErr('refundErr', '서버 오류가 발생했습니다.'); console.error(e); });
+    .catch(() => showErr('t1RefundErr', '서버 오류가 발생했습니다.'));
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // 유틸
-  // ─────────────────────────────────────────────────────────────
+
+  // ═══════════════════════════════════════════════════════════════
+  // 탭2: 선수금 관리
+  // ═══════════════════════════════════════════════════════════════
+
+  function loadTab2() {
+    const startDate    = document.getElementById('t2StartDate').value;
+    const endDate      = document.getElementById('t2EndDate').value;
+    const customerName = document.getElementById('t2FilterCustomer').value.trim();
+
+    const params = new URLSearchParams();
+    if (startDate)    params.set('startDate',    startDate);
+    if (endDate)      params.set('endDate',      endDate);
+    if (customerName) params.set('customerName', customerName);
+
+    fetch('/api/prepaid-rents?' + params, { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => renderTab2(data))
+      .catch(e => { console.error(e); alert('데이터 조회 중 오류가 발생했습니다.'); });
+  }
+
+  function renderTab2(rows) {
+    document.getElementById('t2TotalCount').textContent = rows.length;
+    const tbody = document.getElementById('t2Tbody');
+
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">선수금 거래가 없습니다. 입금 등록 후 목록에 표시됩니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const balCls  = r.balance > 0 ? 'prepaid-balance-pos' : 'balance-zero';
+      const lastDep = r.lastDepositDate || '-';
+
+      return `<tr>
+        <td class="center">${esc(r.contractNumber)}</td>
+        <td>${esc(r.customerName)}</td>
+        <td class="center">${esc(r.vehicleNo)}</td>
+        <td class="amount">${fmt(r.monthlyRent)}</td>
+        <td class="amount"><span class="${balCls}">${fmt(r.balance)}</span></td>
+        <td class="center">${esc(lastDep)}</td>
+        <td class="center">
+          <button class="btn btn-collect btn-sm"
+            onclick="openT2Deposit(${r.contractId},'${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.balance})">
+            입금
+          </button>
+        </td>
+        <td class="center">
+          <button class="btn btn-apply btn-sm" ${r.balance <= 0 ? 'disabled style="opacity:.45;cursor:not-allowed"' : ''}
+            onclick="openT2Apply(${r.contractId},'${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.balance},${r.monthlyRent || 0})">
+            적용
+          </button>
+        </td>
+        <td class="center">
+          <button class="btn btn-history btn-sm"
+            onclick="openT2History(${r.contractId},'${esc(r.customerName)}','${esc(r.vehicleNo)}',${r.balance})">
+            이력
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 탭2 이력 모달
+  function openT2History(contractId, customerName, vehicleNo, balance) {
+    document.getElementById('t2HistoryTitle').textContent =
+      '선수금 이력 — ' + customerName + ' / ' + vehicleNo;
+    document.getElementById('t2HistoryInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRowHtml('선수금 잔액', `<span class="info-val" style="color:#059669">${fmt(balance)}</span>`);
+
+    const tbody = document.getElementById('t2HistoryTbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="empty" style="padding:24px">불러오는 중...</td></tr>';
+    openModal('t2HistoryModal');
+
+    fetch('/api/prepaid-rents/' + contractId + '/history', { credentials: 'include' })
+      .then(r => r.json())
+      .then(rows => { tbody.innerHTML = renderHistoryRows(rows, 6); })
+      .catch(() => { tbody.innerHTML = '<tr><td colspan="6" class="empty" style="color:#dc2626">이력 조회 실패</td></tr>'; });
+  }
+
+  // 탭2 입금 모달
+  function openT2Deposit(contractId, customerName, vehicleNo, balance) {
+    document.getElementById('t2DepositContractId').value = contractId;
+    document.getElementById('t2DepositDate').value       = today();
+    document.getElementById('t2DepositAmount').value     = '';
+    document.getElementById('t2DepositMemo').value       = '';
+    document.querySelectorAll('input[name="t2DepositVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
+    hideErr('t2DepositErr');
+    document.getElementById('t2DepositInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRowHtml('현재 선수금잔액', `<span class="info-val" style="color:#059669">${fmt(balance)}</span>`);
+    openModal('t2DepositModal');
+  }
+
+  function submitT2Deposit() {
+    hideErr('t2DepositErr');
+    const contractId    = parseInt(document.getElementById('t2DepositContractId').value);
+    const date          = document.getElementById('t2DepositDate').value;
+    const amount        = parseInt(document.getElementById('t2DepositAmount').value);
+    const memo          = document.getElementById('t2DepositMemo').value.trim();
+    const createVoucher = document.querySelector('input[name="t2DepositVoucher"]:checked').value === 'true';
+
+    if (!date)              { showErr('t2DepositErr', '거래일자를 입력하세요.'); return; }
+    if (!amount || amount <= 0) { showErr('t2DepositErr', '금액을 올바르게 입력하세요.'); return; }
+
+    fetch('/api/prepaid-rents/deposit', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractId, amount, transactionDate: date, memo, createVoucher })
+    })
+    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+    .then(({ ok, data }) => {
+      if (!ok) { showErr('t2DepositErr', data.message || '입금 등록 실패'); return; }
+      closeModal('t2DepositModal');
+      alert('선수금 입금이 등록되었습니다.');
+      loadTab2();
+    })
+    .catch(() => showErr('t2DepositErr', '서버 오류가 발생했습니다.'));
+  }
+
+  // 탭2 적용(지급처리) 모달
+  function openT2Apply(contractId, customerName, vehicleNo, balance, monthlyRent) {
+    document.getElementById('t2ApplyContractId').value = contractId;
+    document.getElementById('t2ApplyBalance').value    = balance;
+    document.getElementById('t2ApplyDate').value       = today();
+    document.getElementById('t2ApplyAmount').value     = monthlyRent > 0 ? monthlyRent : '';
+    document.getElementById('t2ApplyMemo').value       = '';
+    document.querySelectorAll('input[name="t2ApplyVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
+    hideErr('t2ApplyErr');
+    document.getElementById('t2ApplyInfo').innerHTML =
+      infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
+      infoRowHtml('선수금 잔액 (최대 적용 가능)', `<span class="info-val" style="color:#059669">${fmt(balance)}</span>`) +
+      infoRow('월렌트료 (기본값)', fmt(monthlyRent));
+    openModal('t2ApplyModal');
+  }
+
+  function submitT2Apply() {
+    hideErr('t2ApplyErr');
+    const contractId    = parseInt(document.getElementById('t2ApplyContractId').value);
+    const balance       = parseInt(document.getElementById('t2ApplyBalance').value) || 0;
+    const date          = document.getElementById('t2ApplyDate').value;
+    const amount        = parseInt(document.getElementById('t2ApplyAmount').value);
+    const memo          = document.getElementById('t2ApplyMemo').value.trim();
+    const createVoucher = document.querySelector('input[name="t2ApplyVoucher"]:checked').value === 'true';
+
+    if (!date)              { showErr('t2ApplyErr', '거래일자를 입력하세요.'); return; }
+    if (!amount || amount <= 0) { showErr('t2ApplyErr', '금액을 올바르게 입력하세요.'); return; }
+    if (amount > balance)   { showErr('t2ApplyErr', `적용 금액(${fmtN(amount)})이 선수금 잔액(${fmtN(balance)})을 초과합니다.`); return; }
+
+    fetch('/api/prepaid-rents/apply', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractId, amount, transactionDate: date, memo, createVoucher })
+    })
+    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+    .then(({ ok, data }) => {
+      if (!ok) { showErr('t2ApplyErr', data.message || '적용 등록 실패'); return; }
+      closeModal('t2ApplyModal');
+      alert('선수금 적용이 등록되었습니다.');
+      loadTab2();
+    })
+    .catch(() => showErr('t2ApplyErr', '서버 오류가 발생했습니다.'));
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════
+  // 공통 유틸
+  // ═══════════════════════════════════════════════════════════════
+
+  function renderHistoryRows(rows, colspan) {
+    if (!rows || rows.length === 0) {
+      return `<tr><td colspan="${colspan}" class="empty">거래 이력이 없습니다.</td></tr>`;
+    }
+    return rows.map(h => {
+      const isDeposit  = h.transactionType === '수납' || h.transactionType === '입금';
+      const typeCls    = isDeposit ? 'color:#2563eb;font-weight:700' : 'color:#dc2626;font-weight:700';
+      const cumCls     = h.cumulativeBalance > 0 ? 'color:#059669;font-weight:700' : 'color:#6b7280';
+      const vBadge     = h.voucherCreated
+        ? `<span style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:4px;font-size:0.78rem;font-weight:700">생성</span>`
+        : `<span style="background:#f3f4f6;color:#9ca3af;padding:2px 7px;border-radius:4px;font-size:0.78rem;">없음</span>`;
+      return `<tr>
+        <td class="center">${h.transactionDate || ''}</td>
+        <td class="center"><span style="${typeCls}">${esc(h.transactionType)}</span></td>
+        <td class="amount">${fmtN(h.amount)}</td>
+        <td class="amount"><span style="${cumCls}">${fmtN(h.cumulativeBalance)}</span></td>
+        <td>${esc(h.memo || '')}</td>
+        <td class="center">${vBadge}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function infoRow(label, value) {
+    return `<div class="info-row"><span class="info-label">${esc(label)}</span><span class="info-val">${esc(String(value ?? ''))}</span></div>`;
+  }
+  function infoRowHtml(label, valueHtml) {
+    return `<div class="info-row"><span class="info-label">${esc(label)}</span>${valueHtml}</div>`;
+  }
+
   function openModal(id)  { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
   function hideErr(id)      { const el = document.getElementById(id); el.textContent = ''; el.classList.remove('show'); }
 
+  /** 금액 → "1,234,000원" 형식 */
   function fmt(v) {
-    if (v == null) return '0';
+    if (v == null) return '0원';
     return Number(v).toLocaleString('ko-KR') + '원';
+  }
+  /** 금액 → "1,234,000" 형식 (단위 없음, 오버플로우 방지) */
+  function fmtN(v) {
+    if (v == null) return '0';
+    return Number(v).toLocaleString('ko-KR');
   }
 
   function esc(s) {
@@ -494,8 +845,8 @@
     });
   });
 
-  // 초기 전체 조회
-  document.addEventListener('DOMContentLoaded', loadList);
+  // 초기 탭1 조회
+  document.addEventListener('DOMContentLoaded', loadTab1);
 </script>
 </body>
 </html>
