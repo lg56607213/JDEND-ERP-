@@ -78,6 +78,29 @@
           </div>
         </div>
 
+        <!-- N대 발주 시 실행할 차량 선택 -->
+        <div class="form-section" id="unitSelectSection" style="display: none;">
+          <h3 class="section-title">실행할 차량 선택</h3>
+          <p style="font-size:13px;color:#64748b;margin:0 0 12px;">
+            같은 발주로 등록된 차량이 여러 대입니다. 실행할 차량을 선택하세요.
+            선택한 차량부터 차량관리번호가 <b>…001</b> 순서로 확정됩니다.
+          </p>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:620px;">
+              <thead>
+                <tr style="background:#0f172a;color:#fff;">
+                  <th style="padding:10px 12px;text-align:center;width:70px;">선택</th>
+                  <th style="padding:10px 12px;text-align:left;">차량번호</th>
+                  <th style="padding:10px 12px;text-align:left;">차종</th>
+                  <th style="padding:10px 12px;text-align:left;">제조사계약번호</th>
+                  <th style="padding:10px 12px;text-align:center;">상태</th>
+                </tr>
+              </thead>
+              <tbody id="unitSelectBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- 안내 문구 -->
         <div class="form-section" id="executeInfoSection" style="display: none;">
           <h3 class="section-title">실행 안내</h3>
@@ -221,20 +244,82 @@
       document.getElementById('vehicleMgmtNo').value = vehicleMgmtNo;
 
       try {
-        const res = await fetch(`/api/vehicle-orders/${encodeURIComponent(vehicleMgmtNo)}`);
+        // 발주단계 번호(…000)는 N대가 공유하므로 목록으로 받는다.
+        const res = await fetch(`/api/vehicle-orders/executable/${encodeURIComponent(vehicleMgmtNo)}`);
         if (!res.ok) {
           hideAllSections();
           alert('해당 차량관리번호를 찾을 수 없습니다.');
           return;
         }
 
-        const vehicle = await res.json();
-
-        if (vehicle.orderStatus !== '등록완료') {
+        const list = await res.json();
+        if (!Array.isArray(list) || list.length === 0) {
           hideAllSections();
-          alert(`등록완료 상태의 차량만 실행할 수 있습니다.\n현재 상태: ${vehicle.orderStatus}`);
+          alert('해당 차량관리번호를 찾을 수 없습니다.');
           return;
         }
+
+        const ready = list.filter(v => v.orderStatus === '등록완료');
+        if (ready.length === 0) {
+          hideAllSections();
+          alert(`등록완료 상태의 차량만 실행할 수 있습니다.\n현재 상태: ${list[0].orderStatus}`);
+          return;
+        }
+
+        if (ready.length > 1) {
+          renderUnitSelect(ready);
+          return;   // 차량을 고르면 selectUnit() 이 상세를 채운다
+        }
+
+        document.getElementById('unitSelectSection').style.display = 'none';
+        showVehicle(ready[0]);
+      } catch (e) {
+        console.error(e);
+        hideAllSections();
+        alert('서버 연결 실패(API/CORS 확인)');
+      }
+    }
+
+    // 실행 대상 차량(행 PK). 1대면 자동 선택, N대면 목록에서 고른 값.
+    let selectedOrderId = null;
+
+    function renderUnitSelect(list) {
+      const body = document.getElementById('unitSelectBody');
+      body.innerHTML = '';
+      list.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e5e7eb';
+        tr.innerHTML =
+          `<td style="padding:9px 12px;text-align:center;">
+             <button type="button" class="btn btn-primary" style="padding:5px 14px;font-size:12px;"
+                     onclick="selectUnit(${v.id})">선택</button>
+           </td>
+           <td style="padding:9px 12px;">${v.vehicleNo || '-'}</td>
+           <td style="padding:9px 12px;">${v.carModel || '-'}</td>
+           <td style="padding:9px 12px;">${v.makerContractNo || '-'}</td>
+           <td style="padding:9px 12px;text-align:center;">${v.orderStatus || '-'}</td>`;
+        body.appendChild(tr);
+      });
+      document.getElementById('unitSelectSection').style.display = 'block';
+      document.getElementById('vehicleInfoSection').style.display = 'none';
+      document.getElementById('executeInfoSection').style.display = 'none';
+      document.getElementById('actionButtons').style.display = 'none';
+    }
+
+    async function selectUnit(id) {
+      try {
+        const res = await fetch(`/api/vehicle-orders/by-id/${id}`);
+        if (!res.ok) { alert('차량 정보를 불러오지 못했습니다.'); return; }
+        showVehicle(await res.json());
+      } catch (e) {
+        console.error(e);
+        alert('서버 연결 실패(API/CORS 확인)');
+      }
+    }
+
+    function showVehicle(vehicle) {
+      try {
+        selectedOrderId = vehicle.id ?? null;
 
         document.getElementById('carModel').value = vehicle.carModel || '';
         document.getElementById('vehicleNo').value = vehicle.vehicleNo || '';
@@ -267,9 +352,11 @@
     }
 
     function hideAllSections() {
+      document.getElementById('unitSelectSection').style.display = 'none';
       document.getElementById('vehicleInfoSection').style.display = 'none';
       document.getElementById('executeInfoSection').style.display = 'none';
       document.getElementById('actionButtons').style.display = 'none';
+      selectedOrderId = null;
     }
 
     function resetForm() {
@@ -287,20 +374,22 @@
     }
 
     async function executeDelivery() {
-      let vehicleMgmtNo = document.getElementById('vehicleMgmtNo').value.trim();
-      if (!vehicleMgmtNo) {
-        alert('차량관리번호를 입력해주세요.');
+      if (!selectedOrderId) {
+        alert('실행할 차량을 먼저 조회·선택해주세요.');
         return;
       }
 
-      vehicleMgmtNo = vehicleMgmtNo.toUpperCase();
+      const vehicleNo = document.getElementById('vehicleNo').value.trim();
 
-      if (!confirm(`차량관리번호 ${vehicleMgmtNo}를 실행하시겠습니까?\n\n차입금은 차입금 관리 메뉴에서 별도로 등록합니다.`)) {
+      if (!confirm(`차량 ${vehicleNo || ''} 을(를) 실행하시겠습니까?\n\n`
+                 + `실행하면 차량관리번호가 규칙 번호로 확정됩니다.\n`
+                 + `차입금은 차입금 관리 메뉴에서 별도로 등록합니다.`)) {
         return;
       }
 
       try {
-        const res = await fetch(`/api/vehicle-orders/${encodeURIComponent(vehicleMgmtNo)}`, {
+        // 행 PK(id)로 실행 — 같은 발주 N대가 같은 관리번호를 공유하므로 id 로 특정한다.
+        const res = await fetch(`/api/vehicle-orders/by-id/${selectedOrderId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -314,7 +403,10 @@
           return;
         }
 
-        alert('실행 완료!\n\n상태가 실행완료로 변경되었습니다.');
+        const saved = await res.json().catch(() => null);
+        const newNo = saved && saved.vehicleMgmtNo ? saved.vehicleMgmtNo : '';
+        alert(`실행 완료!\n\n상태가 실행완료로 변경되었습니다.`
+            + (newNo ? `\n차량관리번호: ${newNo}` : ''));
         window.location.href = 'vehicle_order.html';
       } catch (e) {
         console.error(e);

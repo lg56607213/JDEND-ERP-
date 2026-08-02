@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>카드결제 결과 | JDEND ERP</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
+      padding: 48px 40px;
+      max-width: 480px;
+      width: 94vw;
+      text-align: center;
+    }
+    .icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      display: block;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .desc {
+      font-size: 14px;
+      color: #64748b;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+    .info-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .info-row:not(:last-child) { border-bottom: 1px solid #e2e8f0; }
+    .info-label { color: #64748b; }
+    .info-value { font-weight: 600; }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      margin-right: 8px;
+    }
+    .btn-secondary:hover { background: #f9fafb; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 상태별 색상 */
+    .status-success .title { color: #15803d; }
+    .status-fail    .title { color: #b91c1c; }
+    .status-pending .title { color: #92400e; }
+  </style>
+</head>
+<body>
+<div class="card" id="resultCard">
+  <!-- 로딩 중 -->
+  <div id="stateLoading">
+    <div class="spinner"></div>
+    <div class="title">결제 결과 확인 중...</div>
+    <div class="desc">잠시 기다려 주세요.</div>
+  </div>
+
+  <!-- 결제 성공 -->
+  <div id="stateSuccess" style="display:none;">
+    <span class="icon">✅</span>
+    <div class="title">결제가 완료되었습니다</div>
+    <div class="desc">카드 결제가 정상적으로 처리되었습니다.</div>
+    <div class="info-box" id="successInfo"></div>
+    <button class="btn btn-primary" onclick="goPaymentRegister()">수납 내역으로 돌아가기</button>
+  </div>
+
+  <!-- 결제 실패 / 취소 -->
+  <div id="stateFail" style="display:none;">
+    <span class="icon">❌</span>
+    <div class="title" id="failTitle">결제가 실패하였습니다</div>
+    <div class="desc" id="failDesc">결제가 취소되었거나 오류가 발생했습니다.<br>다시 시도해 주세요.</div>
+    <button class="btn btn-secondary" onclick="goPaymentRegister()">수납 등록으로 돌아가기</button>
+  </div>
+
+  <!-- 대기 중 (통지 미수신) -->
+  <div id="statePending" style="display:none;">
+    <span class="icon">⏳</span>
+    <div class="title">결제 처리 중입니다</div>
+    <div class="desc">결제 승인 결과를 기다리는 중입니다.<br>잠시 후 페이지를 새로고침 해주세요.</div>
+    <button class="btn btn-secondary" onclick="location.reload()">새로고침</button>
+  </div>
+
+  <!-- orderId 없음 -->
+  <div id="stateNotFound" style="display:none;">
+    <span class="icon">⚠️</span>
+    <div class="title">결제 정보를 찾을 수 없습니다</div>
+    <div class="desc">잘못된 접근이거나 세션이 만료되었습니다.</div>
+    <button class="btn btn-secondary" onclick="goPaymentRegister()">수납 등록으로 돌아가기</button>
+  </div>
+</div>
+
+<script>
+  // config.js 없이 동작하도록 API_BASE_URL 기본값 직접 처리
+  const API_BASE_URL = (window.API_BASE_URL) ? window.API_BASE_URL : '';
+
+  function getUrlParam(name) {
+    const p = new URLSearchParams(window.location.search);
+    return p.get(name);
+  }
+
+  function won(n) {
+    if (n == null) return '-';
+    return Number(n).toLocaleString() + '원';
+  }
+
+  function showState(id) {
+    ['stateLoading','stateSuccess','stateFail','statePending','stateNotFound']
+      .forEach(s => document.getElementById(s).style.display = (s === id) ? 'block' : 'none');
+  }
+
+  function goPaymentRegister() {
+    window.location.href = '/pages/payment/payment_register.html';
+  }
+
+  async function checkResult(orderId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/payments/kiwoom/result?orderId=${encodeURIComponent(orderId)}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      switch (data.status) {
+        case 'SUCCESS': {
+          const info = document.getElementById('successInfo');
+          info.innerHTML = `
+            <div class="info-row">
+              <span class="info-label">주문번호</span>
+              <span class="info-value">${data.orderId || '-'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">계약번호</span>
+              <span class="info-value">${data.contractNumber || '-'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">결제금액</span>
+              <span class="info-value">${won(data.amount)}</span>
+            </div>
+            ${data.cardName ? `
+            <div class="info-row">
+              <span class="info-label">카드사</span>
+              <span class="info-value">${data.cardName}</span>
+            </div>` : ''}
+            ${data.authno ? `
+            <div class="info-row">
+              <span class="info-label">승인번호</span>
+              <span class="info-value">${data.authno}</span>
+            </div>` : ''}
+          `;
+          showState('stateSuccess');
+          break;
+        }
+
+        case 'FAIL':
+          document.getElementById('failTitle').textContent = '결제가 실패하였습니다';
+          document.getElementById('failDesc').textContent = '결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
+          showState('stateFail');
+          break;
+
+        case 'CANCEL':
+          document.getElementById('failTitle').textContent = '결제가 취소되었습니다';
+          document.getElementById('failDesc').textContent = '결제를 취소하셨습니다.';
+          showState('stateFail');
+          break;
+
+        case 'PENDING':
+          showState('statePending');
+          // 5초 후 자동 재시도 (통지가 늦게 도달하는 경우 대비)
+          setTimeout(() => checkResult(orderId), 5000);
+          break;
+
+        case 'NOT_FOUND':
+        default:
+          showState('stateNotFound');
+      }
+    } catch (e) {
+      console.error('결과 조회 실패:', e);
+      showState('stateNotFound');
+    }
+  }
+
+  window.addEventListener('load', () => {
+    // 키움페이는 RESERVEDINDEX1 또는 ORDERNO 를 리다이렉트 파라미터로 전달함
+    const orderId = getUrlParam('RESERVEDINDEX1') || getUrlParam('orderId') || getUrlParam('ORDERNO');
+
+    if (!orderId) {
+      showState('stateNotFound');
+      return;
+    }
+
+    checkResult(orderId);
+  });
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -93,20 +94,46 @@ public class DailyCashService {
   public DailyFundReportResponse daily(LocalDate date) {
     if (date == null) throw new IllegalArgumentException("date는 필수입니다.");
 
-    // 은행(은행별)
-    List<DailyFundReportResponse.BankRow> banks = new ArrayList<>();
-    long bankIn=0, bankOut=0;
+    // 전일잔액 (기준일 이전 누적, 통장별)
+    Map<String, long[]> prevMap = new HashMap<>(); // bankName → [cumIn, cumOut]
+    for (var r : bankRepo.sumCumulativeByBankBefore(date)) {
+      prevMap.put(r.getBankName(), new long[]{nz(r.getInAmt()), nz(r.getOutAmt())});
+    }
 
+    // 당일 통장별 입출금
+    Map<String, long[]> todayMap = new HashMap<>();
     for (var r : bankRepo.sumByBankOn(date)) {
-      long inAmt = nz(r.getInAmt());
-      long outAmt = nz(r.getOutAmt());
-      bankIn += inAmt;
-      bankOut += outAmt;
+      todayMap.put(r.getBankName(), new long[]{nz(r.getInAmt()), nz(r.getOutAmt())});
+    }
+
+    // 통장 이름 전체 집합 (전일에만 있거나 당일에만 있어도 모두 포함)
+    Set<String> bankNames = new LinkedHashSet<>();
+    bankNames.addAll(prevMap.keySet());
+    bankNames.addAll(todayMap.keySet());
+
+    List<DailyFundReportResponse.BankRow> banks = new ArrayList<>();
+    long bankIn=0, bankOut=0, totalPrev=0, totalBalance=0;
+
+    for (String bankName : bankNames) {
+      long[] prev  = prevMap.getOrDefault(bankName, new long[]{0,0});
+      long[] today = todayMap.getOrDefault(bankName, new long[]{0,0});
+
+      long prevBalance = prev[0] - prev[1];
+      long inAmt  = today[0];
+      long outAmt = today[1];
+      long balance = prevBalance + inAmt - outAmt;
+
+      bankIn       += inAmt;
+      bankOut      += outAmt;
+      totalPrev    += prevBalance;
+      totalBalance += balance;
 
       banks.add(DailyFundReportResponse.BankRow.builder()
-          .bankName(r.getBankName())
+          .bankName(bankName)
+          .prevBalance(prevBalance)
           .income(inAmt)
           .expense(outAmt)
+          .balance(balance)
           .build());
     }
 
@@ -124,10 +151,10 @@ public class DailyCashService {
       String name = r.getAccountName() == null ? "" : r.getAccountName();
 
       DailyFundReportResponse.VoucherRow row = DailyFundReportResponse.VoucherRow.builder()
-          .accountCode("") // 테이블에 없어서 공백
+          .accountCode("")
           .accountName(name)
           .amount(amt)
-          .memo("") // 전표라인에 memo 컬럼 없음
+          .memo("")
           .build();
 
       if ("DEBIT".equalsIgnoreCase(r.getLineType())) {
@@ -141,14 +168,100 @@ public class DailyCashService {
 
     return DailyFundReportResponse.builder()
         .banks(banks)
+        .bankPrevBalanceTotal(totalPrev)
         .bankIncomeTotal(bankIn)
         .bankExpenseTotal(bankOut)
+        .bankBalanceTotal(totalBalance)
         .voucherIncomes(vIn)
         .voucherIncomeTotal(vInSum)
         .voucherExpenses(vOut)
         .voucherExpenseTotal(vOutSum)
         .incomeDiff(bankIn - vInSum)
         .expenseDiff(bankOut - vOutSum)
+        .build();
+  }
+
+  // ==========================
+  // III/IV. 월별 자금 현황
+  // ==========================
+  @Transactional(readOnly = true)
+  public MonthlyFundReportResponse monthly(String ym) {
+    if (ym == null || ym.isBlank()) throw new IllegalArgumentException("month(YYYY-MM)은 필수입니다.");
+
+    YearMonth yearMonth = YearMonth.parse(ym);
+    LocalDate monthStart = yearMonth.atDay(1);
+    LocalDate monthEnd   = yearMonth.atEndOfMonth();
+
+    // 전월잔액 (해당 월 1일 이전 누적, 통장별)
+    Map<String, long[]> prevMap = new HashMap<>();
+    for (var r : bankRepo.sumCumulativeByBankBefore(monthStart)) {
+      prevMap.put(r.getBankName(), new long[]{nz(r.getInAmt()), nz(r.getOutAmt())});
+    }
+
+    // 해당 월 통장별 합계
+    Map<String, long[]> monthMap = new HashMap<>();
+    for (var r : bankRepo.sumByBankBetween(monthStart, monthEnd)) {
+      monthMap.put(r.getBankName(), new long[]{nz(r.getInAmt()), nz(r.getOutAmt())});
+    }
+
+    Set<String> bankNames = new LinkedHashSet<>();
+    bankNames.addAll(prevMap.keySet());
+    bankNames.addAll(monthMap.keySet());
+
+    List<MonthlyFundReportResponse.MonthBankRow> banks = new ArrayList<>();
+    long totalPrev=0, totalIn=0, totalOut=0, totalBalance=0;
+
+    for (String bankName : bankNames) {
+      long[] prev  = prevMap.getOrDefault(bankName, new long[]{0,0});
+      long[] month = monthMap.getOrDefault(bankName, new long[]{0,0});
+
+      long prevBalance = prev[0] - prev[1];
+      long income  = month[0];
+      long expense = month[1];
+      long balance = prevBalance + income - expense;
+
+      totalPrev    += prevBalance;
+      totalIn      += income;
+      totalOut     += expense;
+      totalBalance += balance;
+
+      banks.add(MonthlyFundReportResponse.MonthBankRow.builder()
+          .bankName(bankName)
+          .prevBalance(prevBalance)
+          .income(income)
+          .expense(expense)
+          .balance(balance)
+          .build());
+    }
+
+    // IV. 월별 세부내역 (전표 현금성 계정, 계정별 집계)
+    List<MonthlyFundReportResponse.VoucherRow> mvIn  = new ArrayList<>();
+    List<MonthlyFundReportResponse.VoucherRow> mvOut = new ArrayList<>();
+    long mvInSum=0, mvOutSum=0;
+
+    for (var r : voucherCashRepo.sumCashByAccountBetween(monthStart, monthEnd,
+        CASH_KEYS[0], CASH_KEYS[1], CASH_KEYS[2], CASH_KEYS[3], CASH_KEYS[4], CASH_KEYS[5], CASH_KEYS[6])) {
+      long amt = nz(r.getAmt());
+      String name = r.getAccountName() == null ? "" : r.getAccountName();
+      if ("DEBIT".equalsIgnoreCase(r.getLineType())) {
+        mvIn.add(MonthlyFundReportResponse.VoucherRow.builder().accountName(name).amount(amt).build());
+        mvInSum += amt;
+      } else {
+        mvOut.add(MonthlyFundReportResponse.VoucherRow.builder().accountName(name).amount(amt).build());
+        mvOutSum += amt;
+      }
+    }
+
+    return MonthlyFundReportResponse.builder()
+        .banks(banks)
+        .totalPrevBalance(totalPrev)
+        .totalIncome(totalIn)
+        .totalExpense(totalOut)
+        .totalBalance(totalBalance)
+        .voucherIncomes(mvIn)
+        .voucherIncomeTotal(mvInSum)
+        .voucherExpenses(mvOut)
+        .voucherExpenseTotal(mvOutSum)
         .build();
   }
 

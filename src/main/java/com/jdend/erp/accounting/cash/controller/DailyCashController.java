@@ -2,6 +2,7 @@ package com.jdend.erp.accounting.cash.controller;
 
 import com.jdend.erp.accounting.cash.dto.*;
 import com.jdend.erp.accounting.cash.service.DailyCashService;
+import com.jdend.erp.accounting.cash.dto.MonthlyFundReportResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,5 +26,11 @@ public class DailyCashController {
   @GetMapping("/daily-fund-report")
   public DailyFundReportResponse daily(@RequestParam LocalDate date) {
     return service.daily(date);
+  }
+
+  // GET /api/cash/monthly-fund-report?month=2025-11
+  @GetMapping("/monthly-fund-report")
+  public MonthlyFundReportResponse monthly(@RequestParam String month) {
+    return service.monthly(month);
   }
 }

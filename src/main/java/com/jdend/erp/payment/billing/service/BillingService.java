@@ -256,9 +256,15 @@ public class BillingService {
 
         if (customer != null) {
           customerName = safe(customer.getCustomerName());
-          phone = safe(firstNonBlank(customer.getPhone(), customer.getManagerPhone()));
           registrationNumber = safe(customer.getRegistrationNumber());
-          address = safe(firstNonBlank(customer.getBillAddress(), customer.getAddress()));
+          // Bug2: 법인은 phone 컬럼에 법인등록번호가 저장되므로 연락처는 managerPhone 사용
+          if ("법인".equals(customer.getCustomerType())) {
+            phone = safe(customer.getManagerPhone());
+          } else {
+            phone = safe(firstNonBlank(customer.getPhone(), customer.getManagerPhone()));
+          }
+          // Bug3: billAddress에 업태가 잘못 입력된 경우가 있으므로 address를 우선 사용
+          address = safe(firstNonBlank(customer.getAddress(), customer.getBillAddress()));
         }
       }
     }
@@ -306,17 +312,15 @@ public class BillingService {
             </tr>
 
             <tr>
-              <td colspan="9" class="section-title">* 고객정보</td>
+              <td colspan="9" class="section-title">수 신 : %s 귀 중</td>
             </tr>
 
             <tr>
-              <td class="label">고객명</td>
-              <td colspan="2" class="value">%s</td>
               <td class="label">사업자번호</td>
               <td colspan="2" class="value">%s</td>
               <td class="label">고객연락처</td>
-              <td class="value">%s</td>
-              <td class="value">%s</td>
+              <td colspan="2" class="value">%s</td>
+              <td colspan="3" class="value"></td>
             </tr>
 
             <tr>
@@ -400,7 +404,6 @@ public class BillingService {
         safe(customerName),
         safe(registrationNumber),
         safe(phone),
-        "",
         safe(address),
         safe(vehicleNo),
         safe(vehicleModel),

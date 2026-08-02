@@ -42,4 +42,28 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
      order by b.bankName
   """)
   List<BankSumRow> sumByBankOn(@Param("date") LocalDate date);
+
+  /** 특정일 이전 날짜까지 통장별 누적 입출금 — 전일잔액 계산용 */
+  @Query("""
+    select coalesce(b.bankName,'(미지정)') as bankName,
+           coalesce(sum(coalesce(b.depositAmount,0)),0) as inAmt,
+           coalesce(sum(coalesce(b.withdrawalAmount,0)),0) as outAmt
+      from CashBankTransaction b
+     where b.txDate < :date
+     group by b.bankName
+     order by b.bankName
+  """)
+  List<BankSumRow> sumCumulativeByBankBefore(@Param("date") LocalDate date);
+
+  /** 기간(start~end) 통장별 합계 — 월별 자금현황용 */
+  @Query("""
+    select coalesce(b.bankName,'(미지정)') as bankName,
+           coalesce(sum(coalesce(b.depositAmount,0)),0) as inAmt,
+           coalesce(sum(coalesce(b.withdrawalAmount,0)),0) as outAmt
+      from CashBankTransaction b
+     where b.txDate between :start and :end
+     group by b.bankName
+     order by b.bankName
+  """)
+  List<BankSumRow> sumByBankBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }

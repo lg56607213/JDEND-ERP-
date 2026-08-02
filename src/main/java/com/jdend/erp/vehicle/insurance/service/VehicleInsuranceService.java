@@ -12,6 +12,7 @@ import com.jdend.erp.vehicle.insurance.entity.VehicleInsurance;
 import com.jdend.erp.vehicle.insurance.repository.InsuranceChangeRepository;
 import com.jdend.erp.vehicle.insurance.repository.VehicleInsuranceRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
+import com.jdend.erp.accounting.voucher.service.AccountResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -31,6 +32,7 @@ public class VehicleInsuranceService {
   private final VoucherRepository voucherRepository;
   private final InsuranceChangeRepository insuranceChangeRepo;
   private final OtherAccountSettingsService accountSettings;
+  private final AccountResolver accountResolver;
   private final JdbcTemplate jdbcTemplate;
   private final VoucherNumberService voucherNumberService;
 
@@ -242,6 +244,7 @@ public class VehicleInsuranceService {
 
     voucher.addLine(VoucherLine.builder()
       .lineType("DEBIT")
+      .accountCode(accountResolver.codeOf(debitAccount))
       .accountName(debitAccount)
       .amount(amount)
       .description(memo)
@@ -250,6 +253,7 @@ public class VehicleInsuranceService {
 
     voucher.addLine(VoucherLine.builder()
       .lineType("CREDIT")
+      .accountCode(accountResolver.codeOf(creditAccount))
       .accountName(creditAccount)
       .amount(amount)
       .description(memo)
@@ -289,6 +293,7 @@ public class VehicleInsuranceService {
 
     voucher.addLine(VoucherLine.builder()
       .lineType("DEBIT")
+      .accountCode(accountResolver.codeOf(debit))
       .accountName(debit)
       .amount(amount)
       .description(memo)
@@ -297,6 +302,7 @@ public class VehicleInsuranceService {
 
     voucher.addLine(VoucherLine.builder()
       .lineType("CREDIT")
+      .accountCode(accountResolver.codeOf(credit))
       .accountName(credit)
       .amount(amount)
       .description(memo)

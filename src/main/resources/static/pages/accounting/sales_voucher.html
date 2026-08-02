@@ -312,6 +312,7 @@
     // 계정 옵션
     // =========================
     let accountOptions = `<option value="">계정 선택</option>`;
+    let accountNameToCode = {}; // 계정명 → 계정코드 역매핑 (부가세 계정 코드 조회용)
 
     function buildAccountOptionsHtml(accounts){
       if(!accounts || accounts.length === 0)
@@ -325,7 +326,7 @@
       let html = `<option value="">계정 선택</option>`;
       for(const [key,list] of groups){
         html += `<optgroup label="${escapeHtml(key)}">`;
-        for(const a of list) html += `<option value="${escapeHtml(a.accountName)}">${escapeHtml(a.accountName)}</option>`;
+        for(const a of list) html += `<option value="${escapeHtml(a.accountCode)}" data-name="${escapeHtml(a.accountName)}">[${escapeHtml(a.accountCode)}] ${escapeHtml(a.accountName)}</option>`;
         html += `</optgroup>`;
       }
       return html;
@@ -335,6 +336,8 @@
       try{
         const accounts = await apiGet(`/api/financial-statement-accounts/leaves`);
         accountOptions = buildAccountOptionsHtml(accounts);
+        accountNameToCode = {};
+        for(const a of accounts) accountNameToCode[a.accountName] = a.accountCode;
       }catch(e){
         console.error("계정 목록 조회 실패", e);
         accountOptions = `<option value="">계정 선택</option><option value="" disabled>계정 목록 조회 실패</option>`;
@@ -407,17 +410,19 @@
     }
 
     function syncVatDisplayFromLines(){
+      const vatDebitCode  = accountNameToCode["부가세대급금"]  || "__없음__";
+      const vatCreditCode = accountNameToCode["부가세예수금"] || "__없음__";
       let debitVat = 0;
       qsa("#debitEntriesBody tr").forEach(tr=>{
         const acc = tr.querySelector(".debit-account")?.value || "";
         const amt = Number((tr.querySelector(".debit-amount")?.value||"0").replace(/,/g,""))||0;
-        if(acc === "부가세대급금") debitVat += amt;
+        if(acc === vatDebitCode) debitVat += amt;
       });
       let creditVat = 0;
       qsa("#creditEntriesBody tr").forEach(tr=>{
         const acc = tr.querySelector(".credit-account")?.value || "";
         const amt = Number((tr.querySelector(".credit-amount")?.value||"0").replace(/,/g,""))||0;
-        if(acc === "부가세예수금") creditVat += amt;
+        if(acc === vatCreditCode) creditVat += amt;
       });
       qs("#debitVatAmount").textContent = debitVat.toLocaleString();
       qs("#creditVatAmount").textContent = creditVat.toLocaleString();
@@ -456,13 +461,14 @@
         if(vatTr) vatTr.remove();
       }else{
         const vatAmt = Math.round(supplyAmt * 0.1);
-        const vatAcct = VAT_ACCT[side];
+        const vatAcct     = VAT_ACCT[side];
+        const vatAcctCode = accountNameToCode[vatAcct] || vatAcct; // 계정명→코드 변환
         if(!vatTr){
           vatTr = document.createElement("tr");
           vatTr.className = "entry-row vat-entry";
           vatTr.dataset.vatFor = rowId;
           vatTr.innerHTML = `
-            <td><select class="${side}-account">${setSelectSelected(accountOptions, vatAcct)}</select></td>
+            <td><select class="${side}-account">${setSelectSelected(accountOptions, vatAcctCode)}</select></td>
             <td><input type="text" class="${side}-amount" value="${vatAmt.toLocaleString()}" readonly style="background:#f5f5f5;color:#555;"></td>
             <td><input type="text" class="${side}-description" value="부가세" placeholder="적요"></td>
             <td style="text-align:center;font-size:11px;color:#94a3b8;padding:0 4px;">자동</td>
@@ -513,7 +519,8 @@
       const delBtn = tr.querySelector(".btn-delete-row");
 
       accSel.addEventListener("change", ()=>{
-        if(isVatTrigger(accSel.value, side)) vatChk.checked = true;
+        const acctName = accSel.options[accSel.selectedIndex]?.getAttribute('data-name') || '';
+        if(isVatTrigger(acctName, side)) vatChk.checked = true;
         syncVatRow(tr, side);
         syncVatDisplayFromLines();
       });
@@ -567,10 +574,10 @@
       creditTbody.innerHTML = "";
 
       if(type === "매출"){
-        // 차변: 보통예금 total (부가세 없음)
-        debitTbody.appendChild(buildEntryRow("debit","보통예금",total.toLocaleString(),prefix+"매출"));
-        // 대변: 렌트수익 supply (부가세 체크 → 부가세예수금 자동 생성)
-        const creditRow = buildEntryRow("credit","렌트수익",supply.toLocaleString(),prefix+"렌트료",true);
+        // 차변: 100101 (보통예금) = 합계금액 전액
+        debitTbody.appendChild(buildEntryRow("debit","100101",total.toLocaleString(),prefix+"매출"));
+        // 대변: 400101 (렌트수익) = 공급가액, 부가세예수금 자동 생성
+        const creditRow = buildEntryRow("credit","400101",supply.toLocaleString(),prefix+"렌트료",true);
         creditTbody.appendChild(creditRow);
         syncVatRow(creditRow, "credit");
       }
@@ -656,7 +663,7 @@
         const account     = tr.querySelector(`.${kind}-account`)?.value || "";
         const amount      = Number((tr.querySelector(`.${kind}-amount`)?.value||"0").replace(/,/g,"")) || 0;
         const description = tr.querySelector(`.${kind}-description`)?.value || "";
-        if(account && amount > 0){ entries.push({account, amount:Math.trunc(amount), description}); total += amount; }
+        if(account && amount > 0){ entries.push({accountCode: account, amount:Math.trunc(amount), description}); total += amount; }
       });
       return {entries, total};
     }
@@ -710,8 +717,8 @@
       const creditTbody = qs("#creditEntriesBody");
       debitTbody.innerHTML  = "";
       creditTbody.innerHTML = "";
-      debitTbody.appendChild(buildEntryRow("debit"));
-      creditTbody.appendChild(buildEntryRow("credit"));
+      debitTbody.appendChild(buildEntryRow("debit",  "100101")); // 초기화 후에도 기본 계정 유지
+      creditTbody.appendChild(buildEntryRow("credit", "400101"));
 
       refreshVoucherNo();
       calculateTotals();
@@ -725,9 +732,9 @@
       qs("#voucherDate").value = todayStr();
       await loadAccountOptions();
 
-      // 계정 옵션 로드 후 초기 행 생성
-      qs("#debitEntriesBody").appendChild(buildEntryRow("debit"));
-      qs("#creditEntriesBody").appendChild(buildEntryRow("credit"));
+      // 계정 옵션 로드 후 초기 행 생성 — 매출전표 기본: 차변 100101, 대변 400101
+      qs("#debitEntriesBody").appendChild(buildEntryRow("debit",  "100101"));
+      qs("#creditEntriesBody").appendChild(buildEntryRow("credit", "400101"));
 
       await refreshVoucherNo();
 

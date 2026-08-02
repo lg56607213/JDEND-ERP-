@@ -175,7 +175,7 @@
               <!-- 개인/개인사업자 연락처 -->
               <div class="form-group" id="editPhoneGroup">
                 <label for="editPhone" id="editPhoneLabel">연락처</label>
-                <input type="tel" id="editPhone" name="phone" placeholder="010-0000-0000">
+                <input type="tel" id="editPhone" name="phone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
               </div>
             </div>
           </div>
@@ -228,7 +228,7 @@
 
               <div class="form-group">
                 <label for="editManagerPhone">담당자 연락처</label>
-                <input type="tel" id="editManagerPhone" name="managerPhone" placeholder="010-0000-0000">
+                <input type="tel" id="editManagerPhone" name="managerPhone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
               </div>
 
               <div class="form-group">
@@ -302,6 +302,13 @@
 
     let customerData = null;
 
+    function formatPhone(v) {
+      const d = (v || '').replace(/\D/g, '').slice(0, 11);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
     function formatBizNo(v) {
       const digits = (v || '').replace(/\D/g, '').slice(0, 10);
       if (digits.length <= 3) return digits;
@@ -329,6 +336,14 @@
 
     document.getElementById('editCorpNumber').addEventListener('input', (e) => {
       e.target.value = formatCorpNo(e.target.value);
+    });
+
+    document.getElementById('editPhone').addEventListener('input', (e) => {
+      e.target.value = formatPhone(e.target.value);
+    });
+
+    document.getElementById('editManagerPhone').addEventListener('input', (e) => {
+      e.target.value = formatPhone(e.target.value);
     });
 
     function hideAllEditGroups() {
@@ -390,14 +405,14 @@
       document.getElementById('customerType').textContent = c.customerType ?? '';
       document.getElementById('customerName').textContent = c.customerName ?? '';
       document.getElementById('registrationNumber').textContent = c.registrationNumber ?? '';
-      document.getElementById('phone').textContent = c.phone ?? '';
+      document.getElementById('phone').textContent = formatPhone(c.phone) ?? '';
       document.getElementById('ceo').textContent = c.ceo || '-';
       document.getElementById('businessType').textContent = c.businessType || '-';
       document.getElementById('businessItem').textContent = c.businessItem || '-';
       document.getElementById('address').textContent = c.address ?? '';
       document.getElementById('billAddress').textContent = c.billAddress ?? '';
       document.getElementById('manager').textContent = c.manager ?? '';
-      document.getElementById('managerPhone').textContent = c.managerPhone ?? '';
+      document.getElementById('managerPhone').textContent = formatPhone(c.managerPhone) ?? '';
       document.getElementById('managerEmail').textContent = c.managerEmail ?? '';
       document.getElementById('billEmail').textContent = c.billEmail || '-';
       document.getElementById('registerDate').textContent = c.registerDate ?? '';
@@ -429,7 +444,7 @@
       document.getElementById('editAddress').value = customerData.address || '';
       document.getElementById('editBillAddress').value = customerData.billAddress || '';
       document.getElementById('editManager').value = customerData.manager || '';
-      document.getElementById('editManagerPhone').value = customerData.managerPhone || '';
+      document.getElementById('editManagerPhone').value = formatPhone(customerData.managerPhone || '');
       document.getElementById('editManagerEmail').value = customerData.managerEmail || '';
       document.getElementById('editBillEmail').value = customerData.billEmail || '';
 
@@ -442,12 +457,12 @@
 
       if (customerData.customerType === '개인') {
         document.getElementById('editIdNumber').value = customerData.registrationNumber || '';
-        document.getElementById('editPhone').value = customerData.phone || '';
+        document.getElementById('editPhone').value = formatPhone(customerData.phone || '');
       }
 
       if (customerData.customerType === '개인사업자') {
         document.getElementById('editBusinessNumber').value = customerData.registrationNumber || '';
-        document.getElementById('editPhone').value = customerData.phone || '';
+        document.getElementById('editPhone').value = formatPhone(customerData.phone || '');
       }
 
       if (customerData.customerType === '법인') {

@@ -2,6 +2,7 @@ package com.jdend.erp.accounting.depreciation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class DepreciationPosting {
   @Column(name = "voucher_date", nullable = false)
   private LocalDate voucherDate;
 
-  @Column(name = "created_at", insertable = false, updatable = false)
+  @CreationTimestamp
+  @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 }

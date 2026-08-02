@@ -111,12 +111,60 @@ public class VehicleNumberGenerator {
      * BUG-2 수정: 회사 DB 내 전체 순번(순수 숫자 vehicleMgmtNo) 기준으로
      * 다음 차량관리번호 순번을 채번한다.
      * 결과 형식: 001, 002, ..., 099, 100, 101 (3자리 이상, 패딩은 호출 측에서 처리).
+     *
+     * @deprecated 번호체계 복원(2026-08)으로 더 이상 사용하지 않는다.
+     *             차량관리번호는 {@link #nextUnitSeq(String)} + {@link #buildVehicleMgmtNo}로 채번한다.
      */
+    @Deprecated
     public synchronized int nextSequentialMgmtNo() {
         int dbMax = orderRepo.findMaxSequentialMgmtNo();
         int next = Math.max(dbMax, lastMgmtNoSeq) + 1;
         lastMgmtNoSeq = next;
         return next;
+    }
+
+    // 발주번호별로 이 인스턴스가 마지막으로 발급한 대순번 (커밋 전 동시 실행 대비)
+    private final Map<String, Integer> lastUnitSeqByOrderNo = new HashMap<>();
+
+    /**
+     * 해당 발주(발주번호) 안에서 다음 대순번(1~99)을 채번한다.
+     * 이미 실행 확정된 차량들의 끝 2자리 최대값 + 1.
+     *
+     * <p>5대 발주라면 실행하는 순서대로 1, 2, 3, 4, 5 가 부여된다.
+     */
+    public synchronized int nextUnitSeq(String orderNo) {
+        int dbMax = orderRepo.findMaxUnitSeqByOrderNo(orderNo);
+        int cached = lastUnitSeqByOrderNo.getOrDefault(orderNo, 0);
+        int next = Math.max(dbMax, cached) + 1;
+        if (next > 99) {
+            throw new IllegalStateException(
+                    "한 발주에 실행 가능한 차량은 99대까지입니다. 발주번호=" + orderNo);
+        }
+        lastUnitSeqByOrderNo.put(orderNo, next);
+        return next;
+    }
+
+    /**
+     * 차량관리번호의 재렌트 회차(11번째 자리)를 1 올린다. 대순번은 유지된다.
+     * 예) J260730001001 → J260730001101 → J260730001201
+     */
+    public static String nextRerentMgmtNo(String vehicleMgmtNo) {
+        if (vehicleMgmtNo == null || vehicleMgmtNo.length() != 13) {
+            throw new IllegalArgumentException("차량관리번호는 13자리여야 합니다: " + vehicleMgmtNo);
+        }
+        String orderNo = vehicleMgmtNo.substring(0, 10);
+        int round;
+        int unitSeq;
+        try {
+            round   = Integer.parseInt(vehicleMgmtNo.substring(10, 11));
+            unitSeq = Integer.parseInt(vehicleMgmtNo.substring(11, 13));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("차량관리번호 형식이 올바르지 않습니다: " + vehicleMgmtNo);
+        }
+        if (round >= 9) {
+            throw new IllegalStateException("재렌트는 9회까지만 가능합니다: " + vehicleMgmtNo);
+        }
+        return buildVehicleMgmtNo(orderNo, round + 1, unitSeq);
     }
 
     private int parseOrderSeq(String orderNo) {

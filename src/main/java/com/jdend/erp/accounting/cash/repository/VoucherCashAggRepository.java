@@ -76,4 +76,33 @@ public interface VoucherCashAggRepository extends JpaRepository<VoucherLine, Lon
       @Param("k6") String k6,
       @Param("k7") String k7
   );
+
+  /** 기간(start~end) 계정별 합계 — 월별 자금 세부내역용 */
+  @Query("""
+    select l.accountName as accountName,
+           l.lineType as lineType,
+           coalesce(sum(l.amount),0) as amt
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and v.voucherDate between :start and :end
+       and (
+            l.accountName like %:k1% or l.accountName like %:k2% or l.accountName like %:k3%
+         or l.accountName like %:k4% or l.accountName like %:k5% or l.accountName like %:k6%
+         or l.accountName like %:k7%
+       )
+     group by l.accountName, l.lineType
+     order by l.lineType, l.accountName
+  """)
+  List<AccountCashSumRow> sumCashByAccountBetween(
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end,
+      @Param("k1") String k1,
+      @Param("k2") String k2,
+      @Param("k3") String k3,
+      @Param("k4") String k4,
+      @Param("k5") String k5,
+      @Param("k6") String k6,
+      @Param("k7") String k7
+  );
 }

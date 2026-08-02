@@ -467,6 +467,44 @@
         </div>
       </div>
 
+      <!-- 선수금 전표 -->
+      <div class="form-section">
+        <h3 class="section-title">선수금 전표</h3>
+        <p class="section-note">
+          선수금 수납·적용 시 자동 발생하는 전표 계정을 설정합니다.
+          (수납: 입금계좌 / 선수금 &nbsp;·&nbsp; 적용: 선수금 / 수익)
+          미지정 시 기본값은 입금계좌 <b>100101 보통예금</b>, 선수금 <b>200102 선수금</b>, 수익 <b>400101 렌트수익</b> 입니다.
+        </p>
+        <div class="mapping-row">
+          <div class="mapping-item">
+            <label>입금계좌</label>
+            <div class="account-input-group">
+              <label class="sub-label">수납 전표 차변</label>
+              <input type="text" class="account-code" id="prepaidBankCode" placeholder="계정코드">
+              <select class="account-select" id="prepaidBankAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>선수금 (부채)</label>
+            <div class="account-input-group">
+              <label class="sub-label">수납 전표 대변 &nbsp;/&nbsp; 적용 전표 차변</label>
+              <input type="text" class="account-code" id="prepaidDebitCode" placeholder="계정코드">
+              <select class="account-select" id="prepaidDebitAccount"></select>
+            </div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div class="mapping-item">
+            <label>수익</label>
+            <div class="account-input-group">
+              <label class="sub-label">적용 전표 대변</label>
+              <input type="text" class="account-code" id="prepaidCreditCode" placeholder="계정코드">
+              <select class="account-select" id="prepaidCreditAccount"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 버튼 -->
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="resetSettings()">초기화</button>
@@ -714,6 +752,13 @@
       debit: { code: inputVal('advanceVatDebitCode'), account: selVal('advanceVatDebitAccount'), accountName: selText('advanceVatDebitAccount') }
     };
 
+    // 선수금 — 회계 기준은 계정코드(account). accountName 은 화면 표시용 참고값.
+    const prepaidMapping = {
+      bank:   { code: inputVal('prepaidBankCode'),   account: selVal('prepaidBankAccount'),   accountName: selText('prepaidBankAccount')   },
+      debit:  { code: inputVal('prepaidDebitCode'),  account: selVal('prepaidDebitAccount'),  accountName: selText('prepaidDebitAccount')  },
+      credit: { code: inputVal('prepaidCreditCode'), account: selVal('prepaidCreditAccount'), accountName: selText('prepaidCreditAccount') }
+    };
+
     const saleDetailMapping = {
       accumDeprec:   { code: inputVal('saleAccumDeprecCode'),   account: selVal('saleAccumDeprecAccount'),   accountName: selText('saleAccumDeprecAccount')   },
       undepreciated: { code: inputVal('saleUndepreciatedCode'), account: selVal('saleUndepreciatedAccount'), accountName: selText('saleUndepreciatedAccount') },
@@ -727,7 +772,8 @@
       loanOpenMapping, deprecMapping, earlyTermMapping,
       legalCostMapping, saleMapping, paymentMapping,
       insuranceMapping, insuranceRefundMapping,
-      maintenanceMapping, advanceVatMapping, saleDetailMapping
+      maintenanceMapping, advanceVatMapping, saleDetailMapping,
+      prepaidMapping
     };
   }
 
@@ -862,6 +908,11 @@
     }
 
     // 차량매각 장부 계정
+    // 선수금 — 저장값이 없으면 기본 계정코드로 채워 둔다 (백엔드 기본값과 동일)
+    applySelect('prepaidBankAccount',   settings.prepaidMapping?.bank?.account   || '100101');
+    applySelect('prepaidDebitAccount',  settings.prepaidMapping?.debit?.account  || '200102');
+    applySelect('prepaidCreditAccount', settings.prepaidMapping?.credit?.account || '400101');
+
     if (settings.saleDetailMapping) {
       applySelect('saleAccumDeprecAccount',   settings.saleDetailMapping.accumDeprec?.account);
       applySelect('saleUndepreciatedAccount', settings.saleDetailMapping.undepreciated?.account);

@@ -58,16 +58,22 @@ public class MonthlyVoucherRuleService {
     LocalDate today = LocalDate.now();
     LocalDate nextRun = calcNextRunDate(today, req.getMonthlyDate());
 
+    // 계정코드 우선, 없으면 이름 그대로 저장 (VoucherService에서 실행 시점에 재확인)
+    String debitCode = blankToNull(req.getDebitAccountCode());
+    String creditCode = blankToNull(req.getCreditAccountCode());
+
     MonthlyVoucherRule rule = MonthlyVoucherRule.builder()
-        .active(true) // ✅ 기존 엔티티 필드
+        .active(true)
         .contractNumber(blankToNull(req.getContractNumber()))
         .vehicleNo(blankToNull(vehicleNo))
         .monthlyDay(req.getMonthlyDate())
         .nextRunDate(nextRun)
         .lastRunDate(null)
+        .debitAccountCode(debitCode)
         .debitAccount(req.getDebitAccount().trim())
         .debitAmount(debit)
         .debitDescription(blankToNull(req.getDebitDescription()))
+        .creditAccountCode(creditCode)
         .creditAccount(req.getCreditAccount().trim())
         .creditAmount(credit)
         .creditDescription(blankToNull(req.getCreditDescription()))

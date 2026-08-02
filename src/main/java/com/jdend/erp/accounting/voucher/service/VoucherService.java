@@ -4,7 +4,9 @@ import com.jdend.erp.accounting.voucher.dto.*;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
+import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,12 +14,15 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VoucherService {
 
     private final VoucherRepository voucherRepository;
     private final VoucherNumberService voucherNumberService;
+    private final FinancialStatementAccountRepository financialAccountRepository;
+    private final AccountResolver accountResolver;
 
     @Transactional(readOnly = true)
     public String nextVoucherNo(LocalDate date) {
@@ -80,14 +85,16 @@ public class VoucherService {
         if (req.getDebitEntries() != null) {
             for (var lineReq : req.getDebitEntries()) {
                 if (lineReq == null) continue;
-                if (isBlank(lineReq.getAccount())) continue;
+                if (isBlank(lineReq.getAccountCode()) && isBlank(lineReq.getAccount())) continue;
 
                 long amt = lineReq.getAmount() == null ? 0 : lineReq.getAmount();
                 if (amt <= 0) continue;
 
+                String[] resolved = resolveAccount(lineReq.getAccountCode(), lineReq.getAccount());
                 voucher.addLine(VoucherLine.builder()
                         .lineType("DEBIT")
-                        .accountName(lineReq.getAccount().trim())
+                        .accountCode(resolved[0])
+                        .accountName(resolved[1])
                         .amount(amt)
                         .description(blankToNull(lineReq.getDescription()))
                         .sortOrder(sort++)
@@ -98,14 +105,16 @@ public class VoucherService {
         if (req.getCreditEntries() != null) {
             for (var lineReq : req.getCreditEntries()) {
                 if (lineReq == null) continue;
-                if (isBlank(lineReq.getAccount())) continue;
+                if (isBlank(lineReq.getAccountCode()) && isBlank(lineReq.getAccount())) continue;
 
                 long amt = lineReq.getAmount() == null ? 0 : lineReq.getAmount();
                 if (amt <= 0) continue;
 
+                String[] resolved = resolveAccount(lineReq.getAccountCode(), lineReq.getAccount());
                 voucher.addLine(VoucherLine.builder()
                         .lineType("CREDIT")
-                        .accountName(lineReq.getAccount().trim())
+                        .accountCode(resolved[0])
+                        .accountName(resolved[1])
                         .amount(amt)
                         .description(blankToNull(lineReq.getDescription()))
                         .sortOrder(sort++)
@@ -114,6 +123,14 @@ public class VoucherService {
         }
 
         Voucher saved = voucherRepository.save(voucher);
+
+        saved.getLines().forEach(line -> {
+            if (line.getAccountCode() == null || line.getAccountCode().isBlank()) {
+                log.warn("[전표경고] 계정코드 미확인 계정명 사용: '{}' (voucherNo={}, lineType={}). " +
+                        "재무제표관리에서 계정을 먼저 등록하세요.",
+                        line.getAccountName(), saved.getVoucherNo(), line.getLineType());
+            }
+        });
 
         return VoucherCreateResponse.builder()
                 .id(saved.getId())
@@ -183,6 +200,13 @@ public class VoucherService {
         return ids.size();
     }
 
+    // [0]=accountCode (null 가능), [1]=accountName
+    // 자동전표 생성 서비스들과 동일한 규칙을 쓰도록 AccountResolver 로 위임한다.
+    private String[] resolveAccount(String code, String name) {
+        AccountResolver.Resolved r = accountResolver.resolve(code, name);
+        return new String[]{r.code(), r.name()};
+    }
+
     private long sum(VoucherCreateRequest req, boolean debit) {
         long s = 0;
         var list = debit ? req.getDebitEntries() : req.getCreditEntries();
@@ -190,7 +214,7 @@ public class VoucherService {
 
         for (var r : list) {
             if (r == null) continue;
-            if (isBlank(r.getAccount())) continue;
+            if (isBlank(r.getAccountCode()) && isBlank(r.getAccount())) continue;
 
             long amt = r.getAmount() == null ? 0 : r.getAmount();
             if (amt > 0) s += amt;

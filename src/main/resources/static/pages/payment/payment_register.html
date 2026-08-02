@@ -228,6 +228,13 @@
 
               <div class="form-actions">
                 <button type="button" class="btn btn-secondary" id="btnReset">초기화</button>
+                <button type="button" class="btn btn-kiwoom" id="btnKiwoomPay"
+                        title="키움페이 카드결제창으로 이동합니다"
+                        style="background:#1a56db;color:#fff;border:none;padding:10px 18px;
+                               border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+                               display:flex;align-items:center;gap:6px;">
+                  💳 카드결제
+                </button>
                 <button type="submit" class="btn btn-primary" id="btnSubmit">수납 등록</button>
               </div>
             </form>
@@ -660,6 +667,77 @@
     }
 
     document.getElementById('btnReset').addEventListener('click', () => resetForm(false));
+
+    // -------------------------------------------------------------------------
+    // 키움페이 카드결제
+    // -------------------------------------------------------------------------
+
+    /**
+     * 키움페이 LINK V3.1 카드결제 요청.
+     * 1) POST /api/payments/kiwoom/ready → payUrl + 파라미터 맵 수신
+     * 2) hidden form 생성 후 payUrl 로 POST → 결제창 표시
+     */
+    async function requestKiwoomPay(contractNumber, amount, productName) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/payments/kiwoom/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contractNumber, amount, productName })
+        });
+        await mustOk(res);
+        const data = await res.json();
+
+        if (!data.payUrl || !data.params) {
+          throw new Error('키움페이 응답 형식 오류');
+        }
+
+        // 기존 임시 폼 제거
+        const old = document.getElementById('__kiwoom_form__');
+        if (old) old.remove();
+
+        const form = document.createElement('form');
+        form.id = '__kiwoom_form__';
+        form.method = 'POST';
+        form.action = data.payUrl;
+
+        Object.entries(data.params).forEach(([k, v]) => {
+          const input = document.createElement('input');
+          input.type  = 'hidden';
+          input.name  = k;
+          input.value = v;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+
+      } catch (e) {
+        console.error('[KiwoomPay] 카드결제 요청 실패:', e);
+        alert('카드결제 요청 실패: ' + e.message);
+      }
+    }
+
+    document.getElementById('btnKiwoomPay').addEventListener('click', () => {
+      const contractNumber = document.getElementById('contractNumber').value.trim();
+      const amountRaw      = document.getElementById('paymentAmount').value;
+      const amount         = Number(amountRaw);
+
+      if (!contractNumber) {
+        alert('계약번호를 먼저 조회하세요.');
+        return;
+      }
+      if (!amount || amount <= 0) {
+        alert('결제할 입금금액을 입력하세요.');
+        return;
+      }
+
+      const customerName   = document.getElementById('displayCustomerName').textContent || '';
+      const productName    = `렌트료(${customerName} / ${contractNumber})`;
+
+      if (!confirm(`[카드결제]\n계약번호: ${contractNumber}\n결제금액: ${amount.toLocaleString()}원\n\n키움페이 결제창으로 이동하시겠습니까?`)) return;
+
+      requestKiwoomPay(contractNumber, amount, productName);
+    });
 
     document.getElementById('paymentAmount').addEventListener('input', (e) => {
       let v = String(e.target.value || '').replace(/[^0-9]/g, '');

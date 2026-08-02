@@ -36,33 +36,58 @@ public class StatementService {
   public BalanceSheetResponse balance(LocalDate ref, String status) {
     if (ref == null) throw new IllegalArgumentException("referenceDate는 필수입니다.");
 
+    // ① 기준일까지의 누적 전표 — 자산/부채/자본 B/S 계정 집계에 사용
     List<StatementAggRepository.LineSumRow> rows = aggRepo.sumByAccountToDate(ref, status);
     Map<String, Long> debit = new HashMap<>();
     Map<String, Long> credit = new HashMap<>();
     splitByLineType(rows, debit, credit);
 
-    List<FinancialStatementAccount> all = accountRepo.findAll();
+    // ② 당해 회계연도(1월 1일 ~ 기준일) 전표 — 당기순이익 계산에 사용
+    LocalDate currentYearStart = ref.withMonth(1).withDayOfMonth(1);
+    List<StatementAggRepository.LineSumRow> cyRows = aggRepo.sumByAccountBetween(currentYearStart, ref, status);
+    Map<String, Long> cyDebit = new HashMap<>();
+    Map<String, Long> cyCredit = new HashMap<>();
+    splitByLineType(cyRows, cyDebit, cyCredit);
+
+    List<FinancialStatementAccount> all = accountRepo.findAll().stream()
+        .filter(a -> "사용".equals(a.getIsActive()))
+        .collect(Collectors.toList());
     Map<Long, List<FinancialStatementAccount>> byParent = groupByParent(all);
 
-    StatementNodeResponse asset = buildRootNode(all, byParent, "ASSET", debit, credit);
-    StatementNodeResponse liability = buildRootNode(all, byParent, "LIABILITY", debit, credit);
-    StatementNodeResponse equity = buildRootNode(all, byParent, "EQUITY", debit, credit);
+    StatementNodeResponse asset    = buildRootNode(all, byParent, "ASSET",     debit,   credit);
+    StatementNodeResponse liability = buildRootNode(all, byParent, "LIABILITY", debit,   credit);
+    StatementNodeResponse equity   = buildRootNode(all, byParent, "EQUITY",    debit,   credit);
 
-    // 당기순이익 마감: 전표상 마감분개가 없어 수익/비용이 자본으로 넘어오지 않으면
-    // 재무상태표가 '자산 = 부채 + 자본'을 만족하지 못한다(불균형 금액 = 순이익).
-    // 마감분개(전표)를 만들지 않고, 계산 시점에 누적 순이익(수익-비용, 기준일까지)을 자본에 가산해 균형을 맞춘다.
-    // (복식부기상 총차변=총대변이므로 자산 = 부채 + 자본 + (수익-비용) 이 성립한다.)
-    StatementNodeResponse revenueToDate = buildRootNode(all, byParent, "REVENUE", debit, credit);
-    StatementNodeResponse expenseToDate = buildRootNode(all, byParent, "EXPENSE", debit, credit);
-    long netIncome = revenueToDate.getAmount() - expenseToDate.getAmount();
+    // 마감분개(전표) 없이 계산 시점에 수익-비용을 자본에 가산해 자산=부채+자본 균형을 맞춘다.
+    // 전년도까지의 누적 순이익 → 이익잉여금(전기이월)
+    // 당해연도 순이익                → 당기순이익
+    // 두 항목의 합계가 전체 (수익-비용) 누적과 같으므로 균형은 유지된다.
+    long totalNetIncome = buildRootNode(all, byParent, "REVENUE", debit, credit).getAmount()
+        - buildRootNode(all, byParent, "EXPENSE", debit, credit).getAmount();
+
+    long currentNetIncome = buildRootNode(all, byParent, "REVENUE", cyDebit, cyCredit).getAmount()
+        - buildRootNode(all, byParent, "EXPENSE", cyDebit, cyCredit).getAmount();
+
+    long retainedEarnings = totalNetIncome - currentNetIncome; // 전년도까지 누적 순이익
 
     java.util.List<StatementNodeResponse> equityChildren = new java.util.ArrayList<>(
         equity.getChildren() != null ? equity.getChildren() : java.util.List.of());
+
+    // 전년도 이익이 있을 때만 이익잉여금(전기이월) 항목을 표시한다
+    if (retainedEarnings != 0) {
+      equityChildren.add(StatementNodeResponse.builder()
+          .accountCode(null)
+          .accountName("이익잉여금 (전기이월)")
+          .level(2)
+          .amount(retainedEarnings)
+          .children(java.util.List.of())
+          .build());
+    }
     equityChildren.add(StatementNodeResponse.builder()
         .accountCode(null)
         .accountName("당기순이익")
         .level(2)
-        .amount(netIncome)
+        .amount(currentNetIncome)
         .children(java.util.List.of())
         .build());
 
@@ -70,7 +95,7 @@ public class StatementService {
         .accountCode(equity.getAccountCode())
         .accountName(equity.getAccountName())
         .level(equity.getLevel())
-        .amount(equity.getAmount() + netIncome)
+        .amount(equity.getAmount() + totalNetIncome)
         .children(equityChildren)
         .build();
 
@@ -97,7 +122,9 @@ public class StatementService {
     Map<String, Long> credit = new HashMap<>();
     splitByLineType(rows, debit, credit);
 
-    List<FinancialStatementAccount> all = accountRepo.findAll();
+    List<FinancialStatementAccount> all = accountRepo.findAll().stream()
+        .filter(a -> "사용".equals(a.getIsActive()))
+        .collect(Collectors.toList());
     Map<Long, List<FinancialStatementAccount>> byParent = groupByParent(all);
 
     StatementNodeResponse revenue = buildRootNode(all, byParent, "REVENUE", debit, credit);
@@ -124,16 +151,17 @@ public class StatementService {
       throw new IllegalArgumentException("accountCode는 필수입니다.");
     }
 
-    List<String> accountNames = accountRepo.findAll().stream()
+    List<String> accountCodes = accountRepo.findAll().stream()
+        .filter(a -> "사용".equals(a.getIsActive()))
         .filter(a -> a.getAccountCode().startsWith(accountCode))
-        .map(FinancialStatementAccount::getAccountName)
+        .map(FinancialStatementAccount::getAccountCode)
         .toList();
 
-    if (accountNames.isEmpty()) {
+    if (accountCodes.isEmpty()) {
       return List.of();
     }
 
-    return aggRepo.findBalanceDetails(startDate, referenceDate, accountNames, status);
+    return aggRepo.findBalanceDetails(startDate, referenceDate, accountCodes, status);
   }
 
   // ==========================
@@ -145,10 +173,11 @@ public class StatementService {
       Map<String, Long> credit
   ) {
     for (var r : rows) {
-      String name = safe(r.getAccountName());
+      String code = safe(r.getAccountCode());
+      if (code.isEmpty()) continue; // 코드 없는 라인은 집계 제외
       long amt = r.getAmt() == null ? 0L : r.getAmt();
-      if ("DEBIT".equalsIgnoreCase(r.getLineType())) debit.merge(name, amt, Long::sum);
-      else credit.merge(name, amt, Long::sum);
+      if ("DEBIT".equalsIgnoreCase(r.getLineType())) debit.merge(code, amt, Long::sum);
+      else credit.merge(code, amt, Long::sum);
     }
   }
 
@@ -203,7 +232,11 @@ public class StatementService {
 
     visiting.remove(node.getId());
 
-    long ownAmount = signedNetAmount(node.getCategory(), node.getAccountName(), debit, credit);
+    // 자식이 있는 집계 계정(4001 등)은 전표 금액을 직접 가져오지 않고 자식 합산만 사용한다.
+    // 자식이 없는 리프 계정만 전표에서 ownAmount를 가져온다.
+    long ownAmount = children.isEmpty()
+        ? signedNetAmount(node.getCategory(), node.getAccountCode(), debit, credit)
+        : 0L;
     long childrenSum = children.stream().mapToLong(StatementNodeResponse::getAmount).sum();
 
     return StatementNodeResponse.builder()
@@ -216,10 +249,10 @@ public class StatementService {
   }
 
   // ASSET/EXPENSE는 차변 정상잔액(debit-credit), LIABILITY/EQUITY/REVENUE는 대변 정상잔액(credit-debit)
-  private long signedNetAmount(String category, String accountName, Map<String, Long> debit, Map<String, Long> credit) {
-    String name = safe(accountName);
-    long d = debit.getOrDefault(name, 0L);
-    long c = credit.getOrDefault(name, 0L);
+  private long signedNetAmount(String category, String accountCode, Map<String, Long> debit, Map<String, Long> credit) {
+    String code = safe(accountCode);
+    long d = debit.getOrDefault(code, 0L);
+    long c = credit.getOrDefault(code, 0L);
     long net = d - c;
     return CREDIT_NORMAL_CATEGORIES.contains(category) ? -net : net;
   }

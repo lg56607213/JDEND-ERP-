@@ -95,6 +95,11 @@ public class CompanyUserService {
       }
     }
 
+    // NEW-BUG-D: COMPANY_ADMIN 계정은 어떤 사용자도 비활성화 불가 (gsrent COMPANY_ADMIN 비활성화 재발 방지)
+    if ("COMPANY_ADMIN".equals(user.getRole()) && req.getIsActive() != null && !req.getIsActive()) {
+      throw new ForbiddenException("회사관리자 계정은 비활성화할 수 없습니다. 회사관리자 역할을 변경한 후 진행하세요.");
+    }
+
     // BUG-13-03: COMPANY_ADMIN으로 변경 시 기존 COMPANY_ADMIN 중복 방지
     if (!isBlank(req.getRole()) && "COMPANY_ADMIN".equals(normalizeRole(req.getRole()))
         && !"COMPANY_ADMIN".equals(user.getRole())) {
@@ -128,6 +133,11 @@ public class CompanyUserService {
     if (Objects.equals(currentLoginId, user.getUserLoginId())) {
       // BUG-12-04: 자기 삭제 → 403
       throw new ForbiddenException("현재 로그인한 계정은 삭제할 수 없습니다.");
+    }
+
+    // NEW-BUG-D: COMPANY_ADMIN 계정은 삭제(소프트 삭제) 불가 — 비활성화와 동일한 위험
+    if ("COMPANY_ADMIN".equals(user.getRole())) {
+      throw new ForbiddenException("회사관리자 계정은 삭제할 수 없습니다. 역할을 먼저 변경한 후 삭제하세요.");
     }
 
     // BUG-12-01: 하드 삭제 대신 소프트 삭제 — 기존 세션 다음 요청 시 인터셉터가 401 반환

@@ -2,6 +2,8 @@ package com.jdend.erp.management.financial.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -48,9 +50,11 @@ public class FinancialStatementAccount {
   @Column(name = "is_postable", nullable = false, length = 10)
   private String isPostable; // 사용/미사용 - 전표(전기)에 직접 쓸 수 있는지
 
-  @Column(name = "created_at", insertable = false, updatable = false)
+  @CreationTimestamp
+  @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "updated_at", insertable = false, updatable = false)
+  @UpdateTimestamp
+  @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 }

@@ -2,6 +2,8 @@ package com.jdend.erp.contract.maturitytermination.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,10 +57,12 @@ public class MaturityTermination {
   @Column(name="status", nullable=false, length=20)
   private String status; // 종료예정/종료완료
 
-  @Column(name="created_at", insertable=false, updatable=false)
+  @CreationTimestamp
+  @Column(name="created_at", updatable=false)
   private LocalDateTime createdAt;
 
-  @Column(name="updated_at", insertable=false, updatable=false)
+  @UpdateTimestamp
+  @Column(name="updated_at")
   private LocalDateTime updatedAt;
 
   @PrePersist

@@ -142,13 +142,8 @@ public class VehicleOrderService {
             VehicleOrder saved = orderRepo.save(o);
 
             // BUG-1+BUG-2 수정: 엑셀 업로드 등 "등록완료" 상태로 직접 생성 시
-            // 발주 단계 임시번호(…000)를 즉시 순차 차량관리번호로 확정한다.
-            if ("등록완료".equals(saved.getOrderStatus())
-                    && saved.getVehicleMgmtNo() != null
-                    && saved.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
-                confirmVehicleMgmtNo(saved);
-                orderRepo.save(saved);
-            }
+            // 차량관리번호는 실행(실행완료) 시점에 확정한다.
+            // 발주~등록 구간에서는 발주단계 임시번호(발주번호+000)를 그대로 유지한다.
 
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(saved)
@@ -316,6 +311,12 @@ public class VehicleOrderService {
 
         orderRepo.save(o);
 
+        // 실행완료로 넘어가는 순간 차량관리번호를 규칙 실번호로 확정한다.
+        //   발주단계 J260730001000 → 실행 J260730001001, 002, …
+        if (!Objects.equals(oldStatus, "실행완료") && "실행완료".equals(o.getOrderStatus())) {
+            confirmOnExecute(o);
+        }
+
         if (!Objects.equals(oldStatus, o.getOrderStatus())) {
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
@@ -446,9 +447,28 @@ public class VehicleOrderService {
      */
     @Transactional
     public VehicleDeliveryExecuteResponse execute(String vehicleMgmtNo, VehicleLoanCreateRequest req) {
-        VehicleOrder o = orderRepo.findByVehicleMgmtNo(vehicleMgmtNo)
-                .orElseThrow(() -> new RuntimeException("차량 없음: " + vehicleMgmtNo));
+        // 발주단계(…000)를 5대가 공유할 수 있으므로 단건 조회로는 특정할 수 없다.
+        List<VehicleOrder> candidates = orderRepo.findByVehicleMgmtNoOrderByIdAsc(vehicleMgmtNo);
+        if (candidates.isEmpty()) {
+            throw new RuntimeException("차량 없음: " + vehicleMgmtNo);
+        }
+        if (candidates.size() > 1) {
+            throw new RuntimeException(
+                    "같은 차량관리번호를 가진 차량이 " + candidates.size() + "대입니다. "
+                            + "실행할 차량을 선택해 주세요. (id 기준 실행 사용)");
+        }
+        return executeOrder(candidates.get(0), req);
+    }
 
+    /** 행 PK(id) 기준 실행 — N대 발주에서 실행할 차량을 지정할 때 사용 */
+    @Transactional
+    public VehicleDeliveryExecuteResponse executeById(Long id, VehicleLoanCreateRequest req) {
+        VehicleOrder o = orderRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("차량 없음(id): " + id));
+        return executeOrder(o, req);
+    }
+
+    private VehicleDeliveryExecuteResponse executeOrder(VehicleOrder o, VehicleLoanCreateRequest req) {
         String vehicleNo = o.getVehicleNo();
         if (vehicleNo == null || vehicleNo.isBlank()) {
             throw new RuntimeException("차량번호가 등록되지 않은 차량입니다. 차량등록 완료 후 실행해주세요.");
@@ -458,15 +478,16 @@ public class VehicleOrderService {
         req.vehicleNo = vehicleNo;
         VehicleLoanListItemResponse loan = vehicleLoanService.create(req);
 
-        // 상태가 아직 실행완료가 아니면 변경
+        // 상태가 아직 실행완료가 아니면 변경 + 차량관리번호 실번호 확정
         if (!"실행완료".equals(o.getOrderStatus())) {
             o.setOrderStatus("실행완료");
             orderRepo.save(o);
+            confirmOnExecute(o);
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
                     .status("실행완료")
                     .changedAt(LocalDateTime.now())
-                    .note("차입금 스케줄 등록 실행")
+                    .note("차입금 스케줄 등록 실행 (관리번호 " + o.getVehicleMgmtNo() + ")")
                     .build());
         }
 
@@ -512,11 +533,7 @@ public class VehicleOrderService {
 
         o.setOrderStatus("등록완료");
 
-        // BUG-2 수정: 발주 임시번호(…000) 상태라면 순차 차량관리번호로 확정
-        if (o.getVehicleMgmtNo() != null
-                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
-            confirmVehicleMgmtNo(o);
-        }
+        // 차량관리번호는 실행 시점에 확정한다. 등록 단계에서는 …000 을 유지.
 
         orderRepo.save(o);
 
@@ -547,7 +564,6 @@ public class VehicleOrderService {
         }
 
         String oldStatus = o.getOrderStatus();
-        String oldMgmtNo = o.getVehicleMgmtNo();
 
         o.setVehicleNo(req.getVehicleNo());
         // BUG-07: firstRegDate(자동차등록증 상 최초등록일) 저장
@@ -567,18 +583,9 @@ public class VehicleOrderService {
 
         o.setOrderStatus("등록완료");
 
-        // 차량관리번호 실번호 확정 (…000 → …001 등)
-        if (o.getVehicleMgmtNo() != null
-                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX)) {
-            confirmVehicleMgmtNo(o);
-        }
+        // 차량관리번호는 실행 시점에 확정한다. 등록 단계에서는 …000 을 유지.
 
         orderRepo.save(o);
-
-        // 선급 등록 시 생성된 전표의 차량관리번호를 실번호로 일괄 대체
-        if (!Objects.equals(oldMgmtNo, o.getVehicleMgmtNo())) {
-            voucherService.updateVehicleMgmtNo(oldMgmtNo, o.getVehicleMgmtNo());
-        }
 
         if (!Objects.equals(oldStatus, "등록완료")) {
             historyRepo.save(VehicleOrderHistory.builder()
@@ -592,11 +599,88 @@ public class VehicleOrderService {
         return buildDetailResponse(o);
     }
 
+    /**
+     * 차량관리번호 실번호 확정 (실행 시점).
+     *
+     * <p>차량관리번호(13자리) = 발주번호(10) + 재렌트회차(1) + 대순번(2)
+     * <p>최초계약이므로 재렌트회차는 0. 대순번은 같은 발주 안에서 실행하는 순서대로 1부터.
+     * <p>예) 발주 J260730001 을 5대 실행 → J260730001001 ~ J260730001005
+     */
     private void confirmVehicleMgmtNo(VehicleOrder o) {
-        // BUG-2 수정: J260721003000 형식 제거 → 회사 DB 내 전체 순차 번호(001, 002, …) 방식으로 대체.
-        // VehicleNumberGenerator.nextSequentialMgmtNo() 는 synchronized 로 단일 인스턴스 내 중복 방지.
-        int seq = numberGenerator.nextSequentialMgmtNo();
-        o.setVehicleMgmtNo(String.format("%03d", seq));
+        String orderNo = o.getOrderNo();
+        if (orderNo == null || orderNo.length() != 10) {
+            throw new RuntimeException(
+                    "발주번호가 없어 차량관리번호를 확정할 수 없습니다. (id=" + o.getId() + ")");
+        }
+        int unitSeq = numberGenerator.nextUnitSeq(orderNo);
+        o.setVehicleMgmtNo(VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq));
+    }
+
+    /**
+     * 차량관리번호로 실행 대상 차량 목록을 조회한다.
+     *
+     * <p>발주단계 번호(…000)를 5대가 공유하므로, 실행 화면에서는 이 목록을 띄우고
+     * 사용자가 실행할 차량을 고른다. 1대뿐이면 목록도 1건이다.
+     */
+    @Transactional(readOnly = true)
+    public List<VehicleOrderResponse> findExecutableByMgmtNo(String mgmtNo) {
+        return orderRepo.findByVehicleMgmtNoOrderByIdAsc(mgmtNo).stream()
+                .map(this::buildDetailResponse)
+                .toList();
+    }
+
+    /**
+     * 재렌트 시 차량관리번호의 재렌트 회차(11번째 자리)를 1 올린다. 대순번은 유지.
+     * 예) J260730001001 → J260730001101 (1회) → J260730001201 (2회)
+     *
+     * <p>전표에 붙어 있던 옛 번호도 함께 갱신한다.
+     *
+     * @return 변경된 차량관리번호
+     */
+    @Transactional
+    public String applyRerent(String vehicleNo) {
+        VehicleOrder o = orderRepo.findByVehicleNoNormalized(vehicleNo)
+                .orElseThrow(() -> new RuntimeException("차량 없음(차량번호): " + vehicleNo));
+
+        String oldMgmtNo = o.getVehicleMgmtNo();
+        if (oldMgmtNo == null || oldMgmtNo.length() != 13) {
+            throw new RuntimeException(
+                    "실행 확정된 차량만 재렌트할 수 있습니다. 현재 차량관리번호=" + oldMgmtNo);
+        }
+
+        String newMgmtNo = VehicleNumberGenerator.nextRerentMgmtNo(oldMgmtNo);
+        o.setVehicleMgmtNo(newMgmtNo);
+        orderRepo.save(o);
+        voucherService.updateVehicleMgmtNo(oldMgmtNo, newMgmtNo);
+
+        historyRepo.save(VehicleOrderHistory.builder()
+                .vehicleOrder(o)
+                .status(o.getOrderStatus())
+                .changedAt(LocalDateTime.now())
+                .note("재렌트 — 차량관리번호 " + oldMgmtNo + " → " + newMgmtNo)
+                .build());
+
+        return newMgmtNo;
+    }
+
+    /** 발주단계(…000) 임시번호인지 */
+    private boolean isOrderStageMgmtNo(VehicleOrder o) {
+        return o.getVehicleMgmtNo() != null
+                && o.getVehicleMgmtNo().endsWith(VehicleNumberGenerator.ORDER_STAGE_SUFFIX);
+    }
+
+    /**
+     * 실행 시점에 차량관리번호를 확정하고, 임시번호로 붙어 있던 전표의 번호도 함께 갱신한다.
+     * 이미 확정된 차량이면 아무것도 하지 않는다.
+     */
+    private void confirmOnExecute(VehicleOrder o) {
+        if (!isOrderStageMgmtNo(o)) return;
+        String oldMgmtNo = o.getVehicleMgmtNo();
+        confirmVehicleMgmtNo(o);
+        orderRepo.save(o);
+        if (!Objects.equals(oldMgmtNo, o.getVehicleMgmtNo())) {
+            voucherService.updateVehicleMgmtNo(oldMgmtNo, o.getVehicleMgmtNo());
+        }
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {

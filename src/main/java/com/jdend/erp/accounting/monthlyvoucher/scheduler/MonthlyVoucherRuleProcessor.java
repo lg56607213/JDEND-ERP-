@@ -63,6 +63,7 @@ public class MonthlyVoucherRuleProcessor {
                         .memo(memo)
                         .debitEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
+                                        .accountCode(rule.getDebitAccountCode())
                                         .account(rule.getDebitAccount())
                                         .amount(rule.getDebitAmount())
                                         .description(blankToNull(rule.getDebitDescription()))
@@ -70,6 +71,7 @@ public class MonthlyVoucherRuleProcessor {
                         ))
                         .creditEntries(List.of(
                                 VoucherCreateRequest.VoucherLineRequest.builder()
+                                        .accountCode(rule.getCreditAccountCode())
                                         .account(rule.getCreditAccount())
                                         .amount(rule.getCreditAmount())
                                         .description(blankToNull(rule.getCreditDescription()))

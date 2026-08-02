@@ -2,6 +2,7 @@ package com.jdend.erp.legal.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -24,6 +25,7 @@ public class LegalProgressEntry {
     @Column(name = "progress_content", columnDefinition = "TEXT", nullable = false)
     private String progressContent;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }

@@ -16,8 +16,10 @@ public class DailyFundReportResponse {
   @Builder
   public static class BankRow {
     private String bankName;
+    private Long prevBalance;  // 전일잔액
     private Long income;
     private Long expense;
+    private Long balance;      // 금일잔액 = prevBalance + income - expense
   }
 
   @Getter @Setter
@@ -32,8 +34,10 @@ public class DailyFundReportResponse {
   }
 
   private List<BankRow> banks;
+  private Long bankPrevBalanceTotal;  // 전일잔액 합계
   private Long bankIncomeTotal;
   private Long bankExpenseTotal;
+  private Long bankBalanceTotal;      // 금일잔액 합계
 
   private List<VoucherRow> voucherIncomes;
   private Long voucherIncomeTotal;

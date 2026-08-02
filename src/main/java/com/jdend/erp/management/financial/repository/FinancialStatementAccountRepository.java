@@ -17,4 +17,5 @@ public interface FinancialStatementAccountRepository extends JpaRepository<Finan
   boolean existsByAccountCode(String accountCode);
   Optional<FinancialStatementAccount> findByAccountCode(String accountCode);
   boolean existsByAccountName(String accountName);
+  Optional<FinancialStatementAccount> findFirstByAccountName(String accountName);
 }

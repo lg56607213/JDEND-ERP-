@@ -132,6 +132,8 @@
       margin: 0 2px;
     }
     .btn-mini:hover { background: #f5f5f5; }
+    .btn-mini.edit { color: #2563eb; border-color: #bfdbfe; }
+    .btn-mini.edit:hover { background: #eff6ff; }
     .btn-mini.danger { color: #dc2626; border-color: #fecaca; }
     .btn-mini.danger:hover { background: #fef2f2; }
     .btn-mini:disabled { opacity: .4; cursor: not-allowed; }
@@ -332,6 +334,44 @@
   </div>
 </div>
 
+<!-- 계정 수정 모달 -->
+<div id="editModal" class="add-modal">
+  <div class="add-modal-content">
+    <div class="modal-header2">
+      <h2>계정 수정</h2>
+      <button type="button" class="modal-close2" onclick="closeEditModal()">&times;</button>
+    </div>
+    <div class="modal-body2">
+      <div class="form-row2">
+        <label>계정코드</label>
+        <input type="text" id="editAccountCode" readonly style="background:#f3f4f6;color:#6b7280;" />
+      </div>
+      <div class="form-row2">
+        <label for="editAccountName">계정명 *</label>
+        <input type="text" id="editAccountName" placeholder="예: 보통예금" />
+      </div>
+      <div class="form-row2">
+        <label for="editIsActive">사용여부</label>
+        <select id="editIsActive">
+          <option value="사용">사용</option>
+          <option value="미사용">미사용</option>
+        </select>
+      </div>
+      <div class="form-row2">
+        <label for="editIsPostable">전기가능(전표등록 노출)</label>
+        <select id="editIsPostable">
+          <option value="사용">사용 (전표에서 선택 가능)</option>
+          <option value="미사용">미사용 (분류헤더, 전표에는 안 보임)</option>
+        </select>
+      </div>
+      <div class="form-actions2">
+        <button type="button" onclick="closeEditModal()">취소</button>
+        <button type="button" class="btn-primary" onclick="submitEditNode()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 전표내역 조회 모달 -->
 <div id="voucherHistoryModal" class="voucher-modal">
   <div class="voucher-modal-content">
@@ -430,6 +470,7 @@
   const api = {
     get: (path) => request("GET", path),
     post: (path, body) => request("POST", path, body),
+    put: (path, body) => request("PUT", path, body),
     del: (path) => request("DELETE", path),
   };
 
@@ -489,6 +530,7 @@
         <td class="${postableClass}">${escapeHtml(node.isPostable)}</td>
         <td>
           ${canHaveChild ? `<button type="button" class="btn-mini" onclick="openAddModal(${node.id}, '${escapeHtmlJs(node.accountName)}')">+ 하위분류추가</button>` : ""}
+          <button type="button" class="btn-mini edit" onclick="openEditModal(${node.id})">수정</button>
           <button type="button" class="btn-mini danger" ${canDelete ? "" : "disabled"} onclick="deleteNode(${node.id}, '${escapeHtmlJs(node.accountName)}')">삭제</button>
         </td>
       </tr>
@@ -559,6 +601,40 @@
       await loadTree();
     } catch (e) {
       alert("등록 실패\n\n" + e.message);
+    }
+  }
+
+  let editingNodeId = null;
+
+  function openEditModal(nodeId) {
+    const node = nodeIndex.get(nodeId);
+    if (!node) { alert("계정 정보를 찾을 수 없습니다."); return; }
+    editingNodeId = nodeId;
+    document.getElementById("editAccountCode").value = node.accountCode || "";
+    document.getElementById("editAccountName").value = node.accountName || "";
+    document.getElementById("editIsActive").value = node.isActive || "사용";
+    document.getElementById("editIsPostable").value = node.isPostable || "사용";
+    document.getElementById("editModal").classList.add("show");
+  }
+
+  function closeEditModal() {
+    document.getElementById("editModal").classList.remove("show");
+    editingNodeId = null;
+  }
+
+  async function submitEditNode() {
+    const accountName = document.getElementById("editAccountName").value.trim();
+    if (!accountName) { alert("계정명을 입력하세요."); return; }
+    try {
+      await api.put(`/api/financial-statement-accounts/${editingNodeId}`, {
+        accountName,
+        isActive: document.getElementById("editIsActive").value,
+        isPostable: document.getElementById("editIsPostable").value,
+      });
+      closeEditModal();
+      await loadTree();
+    } catch (e) {
+      alert("수정 실패\n\n" + e.message);
     }
   }
 

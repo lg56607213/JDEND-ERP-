@@ -56,15 +56,33 @@ public class EarlyTerminationService {
     return toDetailDto(et);
   }
 
+  // NEW-BUG-C: 허용된 해지방법 값 목록 (early_termination.html 선택 옵션 기준)
+  private static final List<String> VALID_TERMINATION_METHODS = List.of("인수", "반납");
+
   public Long create(EarlyTerminationCreateRequest req) {
     if (req.getTerminationFee() == null) req.setTerminationFee(0L);
     if (req.getUncollectedRent() == null) req.setUncollectedRent(0L);
+
+    // NEW-BUG-C: terminationMethod 유효값 검증
+    if (req.getTerminationMethod() == null || req.getTerminationMethod().isBlank()) {
+      throw new IllegalArgumentException("중도상환방법을 선택해주세요. 허용값: " + VALID_TERMINATION_METHODS);
+    }
+    if (!VALID_TERMINATION_METHODS.contains(req.getTerminationMethod())) {
+      throw new IllegalArgumentException(
+          "지원하지 않는 중도상환방법입니다: '" + req.getTerminationMethod() + "'. 허용값: " + VALID_TERMINATION_METHODS);
+    }
 
     Contract contract = contractRepository.findByContractNumber(req.getContractNumber())
         .orElseThrow(() -> new IllegalArgumentException("계약번호를 찾을 수 없습니다: " + req.getContractNumber()));
 
     String customerName = resolveCustomerName(contract);
     LocalDate terminationDate = (req.getTerminationDate() != null) ? req.getTerminationDate() : LocalDate.now();
+
+    // BUG-08 수정: 해지일이 계약 시작일보다 이전이면 거부
+    if (terminationDate.isBefore(contract.getStartDate())) {
+      throw new IllegalArgumentException(
+          "해지일은 계약 시작일(" + contract.getStartDate() + ") 이후여야 합니다.");
+    }
 
     long terminationAmount = safe(req.getTerminationAmount());
     long uncollectedRent = safe(req.getUncollectedRent());   // ✅ 직접 입력값 사용
@@ -297,14 +315,39 @@ public class EarlyTerminationService {
     }
 
     // 중도상환금액 분개
+    // BUG-06 수정: 미수금(amtCredit) 크레딧이 미수금 데빗(uncollectedRent)을 초과하면 순액이
+    // 음수가 됨. → 미수금 크레딧은 uncollectedRent 이내로 제한하고, 초과분은
+    // noReceivableAccount(선수금 등)로 분리 처리한다.
     if (terminationAmount > 0) {
-      if (amtDebit == null || amtCredit == null) {
-        log.warn("중도해지 상환금액 분개 생략: 기타계정관리 > 중도해지 > 중도상환금액 차변/대변을 설정해주세요. etId={}", et.getId());
+      if (amtDebit == null) {
+        log.warn("중도해지 상환금액 분개 생략: 기타계정관리 > 중도해지 > 중도상환금액 차변을 설정해주세요. etId={}", et.getId());
       } else {
         debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
             .account(amtDebit).amount(terminationAmount).description("중도상환금액").build());
-        creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account(amtCredit).amount(terminationAmount).description("중도상환금액").build());
+
+        // 미수금으로 상계 가능한 금액은 실제 미수금(uncollectedRent) 이내
+        long creditToReceivable = (uncollectedRent > 0) ? Math.min(terminationAmount, uncollectedRent) : 0L;
+        long creditToOther      = terminationAmount - creditToReceivable;
+
+        if (creditToReceivable > 0) {
+          if (amtCredit == null) {
+            log.warn("중도해지 상환금액 분개 생략(대변): 기타계정관리 > 중도해지 > 중도상환금액 대변을 설정해주세요. etId={}", et.getId());
+            debitEntries.remove(debitEntries.size() - 1); // 위에서 추가한 차변도 제거
+          } else {
+            creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                .account(amtCredit).amount(creditToReceivable).description("중도상환금액").build());
+          }
+        }
+        if (creditToOther > 0) {
+          String noRecCredit = accountSettings.getEarlyTermAmountCreditNoReceivableAccount();
+          String otherAccount = (noRecCredit != null) ? noRecCredit : amtCredit;
+          if (otherAccount == null) {
+            log.warn("중도해지 상환금액 초과분 대변 계정 미설정. 기타계정관리 > 중도해지 > 중도상환금액 대변(미수금없음)을 설정해주세요. etId={}", et.getId());
+          } else {
+            creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                .account(otherAccount).amount(creditToOther).description("중도상환금액(초과분)").build());
+          }
+        }
       }
     }
 

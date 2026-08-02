@@ -11,6 +11,7 @@ import com.jdend.erp.vehicle.advance.entity.VehicleAdvance;
 import com.jdend.erp.vehicle.advance.repository.VehicleAdvanceRepository;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
+import com.jdend.erp.accounting.voucher.service.AccountResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class VehicleAdvanceService {
   private final VoucherRepository voucherRepo;
   private final OtherAccountSettingsService accountSettings;
   private final VoucherNumberService voucherNumberService;
+  private final AccountResolver accountResolver;
 
   private static final Set<String> VAT_ZERO_ITEMS = Set.of(
     "취득세", "인지대", "공채할인금액", "공채매입금액"
@@ -182,6 +184,7 @@ public class VehicleAdvanceService {
         // 부가세 계정 설정 시: 공급가액 + 부가세 분리 차변 (합계 = totalAmt = 대변)
         voucher.addLine(VoucherLine.builder()
           .lineType("DEBIT")
+          .accountCode(accountResolver.codeOf(debitAccount))
           .accountName(debitAccount)
           .amount(supplyAmt)
           .description(itemName)
@@ -189,6 +192,7 @@ public class VehicleAdvanceService {
           .build());
         voucher.addLine(VoucherLine.builder()
           .lineType("DEBIT")
+          .accountCode(accountResolver.codeOf(vatDebitAccount))
           .accountName(vatDebitAccount)
           .amount(vatAmt)
           .description(itemName + " 부가세")
@@ -199,6 +203,7 @@ public class VehicleAdvanceService {
         log.warn("선급 부가세 차변 계정(advanceVatMapping.debit) 미설정으로 전체 금액을 단일 차변으로 처리합니다. itemName={}", itemName);
         voucher.addLine(VoucherLine.builder()
           .lineType("DEBIT")
+          .accountCode(accountResolver.codeOf(debitAccount))
           .accountName(debitAccount)
           .amount(totalAmt)
           .description(itemName)
@@ -209,6 +214,7 @@ public class VehicleAdvanceService {
       // 면세/비과세 항목 (취득세, 인지대 등): 단일 차변
       voucher.addLine(VoucherLine.builder()
         .lineType("DEBIT")
+        .accountCode(accountResolver.codeOf(debitAccount))
         .accountName(debitAccount)
         .amount(totalAmt)
         .description(itemName)
@@ -218,6 +224,7 @@ public class VehicleAdvanceService {
 
     voucher.addLine(VoucherLine.builder()
       .lineType("CREDIT")
+      .accountCode(accountResolver.codeOf(creditAccount))
       .accountName(creditAccount)
       .amount(totalAmt)
       .description(paymentMethod)

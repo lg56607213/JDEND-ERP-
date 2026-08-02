@@ -178,7 +178,7 @@
       for (const [key, list] of groups) {
         html += `<optgroup label="${escapeHtml(key)}">`;
         for (const a of list) {
-          html += `<option value="${escapeHtml(a.accountName)}">${escapeHtml(a.accountName)}</option>`;
+          html += `<option value="${escapeHtml(a.accountCode)}" data-name="${escapeHtml(a.accountName)}">[${escapeHtml(a.accountCode)}] ${escapeHtml(a.accountName)}</option>`;
         }
         html += `</optgroup>`;
       }
@@ -243,11 +243,13 @@
         vehicleManagementId: (document.getElementById('vehicleManagementId').value || '').trim(),
         monthlyDate: monthlyDate,
 
-        debitAccount: document.getElementById('debitAccount').value,
+        debitAccountCode: document.getElementById('debitAccount').value,
+        debitAccount: (() => { const s = document.getElementById('debitAccount'); return s.options[s.selectedIndex]?.getAttribute('data-name') || s.value; })(),
         debitAmount: Math.round(debitAmount),
         debitDescription: (document.getElementById('debitDescription').value || '').trim(),
 
-        creditAccount: document.getElementById('creditAccount').value,
+        creditAccountCode: document.getElementById('creditAccount').value,
+        creditAccount: (() => { const s = document.getElementById('creditAccount'); return s.options[s.selectedIndex]?.getAttribute('data-name') || s.value; })(),
         creditAmount: Math.round(creditAmount),
         creditDescription: (document.getElementById('creditDescription').value || '').trim(),
 

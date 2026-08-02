@@ -15,6 +15,7 @@ import com.jdend.erp.payment.payment.repository.PaymentRepository;
 import com.jdend.erp.payment.receivable.entity.Receivable;
 import com.jdend.erp.payment.receivable.repository.ReceivableRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
+import com.jdend.erp.accounting.voucher.service.AccountResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -33,6 +34,7 @@ public class PaymentService {
   private final ContractRepository contractRepo;
   private final VoucherRepository voucherRepository;
   private final OtherAccountSettingsService accountSettings;
+  private final AccountResolver accountResolver;
   private final VehicleOrderRepository vehicleOrderRepo;
   private final ReceivableRepository receivableRepo;  // BUG-10
   private final VoucherNumberService voucherNumberService;
@@ -207,6 +209,7 @@ public class PaymentService {
 
     voucher.addLine(VoucherLine.builder()
         .lineType("DEBIT")
+        .accountCode(accountResolver.codeOf(debitAccount))
         .accountName(debitAccount)
         .amount(payment.getPaymentAmount())
         .description("수납등록 입금")
@@ -215,6 +218,7 @@ public class PaymentService {
 
     voucher.addLine(VoucherLine.builder()
         .lineType("CREDIT")
+        .accountCode(accountResolver.codeOf(creditAccount))
         .accountName(creditAccount)
         .amount(payment.getPaymentAmount())
         .description("수납등록 입금")

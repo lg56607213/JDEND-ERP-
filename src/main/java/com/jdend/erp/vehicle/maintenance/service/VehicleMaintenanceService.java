@@ -102,7 +102,7 @@ public class VehicleMaintenanceService {
       }
 
       // 대변 계정 설정 확인 — 미설정이면 전표 전체 건너뜀
-      String creditAccount = resolveCreditAccountWithDetail(item.getPaymentMethod(), item.getPaymentDetail());
+      String creditAccount = resolveCreditAccount(item.getPaymentMethod());
       if (creditAccount == null) {
         log.warn("정비 대변 계정 미설정으로 전표를 건너뜁니다. paymentMethod={}, description={}",
             item.getPaymentMethod(), item.getDescription());
@@ -152,7 +152,8 @@ public class VehicleMaintenanceService {
                   VoucherCreateRequest.VoucherLineRequest.builder()
                       .account(creditAccount)
                       .amount(creditTotal)
-                      .description(item.getPaymentMethod())
+                      // BUG-02: 카드명/계좌명 상세는 계정명이 아닌 description에 기재
+                      .description(buildCreditDescription(item.getPaymentMethod(), item.getPaymentDetail()))
                       .build()
               ))
               .build()
@@ -195,23 +196,16 @@ public class VehicleMaintenanceService {
   }
 
   /**
-   * 결제수단별 대변 계정명 반환. suffix("(xxx)") 로직은 기존 그대로 유지.
-   * - 미지급금: suffix 없음
-   * - 법인카드/보통예금: paymentDetail suffix 추가
+   * BUG-02 수정: 결제수단별 대변 계정명 반환 — suffix(카드명/계좌명) 를 계정명에 붙이지 않는다.
+   * suffix 를 붙이면 재무제표 원장 조회(exact match) 에서 "미지급비용" 을 못 찾는 문제가 있었음.
+   * 카드명/계좌명 상세는 전표라인 description 에 기재한다.
    * 설정 미지정 시 null 반환 → 호출부에서 전표 건너뜀 처리.
    */
-  private String resolveCreditAccountWithDetail(String paymentMethod, String paymentDetail) {
-    String suffix = (paymentDetail != null && !paymentDetail.isBlank()) ? "(" + paymentDetail.trim() + ")" : "";
+  private String resolveCreditAccount(String paymentMethod) {
     return switch (paymentMethod) {
       case "미지급금" -> accountSettings.getMaintenanceCreditUnpaidAccount();
-      case "법인카드" -> {
-        String base = accountSettings.getMaintenanceCreditCardAccount();
-        yield base == null ? null : base + suffix;
-      }
-      case "보통예금" -> {
-        String base = accountSettings.getMaintenanceCreditBankAccount();
-        yield base == null ? null : base + suffix;
-      }
+      case "법인카드" -> accountSettings.getMaintenanceCreditCardAccount();
+      case "보통예금" -> accountSettings.getMaintenanceCreditBankAccount();
       default -> throw new IllegalArgumentException("대변 계정 매핑 불가: " + paymentMethod);
     };
   }
@@ -220,5 +214,13 @@ public class VehicleMaintenanceService {
     String vno = (vehicleNo == null || vehicleNo.isBlank()) ? "차량미상" : vehicleNo.trim();
     String desc = (description == null || description.isBlank()) ? "정비등록" : description.trim();
     return vno + " 정비등록 - " + desc;
+  }
+
+  /** BUG-02: 대변 전표라인 description — 결제수단(카드명/계좌명 포함) */
+  private String buildCreditDescription(String paymentMethod, String paymentDetail) {
+    if (paymentDetail != null && !paymentDetail.isBlank()) {
+      return paymentMethod + "(" + paymentDetail.trim() + ")";
+    }
+    return paymentMethod == null ? "" : paymentMethod;
   }
 }

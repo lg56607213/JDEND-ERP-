@@ -132,7 +132,7 @@
               <!-- 개인/개인사업자 연락처 -->
               <div class="form-group" id="phoneGroup">
                 <label for="phone" id="phoneLabel">연락처</label>
-                <input type="tel" id="phone" name="phone" placeholder="010-0000-0000">
+                <input type="tel" id="phone" name="phone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
               </div>
             </div>
           </div>
@@ -185,7 +185,7 @@
 
               <div class="form-group">
                 <label for="managerPhone">담당자 연락처</label>
-                <input type="tel" id="managerPhone" name="managerPhone" placeholder="010-0000-0000">
+                <input type="tel" id="managerPhone" name="managerPhone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
               </div>
 
               <div class="form-group">
@@ -321,6 +321,14 @@
       document.getElementById('corpNumber').removeAttribute('required');
     }
 
+    // 전화번호 포맷터 (11자리 숫자 → 000-0000-0000)
+    function formatPhone(v) {
+      const d = (v || '').replace(/\D/g, '').slice(0, 11);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
     // 사업자등록번호 포맷터
     function formatBizNo(v) {
       const digits = (v || '').replace(/\D/g, '').slice(0, 10);
@@ -342,9 +350,17 @@
       } else {
         phoneGroup.classList.remove('hidden');
         phoneLabel.textContent = '연락처';
-        phoneInput.placeholder = '010-0000-0000';
+        phoneInput.placeholder = '하이픈(-) 없이 숫자만 입력  예) 01012345678';
       }
     }
+
+    phoneInput.addEventListener('input', (e) => {
+      e.target.value = formatPhone(e.target.value);
+    });
+
+    document.getElementById('managerPhone').addEventListener('input', (e) => {
+      e.target.value = formatPhone(e.target.value);
+    });
 
     document.getElementById('businessNumber').addEventListener('input', (e) => {
       e.target.value = formatBizNo(e.target.value);
@@ -442,11 +458,11 @@
           <td>${escHtml(c.customerName ?? '')}</td>
           <td>${escHtml(c.registrationNumber ?? '')}</td>
           <td>${escHtml(c.ceo ?? '-')}</td>
-          <td>${escHtml(c.phone ?? '')}</td>
+          <td>${escHtml(formatPhone(c.phone) ?? '')}</td>
           <td>${escHtml(c.address ?? '')}</td>
           <td>${escHtml(c.billAddress ?? '')}</td>
           <td>${escHtml(c.manager ?? '')}</td>
-          <td>${escHtml(c.managerPhone ?? '')}</td>
+          <td>${escHtml(formatPhone(c.managerPhone) ?? '')}</td>
           <td>${escHtml(c.managerEmail ?? '')}</td>
           <td>${escHtml(c.registerDate ?? '')}</td>
           <td>

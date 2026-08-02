@@ -2,6 +2,8 @@ package com.jdend.erp.customer;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,9 +65,12 @@ public class Customer {
     @Column(name="register_date")
     private LocalDate registerDate;
 
-    @Column(name="created_at", insertable = false, updatable = false)
+    // BUG-04 수정: insertable=false 제거 → Hibernate가 INSERT/UPDATE 시점에 자동 설정
+    @CreationTimestamp
+    @Column(name="created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name="updated_at", insertable = false, updatable = false)
+    @UpdateTimestamp
+    @Column(name="updated_at")
     private LocalDateTime updatedAt;
 }

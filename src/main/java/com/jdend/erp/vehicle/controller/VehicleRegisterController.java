@@ -38,12 +38,14 @@ public class VehicleRegisterController {
 
   // ✅ 등록 저장 + 파일 업로드
   // /api/vehicle-register/J0003 (POST multipart)
+  // BUG-07 수정: firstRegDate(최초등록일) 파라미터 추가, registerDate 는 optional 로 변경
   @PostMapping(value = "/{mgmtNo}", consumes = "multipart/form-data")
   public ResponseEntity<?> register(
     @PathVariable String mgmtNo,
 
     @RequestParam String vehicleNo,
-    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate registerDate,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate firstRegDate,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate registerDate,
 
     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inspectionStart,
     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inspectionEnd,
@@ -57,6 +59,7 @@ public class VehicleRegisterController {
     try {
       VehicleRegisterRequest req = VehicleRegisterRequest.builder()
         .vehicleNo(vehicleNo)
+        .firstRegDate(firstRegDate)
         .registerDate(registerDate)
         .inspectionStart(inspectionStart)
         .inspectionEnd(inspectionEnd)

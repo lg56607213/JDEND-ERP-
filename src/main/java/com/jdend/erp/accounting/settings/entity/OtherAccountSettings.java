@@ -2,6 +2,8 @@ package com.jdend.erp.accounting.settings.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -20,9 +22,11 @@ public class OtherAccountSettings {
   @Column(name = "settings_json", nullable = false, columnDefinition = "json")
   private String settingsJson; // JSON 문자열로 저장(가장 단순/안전)
 
-  @Column(name = "created_at", insertable = false, updatable = false)
+  @CreationTimestamp
+  @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "updated_at", insertable = false, updatable = false)
+  @UpdateTimestamp
+  @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 }

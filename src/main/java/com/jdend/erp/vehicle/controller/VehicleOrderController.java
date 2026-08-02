@@ -59,6 +59,13 @@ public class VehicleOrderController {
         return service.detailById(id);
     }
 
+    // 실행 대상 조회 — 발주단계 번호(…000)를 N대가 공유하므로 목록으로 반환한다.
+    // 실행 화면에서 이 목록을 띄우고 사용자가 실행할 차량을 고른다.
+    @GetMapping("/executable/{mgmtNo}")
+    public List<VehicleOrderResponse> executable(@PathVariable String mgmtNo) {
+        return service.findExecutableByMgmtNo(mgmtNo);
+    }
+
     // 차입금 스케줄 등록 실행 (BUG-1 수정: 누락된 엔드포인트 추가)
     // 차량을 "실행완료"로 변경하고 차입금과 개시전표를 생성한다.
     @PostMapping("/{mgmtNo}/execute")
@@ -68,6 +75,16 @@ public class VehicleOrderController {
             HttpSession session) {
         permissionService.requireManager(session);
         return service.execute(mgmtNo, req);
+    }
+
+    // 행 PK(id) 기준 실행 — N대 발주에서 실행할 차량을 지정할 때 사용
+    @PostMapping("/by-id/{id}/execute")
+    public VehicleDeliveryExecuteResponse executeById(
+            @PathVariable Long id,
+            @RequestBody VehicleLoanCreateRequest req,
+            HttpSession session) {
+        permissionService.requireManager(session);
+        return service.executeById(id, req);
     }
 
     // 수정 (차량관리번호 기반)

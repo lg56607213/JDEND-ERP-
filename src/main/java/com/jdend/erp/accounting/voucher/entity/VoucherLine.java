@@ -2,6 +2,8 @@ package com.jdend.erp.accounting.voucher.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -23,6 +25,9 @@ public class VoucherLine {
 
     @Column(name = "line_type", nullable = false, length = 20)
     private String lineType; // "DEBIT" or "CREDIT"
+
+    @Column(name = "account_code", length = 30)
+    private String accountCode;
 
     @Column(name = "account_name", nullable = false, length = 100)
     private String accountName;
@@ -46,9 +51,11 @@ public class VoucherLine {
     @Column(name = "paid_voucher_no", length = 50)
     private String paidVoucherNo;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", insertable = false, updatable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

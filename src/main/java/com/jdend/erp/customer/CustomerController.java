@@ -47,7 +47,9 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Customer c) {
+    public ResponseEntity<?> create(@RequestBody Customer c, HttpSession session) {
+        // BUG-05 수정: 고객 등록은 책임자 권한 필요 (STAFF 차단)
+        permissionService.requireManager(session);
         // BUG-7차-07: JPA 내부 경로 노출 방지 — 필수값 사전 검증
         if (c.getCustomerName() == null || c.getCustomerName().isBlank())
             throw new IllegalArgumentException("고객명은 필수입니다.");
@@ -134,7 +136,9 @@ public class CustomerController {
     }
 
     @PostMapping("/bulk-upload")
-    public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
+    public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file, HttpSession session) {
+        // BUG-05 수정: 대량 업로드도 책임자 권한 필요
+        permissionService.requireManager(session);
         return bulkUploadService.upload(file);
     }
 }

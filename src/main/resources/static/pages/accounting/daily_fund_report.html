@@ -6,7 +6,116 @@
   <title>일일자금일보 | JDEND ERP</title>
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <link rel="stylesheet" href="../../assets/css/pages.css">
-  <link rel="stylesheet" href="../../assets/css/accounting/daily_fund_report.css">
+  <style>
+    /* ── 조회 영역 ── */
+    .search-bar {
+      display: flex; align-items: flex-end; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .search-bar .form-group { margin: 0; }
+    .search-bar label { font-size: .8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+    .search-bar input[type=date],
+    .search-bar input[type=month] {
+      height: 36px; padding: 0 10px; border: 1px solid #CBD5E1;
+      border-radius: 6px; font-size: .875rem; background: #fff;
+    }
+    .btn-search { height: 36px; padding: 0 20px; background: #2563EB; color: #fff;
+      border: none; border-radius: 6px; font-size: .875rem; font-weight: 600; cursor: pointer; }
+    .btn-search:hover { background: #1D4ED8; }
+
+    /* ── 보고서 제목 ── */
+    .report-title-wrap {
+      text-align: center; margin-bottom: 6px;
+    }
+    .report-title-wrap h2 {
+      font-size: 1.15rem; font-weight: 800; letter-spacing: .04em; color: #1E293B;
+    }
+    .report-title-wrap .report-date-label {
+      font-size: .8rem; color: #64748B; margin-top: 2px;
+    }
+
+    /* ── 섹션 공통 ── */
+    .fund-section { margin-bottom: 22px; }
+    .fund-section-title {
+      font-size: .78rem; font-weight: 700; color: #1E293B;
+      margin-bottom: 6px; padding: 4px 0;
+      border-bottom: 2px solid #1E293B;
+      letter-spacing: .02em;
+    }
+
+    /* ── 표 공통 ── */
+    .fund-table {
+      width: 100%; border-collapse: collapse;
+      font-size: .8rem;
+      table-layout: fixed;
+    }
+    .fund-table th, .fund-table td {
+      border: 1px solid #CBD5E1;
+      padding: 5px 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fund-table th {
+      background: #1E293B; color: #fff;
+      font-weight: 600; text-align: center; font-size: .75rem;
+    }
+    .fund-table td { background: #fff; }
+    .fund-table tr:hover td { background: #F8FAFC; }
+    .fund-table tfoot td {
+      background: #E2E8F0 !important;
+      font-weight: 700;
+    }
+    .fund-table .td-label { font-weight: 600; color: #334155; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .income  { color: #1D4ED8; }
+    .expense { color: #B91C1C; }
+    .balance { color: #065F46; font-weight: 700; }
+    .prev    { color: #6B21A8; }
+    .center  { text-align: center; }
+
+    /* ── 섹션 I/III: 자금현황 표 ── */
+    .balance-table th:nth-child(1) { width: 22%; }
+    .balance-table th:nth-child(2) { width: 19%; }
+    .balance-table th:nth-child(3) { width: 19%; }
+    .balance-table th:nth-child(4) { width: 19%; }
+    .balance-table th:nth-child(5) { width: 21%; }
+
+    /* ── 섹션 II/IV: 세부내역 좌우 분할 ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .detail-half-title {
+      font-size: .75rem; font-weight: 700;
+      padding: 3px 8px; margin-bottom: 4px;
+      border-radius: 4px; display: inline-block;
+    }
+    .detail-half-title.in  { background: #DBEAFE; color: #1D4ED8; }
+    .detail-half-title.out { background: #FEE2E2; color: #B91C1C; }
+
+    /* ── 버튼 영역 ── */
+    .form-actions {
+      display: flex; gap: 8px; justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .btn { height: 34px; padding: 0 16px; border-radius: 6px;
+      font-size: .82rem; font-weight: 600; cursor: pointer; border: none; }
+    .btn-outline { background: #fff; border: 1px solid #CBD5E1; color: #475569; }
+    .btn-outline:hover { background: #F1F5F9; }
+    .btn-primary { background: #2563EB; color: #fff; }
+    .btn-primary:hover { background: #1D4ED8; }
+
+    /* ── 인쇄 ── */
+    @media print {
+      .search-bar, .form-actions, #sidebar-container, .page-header { display: none !important; }
+      .content-wrapper { margin: 0 !important; padding: 12px !important; }
+      .erp-card { box-shadow: none !important; border: none !important; }
+      .fund-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .fund-section { page-break-inside: avoid; }
+    }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -18,146 +127,217 @@
 
     <div class="erp-card">
       <div class="card-body">
-        <!-- 기준일자 선택 -->
-        <div class="search-section">
-          <div class="search-grid">
-            <div class="form-group">
-              <label for="reportDate" class="required">기준일자</label>
-              <input type="date" id="reportDate" name="reportDate" required>
-            </div>
-            <div class="form-group btn-group">
-              <button type="button" class="btn-search" onclick="loadReport()">조회</button>
-            </div>
+
+        <!-- 조회 영역 -->
+        <div class="search-bar">
+          <div class="form-group">
+            <label for="reportDate">기준일자</label>
+            <input type="date" id="reportDate">
           </div>
+          <div class="form-group">
+            <label for="reportMonth">기준월</label>
+            <input type="month" id="reportMonth">
+          </div>
+          <button class="btn-search" onclick="loadAll()">조회</button>
         </div>
 
-        <!-- 메인 컨텐츠 그리드 -->
-        <div class="report-grid">
-          <!-- 은행내역 -->
-          <div class="report-section">
-            <h3 class="section-title">* 은행내역</h3>
-            <table class="report-table">
-              <thead>
-                <tr>
-                  <th>은행</th>
-                  <th>입금</th>
-                  <th>출금</th>
-                </tr>
-              </thead>
-              <tbody id="bankTableBody"></tbody>
-              <tfoot>
-                <tr class="total-row">
-                  <td><strong>합계</strong></td>
-                  <td class="amount-cell income"><strong id="bankIncomeTotal">-</strong></td>
-                  <td class="amount-cell expense"><strong id="bankExpenseTotal">-</strong></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          <!-- 전표내역 -->
-          <div class="report-section voucher-section">
-            <h3 class="section-title">* 전표내역</h3>
-            <div class="voucher-grid">
-              <!-- 입금 전표 -->
-              <div class="voucher-half">
-                <h4 class="sub-title income-title">입금</h4>
-                <table class="report-table">
-                  <thead>
-                    <tr>
-                      <th>계정코드</th>
-                      <th>계정명</th>
-                      <th>입금금액</th>
-                      <th>비고</th>
-                    </tr>
-                  </thead>
-                  <tbody id="voucherIncomeBody"></tbody>
-                  <tfoot>
-                    <tr class="total-row">
-                      <td colspan="2"><strong>합계</strong></td>
-                      <td class="amount-cell income"><strong id="voucherIncomeTotal">-</strong></td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              <!-- 출금 전표 -->
-              <div class="voucher-half">
-                <h4 class="sub-title expense-title">출금</h4>
-                <table class="report-table">
-                  <thead>
-                    <tr>
-                      <th>계정코드</th>
-                      <th>계정명</th>
-                      <th>출금금액</th>
-                      <th>비고</th>
-                    </tr>
-                  </thead>
-                  <tbody id="voucherExpenseBody"></tbody>
-                  <tfoot>
-                    <tr class="total-row">
-                      <td colspan="2"><strong>합계</strong></td>
-                      <td class="amount-cell expense"><strong id="voucherExpenseTotal">-</strong></td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
+        <!-- 보고서 제목 -->
+        <div class="report-title-wrap">
+          <h2>제이디엔드 자금 일보</h2>
+          <div class="report-date-label" id="reportDateLabel"></div>
         </div>
 
-        <!-- 총 수입/지출 내역 비교 -->
-        <div class="summary-grid">
-          <!-- 총 수입내역 -->
-          <div class="summary-section">
-            <h3 class="section-title">* 총 수입내역</h3>
-            <table class="summary-table">
+        <!-- ───────────────────────────────────────────
+             I. 일일 자금 현황
+        ─────────────────────────────────────────── -->
+        <div class="fund-section">
+          <div class="fund-section-title">I. 일일 자금 현황</div>
+          <table class="fund-table balance-table">
+            <thead>
+              <tr>
+                <th>구&nbsp;&nbsp;분</th>
+                <th class="num">전일잔액</th>
+                <th class="num">수&nbsp;&nbsp;입</th>
+                <th class="num">지&nbsp;&nbsp;출</th>
+                <th class="num">금일잔액</th>
+              </tr>
+            </thead>
+            <tbody id="dailyBalanceBody">
+              <tr><td colspan="5" class="center" style="color:#94A3B8;padding:12px;">조회 버튼을 누르세요</td></tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="td-label">합&nbsp;&nbsp;계</td>
+                <td class="num prev"  id="dailyTotalPrev">-</td>
+                <td class="num income" id="dailyTotalIn">-</td>
+                <td class="num expense" id="dailyTotalOut">-</td>
+                <td class="num balance" id="dailyTotalBal">-</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- ───────────────────────────────────────────
+             II. 일일 자금 세부내역
+        ─────────────────────────────────────────── -->
+        <div class="fund-section">
+          <div class="fund-section-title">II. 일일 자금 세부내역</div>
+          <div class="detail-grid">
+            <div>
+              <span class="detail-half-title in">▲ 입금 내역</span>
+              <table class="fund-table">
+                <thead>
+                  <tr>
+                    <th style="width:45%">계정명</th>
+                    <th class="num" style="width:55%">금액</th>
+                  </tr>
+                </thead>
+                <tbody id="dailyVoucherInBody">
+                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td class="td-label">합계</td>
+                    <td class="num income" id="dailyVInTotal">-</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div>
+              <span class="detail-half-title out">▼ 출금 내역</span>
+              <table class="fund-table">
+                <thead>
+                  <tr>
+                    <th style="width:45%">계정명</th>
+                    <th class="num" style="width:55%">금액</th>
+                  </tr>
+                </thead>
+                <tbody id="dailyVoucherOutBody">
+                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td class="td-label">합계</td>
+                    <td class="num expense" id="dailyVOutTotal">-</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+          <!-- 은행내역 vs 전표 차액 요약 -->
+          <div style="margin-top:10px;">
+            <table class="fund-table" style="width:50%">
               <thead>
                 <tr>
-                  <th>은행내역</th>
-                  <th>전표내역</th>
-                  <th>차액</th>
+                  <th style="width:30%">구분</th>
+                  <th class="num" style="width:23%">은행내역</th>
+                  <th class="num" style="width:23%">전표내역</th>
+                  <th class="num" style="width:24%">차액</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td class="amount-cell" id="summaryBankIncome">-</td>
-                  <td class="amount-cell" id="summaryVoucherIncome">-</td>
-                  <td class="amount-cell difference" id="summaryIncomeDiff">-</td>
+                  <td class="td-label center">총 수입</td>
+                  <td class="num income" id="sumBankIn">-</td>
+                  <td class="num income" id="sumVoucherIn">-</td>
+                  <td class="num" id="sumDiffIn">-</td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 총 지출내역 -->
-          <div class="summary-section">
-            <h3 class="section-title">* 총 지출내역</h3>
-            <table class="summary-table">
-              <thead>
                 <tr>
-                  <th>은행내역</th>
-                  <th>전표내역</th>
-                  <th>차액</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="amount-cell" id="summaryBankExpense">-</td>
-                  <td class="amount-cell" id="summaryVoucherExpense">-</td>
-                  <td class="amount-cell difference" id="summaryExpenseDiff">-</td>
+                  <td class="td-label center">총 지출</td>
+                  <td class="num expense" id="sumBankOut">-</td>
+                  <td class="num expense" id="sumVoucherOut">-</td>
+                  <td class="num" id="sumDiffOut">-</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- 버튼 영역 -->
+        <!-- ───────────────────────────────────────────
+             III. 월별 자금 현황
+        ─────────────────────────────────────────── -->
+        <div class="fund-section">
+          <div class="fund-section-title">III. 월별 자금 현황</div>
+          <table class="fund-table balance-table">
+            <thead>
+              <tr>
+                <th>구&nbsp;&nbsp;분</th>
+                <th class="num">전월잔액</th>
+                <th class="num">월 수입</th>
+                <th class="num">월 지출</th>
+                <th class="num">잔&nbsp;&nbsp;액</th>
+              </tr>
+            </thead>
+            <tbody id="monthlyBalanceBody">
+              <tr><td colspan="5" class="center" style="color:#94A3B8;padding:12px;">조회 버튼을 누르세요</td></tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="td-label">합&nbsp;&nbsp;계</td>
+                <td class="num prev"   id="monthTotalPrev">-</td>
+                <td class="num income" id="monthTotalIn">-</td>
+                <td class="num expense" id="monthTotalOut">-</td>
+                <td class="num balance" id="monthTotalBal">-</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- ───────────────────────────────────────────
+             IV. 월별 자금 세부내역
+        ─────────────────────────────────────────── -->
+        <div class="fund-section">
+          <div class="fund-section-title">IV. 월별 자금 세부내역</div>
+          <div class="detail-grid">
+            <div>
+              <span class="detail-half-title in">▲ 월 입금 내역</span>
+              <table class="fund-table">
+                <thead>
+                  <tr>
+                    <th style="width:45%">계정명</th>
+                    <th class="num" style="width:55%">금액</th>
+                  </tr>
+                </thead>
+                <tbody id="monthlyVInBody">
+                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td class="td-label">합계</td>
+                    <td class="num income" id="monthlyVInTotal">-</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div>
+              <span class="detail-half-title out">▼ 월 출금 내역</span>
+              <table class="fund-table">
+                <thead>
+                  <tr>
+                    <th style="width:45%">계정명</th>
+                    <th class="num" style="width:55%">금액</th>
+                  </tr>
+                </thead>
+                <tbody id="monthlyVOutBody">
+                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td class="td-label">합계</td>
+                    <td class="num expense" id="monthlyVOutTotal">-</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 버튼 -->
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="printReport()">인쇄</button>
-          <button type="button" class="btn btn-primary" onclick="exportExcel()">엑셀 다운로드</button>
+          <button class="btn btn-outline" onclick="window.print()">인쇄</button>
+          <button class="btn btn-primary" onclick="exportCsv()">엑셀 다운로드</button>
         </div>
+
       </div>
     </div>
   </div>
@@ -166,133 +346,252 @@
   <script src="../../assets/js/config.js"></script>
   <script src="../../assets/js/html-escape.js"></script>
   <script>
-    let lastDaily = null;
+    let lastDaily   = null;
+    let lastMonthly = null;
 
-    function mustOk(res){
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      return res;
-    }
-    function fmt(v){
+    /* ── 포매터 ── */
+    function fmt(v) {
       const n = Number(v || 0);
-      if(n === 0) return "-";
-      return n.toLocaleString();
+      return n === 0 ? '-' : n.toLocaleString();
+    }
+    function fmtAlways(v) {
+      return Number(v || 0).toLocaleString();
+    }
+    function diffClass(v) {
+      const n = Number(v || 0);
+      return n > 0 ? 'income' : n < 0 ? 'expense' : '';
     }
 
-    window.addEventListener('load', function() {
-      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
-      loadReport();
+    /* ── 초기 날짜 설정 ── */
+    window.addEventListener('load', function () {
+      const today = new Date();
+      const ymd   = today.toISOString().split('T')[0];
+      const ym    = ymd.substring(0, 7);
+      document.getElementById('reportDate').value  = ymd;
+      document.getElementById('reportMonth').value = ym;
+      loadAll();
     });
 
-    async function loadReport() {
-      const reportDate = document.getElementById('reportDate').value;
-      if (!reportDate) return alert('기준일자를 선택해주세요.');
+    /* ── 날짜 동기화: 날짜 바꾸면 월도 자동 변경 ── */
+    document.getElementById('reportDate').addEventListener('change', function () {
+      const v = this.value;
+      if (v) document.getElementById('reportMonth').value = v.substring(0, 7);
+    });
+    document.getElementById('reportMonth').addEventListener('change', function () {
+      const v = this.value;
+      if (v) {
+        const cur = document.getElementById('reportDate').value;
+        if (!cur || cur.substring(0, 7) !== v) {
+          document.getElementById('reportDate').value = v + '-01';
+        }
+      }
+    });
 
+    /* ── 조회 ── */
+    async function loadAll() {
+      const date  = document.getElementById('reportDate').value;
+      const month = document.getElementById('reportMonth').value;
+      if (!date)  return alert('기준일자를 선택해주세요.');
+      if (!month) return alert('기준월을 선택해주세요.');
+
+      document.getElementById('reportDateLabel').textContent =
+        `기준일: ${date}  /  기준월: ${month}`;
+
+      await Promise.all([loadDaily(date), loadMonthly(month)]);
+    }
+
+    async function loadDaily(date) {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/cash/daily-fund-report?date=` + encodeURIComponent(reportDate));
-        await mustOk(res);
-        const data = await res.json();
-        lastDaily = data;
-        renderDaily(data);
+        const res = await fetch(`${API_BASE_URL}/api/cash/daily-fund-report?date=` + encodeURIComponent(date));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        lastDaily = await res.json();
+        renderDaily(lastDaily);
       } catch (e) {
         console.error(e);
-        alert("조회 실패: " + e.message);
+        alert('일일 조회 실패: ' + e.message);
       }
     }
 
-    function renderDaily(data){
-      // 은행내역
-      const bankBody = document.getElementById('bankTableBody');
-      bankBody.innerHTML = '';
-      (data.banks || []).forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escHtml(r.bankName || '(미지정)')}</td>
-          <td class="amount-cell income">${fmt(r.income)}</td>
-          <td class="amount-cell expense">${fmt(r.expense)}</td>
-        `;
-        bankBody.appendChild(tr);
-      });
-
-      document.getElementById('bankIncomeTotal').textContent = (data.bankIncomeTotal||0).toLocaleString();
-      document.getElementById('bankExpenseTotal').textContent = (data.bankExpenseTotal||0).toLocaleString();
-
-      // 전표 입금
-      const vInBody = document.getElementById('voucherIncomeBody');
-      vInBody.innerHTML = '';
-      (data.voucherIncomes || []).forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escHtml(r.accountCode || '')}</td>
-          <td>${escHtml(r.accountName || '')}</td>
-          <td class="amount-cell income">${fmt(r.amount)}</td>
-          <td>${escHtml(r.memo || '')}</td>
-        `;
-        vInBody.appendChild(tr);
-      });
-
-      // 전표 출금
-      const vOutBody = document.getElementById('voucherExpenseBody');
-      vOutBody.innerHTML = '';
-      (data.voucherExpenses || []).forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escHtml(r.accountCode || '')}</td>
-          <td>${escHtml(r.accountName || '')}</td>
-          <td class="amount-cell expense">${fmt(r.amount)}</td>
-          <td>${escHtml(r.memo || '')}</td>
-        `;
-        vOutBody.appendChild(tr);
-      });
-
-      document.getElementById('voucherIncomeTotal').textContent = (data.voucherIncomeTotal||0).toLocaleString();
-      document.getElementById('voucherExpenseTotal').textContent = (data.voucherExpenseTotal||0).toLocaleString();
-
-      // 요약
-      document.getElementById('summaryBankIncome').textContent = (data.bankIncomeTotal||0).toLocaleString();
-      document.getElementById('summaryVoucherIncome').textContent = (data.voucherIncomeTotal||0).toLocaleString();
-      document.getElementById('summaryIncomeDiff').textContent = fmt(data.incomeDiff);
-
-      document.getElementById('summaryBankExpense').textContent = (data.bankExpenseTotal||0).toLocaleString();
-      document.getElementById('summaryVoucherExpense').textContent = (data.voucherExpenseTotal||0).toLocaleString();
-      document.getElementById('summaryExpenseDiff').textContent = fmt(data.expenseDiff);
+    async function loadMonthly(month) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/cash/monthly-fund-report?month=` + encodeURIComponent(month));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        lastMonthly = await res.json();
+        renderMonthly(lastMonthly);
+      } catch (e) {
+        console.error(e);
+        alert('월별 조회 실패: ' + e.message);
+      }
     }
 
-    function printReport() {
-      window.print();
+    /* ── I. 일일 자금 현황 렌더 ── */
+    function renderDaily(d) {
+      const tbody = document.getElementById('dailyBalanceBody');
+      tbody.innerHTML = '';
+      (d.banks || []).forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-label">${escHtml(b.bankName || '(미지정)')}</td>
+          <td class="num prev">${fmtAlways(b.prevBalance)}</td>
+          <td class="num income">${fmt(b.income)}</td>
+          <td class="num expense">${fmt(b.expense)}</td>
+          <td class="num balance">${fmtAlways(b.balance)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      if (!d.banks || d.banks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="center" style="color:#94A3B8;padding:10px;">데이터 없음</td></tr>';
+      }
+
+      setEl('dailyTotalPrev', fmtAlways(d.bankPrevBalanceTotal));
+      setEl('dailyTotalIn',   fmtAlways(d.bankIncomeTotal));
+      setEl('dailyTotalOut',  fmtAlways(d.bankExpenseTotal));
+      setEl('dailyTotalBal',  fmtAlways(d.bankBalanceTotal));
+
+      /* II. 세부내역 */
+      renderVoucherList('dailyVoucherInBody', d.voucherIncomes, 'income');
+      renderVoucherList('dailyVoucherOutBody', d.voucherExpenses, 'expense');
+      setEl('dailyVInTotal',  fmtAlways(d.voucherIncomeTotal));
+      setEl('dailyVOutTotal', fmtAlways(d.voucherExpenseTotal));
+
+      /* 차액 요약 */
+      setEl('sumBankIn',     fmtAlways(d.bankIncomeTotal));
+      setEl('sumVoucherIn',  fmtAlways(d.voucherIncomeTotal));
+      const dIn = Number(d.incomeDiff || 0);
+      const dEl = document.getElementById('sumDiffIn');
+      dEl.textContent = dIn === 0 ? '-' : dIn.toLocaleString();
+      dEl.className   = 'num ' + diffClass(dIn);
+
+      setEl('sumBankOut',    fmtAlways(d.bankExpenseTotal));
+      setEl('sumVoucherOut', fmtAlways(d.voucherExpenseTotal));
+      const dOut = Number(d.expenseDiff || 0);
+      const dElO = document.getElementById('sumDiffOut');
+      dElO.textContent = dOut === 0 ? '-' : dOut.toLocaleString();
+      dElO.className   = 'num ' + diffClass(dOut);
     }
 
-    // ✅ CSV 다운로드 (서버 필요없음)
-    function exportExcel() {
-      if (!lastDaily) return alert("다운로드할 데이터가 없습니다.");
+    /* ── III. 월별 자금 현황 렌더 ── */
+    function renderMonthly(d) {
+      const tbody = document.getElementById('monthlyBalanceBody');
+      tbody.innerHTML = '';
+      (d.banks || []).forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-label">${escHtml(b.bankName || '(미지정)')}</td>
+          <td class="num prev">${fmtAlways(b.prevBalance)}</td>
+          <td class="num income">${fmt(b.income)}</td>
+          <td class="num expense">${fmt(b.expense)}</td>
+          <td class="num balance">${fmtAlways(b.balance)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      if (!d.banks || d.banks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="center" style="color:#94A3B8;padding:10px;">데이터 없음</td></tr>';
+      }
 
-      const date = document.getElementById('reportDate').value || 'report';
+      setEl('monthTotalPrev', fmtAlways(d.totalPrevBalance));
+      setEl('monthTotalIn',   fmtAlways(d.totalIncome));
+      setEl('monthTotalOut',  fmtAlways(d.totalExpense));
+      setEl('monthTotalBal',  fmtAlways(d.totalBalance));
 
+      /* IV. 월별 세부내역 */
+      renderVoucherList('monthlyVInBody',  d.voucherIncomes,  'income');
+      renderVoucherList('monthlyVOutBody', d.voucherExpenses, 'expense');
+      setEl('monthlyVInTotal',  fmtAlways(d.voucherIncomeTotal));
+      setEl('monthlyVOutTotal', fmtAlways(d.voucherExpenseTotal));
+    }
+
+    function renderVoucherList(tbodyId, rows, colorClass) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>';
+        return;
+      }
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escHtml(r.accountName || '')}</td>
+          <td class="num ${colorClass}">${fmt(r.amount)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setEl(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    /* ── CSV 다운로드 ── */
+    function exportCsv() {
+      const date  = document.getElementById('reportDate').value || 'report';
+      const month = document.getElementById('reportMonth').value || '';
       const lines = [];
-      lines.push("구분,항목,입금,출금");
 
-      // 은행
-      (lastDaily.banks || []).forEach(b => {
-        lines.push(["은행", b.bankName || "(미지정)", b.income || 0, b.expense || 0].join(","));
-      });
+      lines.push('제이디엔드 자금일보,' + date);
+      lines.push('');
 
-      // 전표 입금/출금
-      (lastDaily.voucherIncomes || []).forEach(v => {
-        lines.push(["전표입금", v.accountName || "", v.amount || 0, 0].join(","));
-      });
-      (lastDaily.voucherExpenses || []).forEach(v => {
-        lines.push(["전표출금", v.accountName || "", 0, v.amount || 0].join(","));
-      });
+      /* I. 일일 자금 현황 */
+      lines.push('I. 일일 자금 현황');
+      lines.push('구분,전일잔액,수입,지출,금일잔액');
+      if (lastDaily) {
+        (lastDaily.banks || []).forEach(b => {
+          lines.push([b.bankName||'(미지정)', b.prevBalance||0, b.income||0, b.expense||0, b.balance||0].join(','));
+        });
+        lines.push(['합계', lastDaily.bankPrevBalanceTotal||0, lastDaily.bankIncomeTotal||0,
+          lastDaily.bankExpenseTotal||0, lastDaily.bankBalanceTotal||0].join(','));
+      }
+      lines.push('');
 
-      lines.push(["합계(은행)", "", lastDaily.bankIncomeTotal||0, lastDaily.bankExpenseTotal||0].join(","));
-      lines.push(["합계(전표)", "", lastDaily.voucherIncomeTotal||0, lastDaily.voucherExpenseTotal||0].join(","));
-      lines.push(["차액", "", lastDaily.incomeDiff||0, lastDaily.expenseDiff||0].join(","));
+      /* II. 세부 */
+      lines.push('II. 일일 자금 세부내역 (입금)');
+      lines.push('계정명,금액');
+      if (lastDaily) {
+        (lastDaily.voucherIncomes||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['합계', lastDaily.voucherIncomeTotal||0].join(','));
+      }
+      lines.push('');
+      lines.push('II. 일일 자금 세부내역 (출금)');
+      lines.push('계정명,금액');
+      if (lastDaily) {
+        (lastDaily.voucherExpenses||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['합계', lastDaily.voucherExpenseTotal||0].join(','));
+      }
+      lines.push('');
 
-      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
+      /* III. 월별 자금 현황 */
+      lines.push('III. 월별 자금 현황 (' + month + ')');
+      lines.push('구분,전월잔액,월수입,월지출,잔액');
+      if (lastMonthly) {
+        (lastMonthly.banks||[]).forEach(b => {
+          lines.push([b.bankName||'(미지정)', b.prevBalance||0, b.income||0, b.expense||0, b.balance||0].join(','));
+        });
+        lines.push(['합계', lastMonthly.totalPrevBalance||0, lastMonthly.totalIncome||0,
+          lastMonthly.totalExpense||0, lastMonthly.totalBalance||0].join(','));
+      }
+      lines.push('');
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `일일자금일보_${date}.csv`;
+      /* IV. 월별 세부 */
+      lines.push('IV. 월별 자금 세부내역 (입금)');
+      lines.push('계정명,금액');
+      if (lastMonthly) {
+        (lastMonthly.voucherIncomes||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['합계', lastMonthly.voucherIncomeTotal||0].join(','));
+      }
+      lines.push('');
+      lines.push('IV. 월별 자금 세부내역 (출금)');
+      lines.push('계정명,금액');
+      if (lastMonthly) {
+        (lastMonthly.voucherExpenses||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['합계', lastMonthly.voucherExpenseTotal||0].join(','));
+      }
+
+      const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `자금일보_${date}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();

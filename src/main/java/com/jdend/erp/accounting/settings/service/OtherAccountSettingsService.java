@@ -7,6 +7,7 @@ import com.jdend.erp.accounting.settings.entity.OtherAccountSettings;
 import com.jdend.erp.accounting.settings.repository.OtherAccountSettingsRepository;
 import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OtherAccountSettingsService {
@@ -135,12 +137,25 @@ public class OtherAccountSettingsService {
   /** 보증금/선수금 수납 시 차변 계정명 (보통예금 - 현금성) */
   public String getDepositCreditAccount()    { return nested("depositMapping",    "credit"); }
 
-  /** 선수금 계정명 — 선수금 입금 시 대변, 적용 시 차변 (기본값: 선수금) */
-  public String getPrepaidDebitAccount()     { return nested("prepaidMapping",    "debit");  }
-  /** 선수금 적용 시 대변 계정명 (기본값: 임대수익) */
-  public String getPrepaidCreditAccount()    { return nested("prepaidMapping",    "credit"); }
-  /** 선수금 입금 시 차변 계정명 (기본값: 보통예금) */
-  public String getPrepaidBankAccount()      { return nested("prepaidMapping",    "bank");   }
+  // ── 선수금 ────────────────────────────────────────────────────────────
+  // 회계 계정의 기준은 "계정코드"다. 사용자가 재무제표관리에서 계정명을 바꿔도
+  // 매핑이 깨지지 않도록 아래 getter 는 모두 코드(account)를 반환한다.
+  // 계정명은 화면 표시용일 뿐이며 전표 생성에 사용하지 않는다.
+
+  /** 선수금 입금 시 차변 계정코드 (기본값: 100101 보통예금) */
+  public String getPrepaidBankAccountCode()   { return nestedCode("prepaidMapping", "bank",   DEFAULT_PREPAID_BANK_CODE);   }
+  /** 선수금 계정코드 — 입금 시 대변, 적용 시 차변 (기본값: 200102 선수금) */
+  public String getPrepaidDebitAccountCode()  { return nestedCode("prepaidMapping", "debit",  DEFAULT_PREPAID_LIAB_CODE);   }
+  /** 선수금 적용 시 대변(수익) 계정코드 (기본값: 400101 렌트수익) */
+  public String getPrepaidCreditAccountCode() { return nestedCode("prepaidMapping", "credit", DEFAULT_PREPAID_REVENUE_CODE); }
+
+  /** 선수금 입금 시 차변 계정코드 기본값 — 보통예금 */
+  public static final String DEFAULT_PREPAID_BANK_CODE    = "100101";
+  /** 선수금 계정코드 기본값 — 선수금(유동부채) */
+  public static final String DEFAULT_PREPAID_LIAB_CODE    = "200102";
+  /** 선수금 적용 시 수익 계정코드 기본값 — 렌트수익 */
+  public static final String DEFAULT_PREPAID_REVENUE_CODE = "400101";
+
 
   /** 정비 차변 계정명 (공급가액) */
   public String getMaintenanceDebitAccount()        { return nested("maintenanceMapping", "debit");        }
@@ -190,6 +205,36 @@ public class OtherAccountSettingsService {
   public String getEarlyTermAmountCreditNoReceivableAccount() {
     String val = nested3("earlyTermMapping", "terminationAmount", "creditNoReceivable");
     return (val != null) ? val : "위약금수익";
+  }
+
+  /**
+   * section → key → "account"(계정코드)를 반환한다.
+   * 미설정이거나 재무제표관리에 없는 코드면 defaultCode 로 대체한다.
+   * 계정명(accountName)은 사용자가 바꿀 수 있으므로 매핑 기준으로 쓰지 않는다.
+   */
+  private String nestedCode(String section, String key, String defaultCode) {
+    Object sec = getSettingsMap().get(section);
+    if (sec instanceof Map) {
+      Object entry = ((Map<?, ?>) sec).get(key);
+      if (entry instanceof Map) {
+        Object code = ((Map<?, ?>) entry).get("account");
+        if (code instanceof String) {
+          String c = ((String) code).trim();
+          if (!c.isEmpty()) {
+            if (fsAccountRepo.existsByAccountCode(c)) return c;
+            log.warn("기타계정관리 {}.{} 의 계정코드 '{}' 가 재무제표관리에 없습니다. 기본코드 '{}' 로 대체합니다.",
+                section, key, c, defaultCode);
+          }
+        }
+      }
+    }
+    // 기본코드마저 없으면 전표는 만들어지지만 재무제표 집계에서 누락된다.
+    if (!fsAccountRepo.existsByAccountCode(defaultCode)) {
+      log.error("기본 계정코드 '{}' ({}.{}) 가 재무제표관리에 등록되어 있지 않습니다. "
+              + "해당 전표는 재무제표에 반영되지 않습니다. 재무제표관리에 계정을 등록하거나 기타계정관리에서 계정을 지정하세요.",
+          defaultCode, section, key);
+    }
+    return defaultCode;
   }
 
   private String nested(String section, String key) {

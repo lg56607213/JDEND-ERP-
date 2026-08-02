@@ -2,6 +2,8 @@ package com.jdend.erp.accounting.voucher.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,6 +38,9 @@ public class MonthlyVoucherRule {
   @Column(name = "last_run_date")
   private LocalDate lastRunDate;
 
+  @Column(name = "debit_account_code", length = 30)
+  private String debitAccountCode;
+
   @Column(name = "debit_account", nullable = false, length = 100)
   private String debitAccount;
 
@@ -44,6 +49,9 @@ public class MonthlyVoucherRule {
 
   @Column(name = "debit_description", length = 255)
   private String debitDescription;
+
+  @Column(name = "credit_account_code", length = 30)
+  private String creditAccountCode;
 
   @Column(name = "credit_account", nullable = false, length = 100)
   private String creditAccount;
@@ -57,9 +65,11 @@ public class MonthlyVoucherRule {
   @Column(name = "memo", length = 255)
   private String memo;
 
-  @Column(name = "created_at", insertable = false, updatable = false)
+  @CreationTimestamp
+  @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "updated_at", insertable = false, updatable = false)
+  @UpdateTimestamp
+  @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 }

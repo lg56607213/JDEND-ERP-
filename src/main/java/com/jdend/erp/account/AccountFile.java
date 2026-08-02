@@ -2,6 +2,7 @@ package com.jdend.erp.account;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Getter @Setter
@@ -28,6 +29,7 @@ public class AccountFile {
     @Column(name="file_size")
     private Long fileSize;
 
-    @Column(name="created_at", insertable=false, updatable=false)
+    @CreationTimestamp
+    @Column(name="created_at", updatable=false)
     private LocalDateTime createdAt;
 }

@@ -51,8 +51,11 @@ public class TaxInvoiceService {
                 customer = customerRepo.findByCustomerNumber(contract.getCustomerNumber()).orElse(null);
             }
 
-            long supplyAmount = ps.getRentAmount() != null ? ps.getRentAmount() : 0L;
-            long taxAmount    = Math.round(supplyAmount * 0.1);
+            // BUG-03 수정: rentAmount 는 VAT 포함 합계액 → 역산으로 공급가액/세액 분리
+            // 합계(VAT 포함) / 11 = 부가세,  합계 - 부가세 = 공급가액
+            long total        = ps.getRentAmount() != null ? ps.getRentAmount() : 0L;
+            long taxAmount    = Math.round(total / 11.0);
+            long supplyAmount = total - taxAmount;
 
             TaxInvoicePreviewRow row = TaxInvoicePreviewRow.builder()
                     .contractNumber(cn)

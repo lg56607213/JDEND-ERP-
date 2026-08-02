@@ -71,6 +71,8 @@
             <input type="date" id="endDate">
           </div>
           <button type="button" class="btn-search" onclick="loadIncomeStatement()">조회</button>
+          <button type="button" class="btn-search" onclick="downloadFullExcel()" style="background:#059669;border-color:#059669;margin-left:8px;">전체 엑셀 다운로드</button>
+          <button type="button" class="btn-search" onclick="printIncomeStatement()" style="background:#4f46e5;border-color:#4f46e5;margin-left:8px;">인쇄</button>
         </div>
 
         <div class="statements-grid">
@@ -145,7 +147,10 @@
           <div class="modal-title" id="detailModalTitle">상세내역</div>
           <div class="muted" id="detailModalSubTitle">기간 기준 전표 내역</div>
         </div>
-        <button type="button" class="modal-close" onclick="closeDetailModal()">×</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" onclick="downloadDetailExcel()" style="padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">엑셀 다운로드</button>
+          <button type="button" class="modal-close" onclick="closeDetailModal()">×</button>
+        </div>
       </div>
       <div class="modal-body">
         <table class="detail-table">
@@ -183,6 +188,73 @@
     }
 
     let lastRange = { startDate: null, endDate: null };
+    let currentDetailAccountCode = null;
+    let currentDetailAccountName = null;
+
+    function downloadDetailExcel() {
+      if (!currentDetailAccountCode) { alert('먼저 계정을 조회하세요.'); return; }
+      if (!lastRange.startDate || !lastRange.endDate) { alert('기간을 선택해주세요.'); return; }
+      const qs = new URLSearchParams({
+        accountCode: currentDetailAccountCode,
+        startDate: lastRange.startDate,
+        referenceDate: lastRange.endDate,
+        status: '승인',
+        accountName: currentDetailAccountName || '계정'
+      });
+      window.location.href = `${API_BASE_URL}/api/statements/balance/details/export?` + qs.toString();
+    }
+
+    function downloadFullExcel() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (!startDate || !endDate) { alert('기간을 선택해주세요.'); return; }
+      const qs = new URLSearchParams({ startDate, endDate, status: '승인' });
+      window.location.href = `${API_BASE_URL}/api/statements/income/export?` + qs.toString();
+    }
+
+    function printIncomeStatement() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (!startDate || !endDate) { alert('기간을 선택 후 인쇄해 주세요.'); return; }
+
+      const revenueHtml = document.getElementById('revenueTableBody').innerHTML;
+      const expenseHtml = document.getElementById('expenseTableBody').innerHTML;
+      const totalRevenue = document.getElementById('totalRevenue').textContent;
+      const totalExpense = document.getElementById('totalExpense').textContent;
+      const netIncome = document.getElementById('netIncome').textContent;
+
+      const win = window.open('', '', 'width=900,height=700');
+      win.document.write(`<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><title>손익계산서</title>
+<style>
+  body{font-family:'맑은 고딕',sans-serif;margin:30px;font-size:13px;color:#111;}
+  h2{text-align:center;margin-bottom:4px;font-size:20px;}
+  .sub{text-align:center;margin-bottom:24px;color:#555;font-size:13px;}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px;}
+  th{background:#e8eeff;text-align:center;padding:9px;border:1px solid #b0b8d0;font-size:14px;font-weight:700;}
+  td{padding:6px 10px;border-bottom:1px solid #eee;}
+  .total-row td{font-weight:700;border-top:2px solid #333;padding:9px 10px;}
+  .net-row td{font-weight:700;font-size:15px;border-top:3px double #333;padding:10px;}
+  td:last-child{text-align:right;}
+  @media print{body{margin:10px;}}
+</style>
+</head><body>
+<h2>손익계산서</h2>
+<p class="sub">기간: ${startDate} ~ ${endDate}</p>
+<table><thead><tr><th colspan="2">수익</th></tr></thead>
+<tbody>${revenueHtml}</tbody>
+<tfoot><tr class="total-row"><td>수익 총계</td><td>${totalRevenue}</td></tr></tfoot></table>
+<table><thead><tr><th colspan="2">비용</th></tr></thead>
+<tbody>${expenseHtml}</tbody>
+<tfoot><tr class="total-row"><td>비용 총계</td><td>${totalExpense}</td></tr></tfoot></table>
+<table><tbody>
+<tr class="net-row"><td>당기순이익</td><td>${netIncome}</td></tr>
+</tbody></table>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`);
+      win.document.close();
+    }
 
     window.addEventListener('load', function() {
       const today = new Date();
@@ -265,6 +337,9 @@
     async function openDetailModal(accountCode, accountName) {
       if (!lastRange.startDate || !lastRange.endDate) return;
 
+      currentDetailAccountCode = accountCode;
+      currentDetailAccountName = accountName;
+
       document.getElementById('detailModalTitle').textContent = `${accountName} 상세내역`;
       document.getElementById('detailModalSubTitle').textContent = `${lastRange.startDate} ~ ${lastRange.endDate} 승인 전표 내역`;
       document.getElementById('detailTableBody').innerHTML = `<tr><td colspan="9" style="text-align:center;">조회중...</td></tr>`;
@@ -313,6 +388,8 @@
 
     function closeDetailModal() {
       document.getElementById('detailModal').style.display = 'none';
+      currentDetailAccountCode = null;
+      currentDetailAccountName = null;
     }
 
     document.getElementById('detailModal').addEventListener('click', function(e) {

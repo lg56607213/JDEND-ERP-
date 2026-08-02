@@ -403,7 +403,7 @@
       for (const [key, list] of groups) {
         html += `<optgroup label="${escapeHtml(key)}">`;
         for (const a of list) {
-          html += `<option value="${escapeHtml(a.accountName)}">${escapeHtml(a.accountName)}</option>`;
+          html += `<option value="${escapeHtml(a.accountCode)}" data-name="${escapeHtml(a.accountName)}">[${escapeHtml(a.accountCode)}] ${escapeHtml(a.accountName)}</option>`;
         }
         html += `</optgroup>`;
       }
@@ -645,7 +645,7 @@
         const amount = Number(amtStr) || 0;
 
         if (account && amount > 0) {
-          entries.push({ account, amount: Math.trunc(amount), description });
+          entries.push({ accountCode: account, amount: Math.trunc(amount), description });
           total += amount;
         }
       });

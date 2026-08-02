@@ -442,7 +442,9 @@ public class DepreciationService {
   }
 
   private static int monthsInclusive(LocalDate start, LocalDate end) {
-    int months = (end.getYear() - start.getYear()) * 12 + (end.getMonthValue() - start.getMonthValue()) + 1;
+    // BUG-01 수정: + 1 제거 — start와 end가 같은 달이면 0이 되고 Math.max(0,1)=1개월로 올바름
+    // 예) start=2024-01, end=2028-01 → (4*12)+(1-1) = 48개월 (올바름)
+    int months = (end.getYear() - start.getYear()) * 12 + (end.getMonthValue() - start.getMonthValue());
     return Math.max(months, 1);
   }
 

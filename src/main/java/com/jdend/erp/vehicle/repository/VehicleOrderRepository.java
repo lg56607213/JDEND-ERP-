@@ -29,6 +29,25 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
                    "WHERE vehicle_mgmt_no REGEXP '^[0-9]+$'")
     int findMaxSequentialMgmtNo();
 
+    /**
+     * 발주단계(…000) 관리번호를 공유하는 N대를 등록 순서대로 조회.
+     * 실행 화면에서 "어느 차를 실행할지" 목록을 보여줄 때 사용한다.
+     */
+    List<VehicleOrder> findByVehicleMgmtNoOrderByIdAsc(String vehicleMgmtNo);
+
+    /**
+     * 같은 발주(발주번호) 안에서 이미 확정된 차량관리번호의 대순번(끝 2자리) 최대값.
+     * 차량관리번호 = 발주번호(10) + 재렌트회차(1) + 대순번(2) = 13자리.
+     * 발주단계(…000)와 13자리가 아닌 값은 제외한다. 없으면 0.
+     */
+    @Query(nativeQuery = true,
+           value = "SELECT COALESCE(MAX(CAST(RIGHT(vehicle_mgmt_no, 2) AS UNSIGNED)), 0) " +
+                   "FROM vehicle_orders " +
+                   "WHERE order_no = :orderNo " +
+                   "  AND CHAR_LENGTH(vehicle_mgmt_no) = 13 " +
+                   "  AND RIGHT(vehicle_mgmt_no, 3) <> '000'")
+    int findMaxUnitSeqByOrderNo(@Param("orderNo") String orderNo);
+
     Optional<VehicleOrder> findTopByOrderByVehicleMgmtNoDesc();
 
     boolean existsByVehicleMgmtNo(String vehicleMgmtNo);

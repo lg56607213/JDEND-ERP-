@@ -181,8 +181,9 @@ public class PrepaidRentService {
      *   대변: 선수금    (getPrepaidDebitAccount)
      */
     private void createDepositVoucher(PrepaidRentCreateRequest req) {
-        String bankAcct    = nvl(settingsService.getPrepaidBankAccount(),  "보통예금");
-        String prepaidAcct = nvl(settingsService.getPrepaidDebitAccount(), "선수금");
+        // 기타계정관리 > 선수금 전표 설정의 계정코드를 사용한다 (미설정 시 기본코드).
+        String bankCode    = settingsService.getPrepaidBankAccountCode();
+        String prepaidCode = settingsService.getPrepaidDebitAccountCode();
 
         Contract contract = findContract(req.getContractId());
         String memoText = "선수금 입금" + appendMemo(req.getMemo());
@@ -193,12 +194,12 @@ public class PrepaidRentService {
                 .vehicleNo(contract.getVehicleNo())
                 .memo(memoText)
                 .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
-                        .account(bankAcct)
+                        .accountCode(bankCode)
                         .amount(req.getAmount())
                         .description(memoText)
                         .build()))
                 .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
-                        .account(prepaidAcct)
+                        .accountCode(prepaidCode)
                         .amount(req.getAmount())
                         .description(memoText)
                         .build()))
@@ -211,8 +212,9 @@ public class PrepaidRentService {
      *   대변: 임대수익  (getPrepaidCreditAccount)
      */
     private void createApplyVoucher(PrepaidRentCreateRequest req) {
-        String prepaidAcct = nvl(settingsService.getPrepaidDebitAccount(),  "선수금");
-        String revenueAcct = nvl(settingsService.getPrepaidCreditAccount(), "임대수익");
+        // 기타계정관리 > 선수금 전표 설정의 계정코드를 사용한다 (미설정 시 기본코드).
+        String prepaidCode = settingsService.getPrepaidDebitAccountCode();
+        String revenueCode = settingsService.getPrepaidCreditAccountCode();
 
         Contract contract = findContract(req.getContractId());
         String memoText = "선수금 적용" + appendMemo(req.getMemo());
@@ -223,12 +225,12 @@ public class PrepaidRentService {
                 .vehicleNo(contract.getVehicleNo())
                 .memo(memoText)
                 .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
-                        .account(prepaidAcct)
+                        .accountCode(prepaidCode)
                         .amount(req.getAmount())
                         .description(memoText)
                         .build()))
                 .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
-                        .account(revenueAcct)
+                        .accountCode(revenueCode)
                         .amount(req.getAmount())
                         .description(memoText)
                         .build()))
@@ -258,10 +260,6 @@ public class PrepaidRentService {
         if (o instanceof Long l) return l;
         if (o instanceof Number n) return n.longValue();
         return 0L;
-    }
-
-    private String nvl(String value, String defaultValue) {
-        return (value != null && !value.isBlank()) ? value : defaultValue;
     }
 
     private String appendMemo(String memo) {

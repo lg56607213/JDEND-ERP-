@@ -14,6 +14,7 @@ import com.jdend.erp.legal.entity.LegalProgressEntry;
 import com.jdend.erp.legal.repository.LegalCaseRepository;
 import com.jdend.erp.legal.repository.LegalCostItemRepository;
 import com.jdend.erp.legal.repository.LegalProgressEntryRepository;
+import com.jdend.erp.accounting.voucher.service.AccountResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class LegalCaseService {
     private final LegalCostItemRepository costItemRepo;
     private final VoucherRepository voucherRepository;
     private final OtherAccountSettingsService accountSettings;
+    private final AccountResolver accountResolver;
     private final VoucherNumberService voucherNumberService;
 
     public LegalCaseResponse create(LegalCaseRequest req) {
@@ -243,10 +245,10 @@ public class LegalCaseService {
                 .build();
 
         voucher.addLine(VoucherLine.builder()
-                .lineType("DEBIT").accountName(debitAccount).amount(item.getAmount())
+                .lineType("DEBIT").accountCode(accountResolver.codeOf(debitAccount)).accountName(debitAccount).amount(item.getAmount())
                 .description(debitDesc).sortOrder(1).build());
         voucher.addLine(VoucherLine.builder()
-                .lineType("CREDIT").accountName(creditAccount).amount(item.getAmount())
+                .lineType("CREDIT").accountCode(accountResolver.codeOf(creditAccount)).accountName(creditAccount).amount(item.getAmount())
                 .description(creditDesc).sortOrder(2).build());
 
         return voucherRepository.save(voucher).getId();
