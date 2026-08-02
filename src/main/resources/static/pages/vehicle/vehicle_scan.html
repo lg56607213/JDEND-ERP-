@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차량등록증 스캔 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    /* ── 공통 버튼 ── */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+    .btn-primary { background: #23304e; color: #fff; }
+    .btn-primary:hover { background: #1b253a; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-add { background: #3b82f6; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+    .btn-add:hover { background: #2563eb; }
+    .btn-del { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+    .btn-del:hover { background: #fed7d7; }
+    .btn-view { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 700; padding: 4px 10px; }
+    .btn-view:hover { background: #dcfce7; }
+
+    /* ── 툴바 카드 ── */
+    .toolbar-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 16px 20px; margin-bottom: 16px;
+      display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+    }
+    .tfg { display: flex; flex-direction: column; gap: 5px; }
+    .tfg label { font-size: 0.82rem; font-weight: 700; color: #374151; }
+    .tfg input {
+      padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 5px;
+      font-size: 0.93rem; width: 180px;
+    }
+    .tfg input:focus { outline: none; border-color: #23304e; }
+
+    /* ── 테이블 카드 ── */
+    .table-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 16px 20px;
+    }
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 9px 10px; font-size: 0.8rem; font-weight: 700; color: #374151; background: #f8fafc; white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.87rem; color: #374151; white-space: nowrap; }
+    tr:hover td { background: #f9fafb; }
+
+    /* ── 업로드 모달 ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 12px; padding: 28px;
+      width: min(480px, 96vw); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    .modal-box h3 { margin: 0 0 18px; font-size: 1.1rem; font-weight: 800; color: #1b253a; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 0.82rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+    .modal-field input[type="text"],
+    .modal-field input[type="file"] {
+      width: 100%; box-sizing: border-box;
+      padding: 9px 11px; border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: 0.9rem; outline: none;
+    }
+    .modal-field input:focus { border-color: #23304e; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+    .modal-btns .btn-cancel { padding: 9px 18px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.88rem; }
+    .modal-btns .btn-cancel:hover { background: #e5e7eb; }
+    .modal-btns .btn-ok { padding: 9px 22px; background: #23304e; color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.88rem; }
+    .modal-btns .btn-ok:hover { background: #1b253a; }
+
+    /* ── 뷰어 모달 ── */
+    .viewer-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.75); z-index: 10000;
+      align-items: center; justify-content: center;
+    }
+    .viewer-backdrop.open { display: flex; }
+    .viewer-box {
+      background: #fff; border-radius: 12px;
+      width: min(860px, 96vw); max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      overflow: hidden;
+    }
+    .viewer-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px; border-bottom: 1px solid #eee;
+    }
+    .viewer-title { font-weight: 700; font-size: 1rem; color: #111827; }
+    .viewer-close {
+      border: 1px solid #ddd; background: #fff; border-radius: 8px;
+      width: 34px; height: 34px; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .viewer-close:hover { background: #f5f5f5; }
+    .viewer-body { flex: 1; overflow: auto; padding: 16px; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+    .viewer-body img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; }
+    .viewer-body iframe { width: 100%; height: 70vh; border: none; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <div class="page-header">
+    <h1>차량등록증 스캔</h1>
+    <p>차량관리 &gt; 스캔관리 &gt; 차량등록증</p>
+  </div>
+
+  <!-- 툴바 -->
+  <div class="toolbar-card">
+    <div class="tfg">
+      <label>차량번호</label>
+      <input type="text" id="searchVehicleNo" placeholder="예: 12가3456" onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <div class="tfg">
+      <label>차량관리번호</label>
+      <input type="text" id="searchMgmtNo" placeholder="예: V001" onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <button class="btn btn-primary" onclick="doSearch()">조회</button>
+    <button class="btn btn-primary" style="margin-left:auto;" onclick="openUploadModal()">+ 파일 업로드</button>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="table-card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px;">번호</th>
+            <th>차량관리번호</th>
+            <th>차량번호</th>
+            <th>파일명</th>
+            <th>크기</th>
+            <th>업로드일시</th>
+            <th style="width:120px;">관리</th>
+          </tr>
+        </thead>
+        <tbody id="scanTableBody">
+          <tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:32px;">조회하세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 업로드 모달 -->
+<div class="modal-backdrop" id="uploadBackdrop">
+  <div class="modal-box">
+    <h3>차량등록증 업로드</h3>
+    <div class="modal-field">
+      <label>차량번호</label>
+      <input type="text" id="uploadVehicleNo" placeholder="예: 12가3456">
+    </div>
+    <div class="modal-field">
+      <label>차량관리번호</label>
+      <input type="text" id="uploadMgmtNo" placeholder="예: V001">
+    </div>
+    <div class="modal-field">
+      <label>파일 선택 <span style="color:#6b7280; font-weight:400;">(PDF/JPG/JPEG/PNG, 최대 10MB)</span></label>
+      <input type="file" id="uploadFile" accept=".pdf,.jpg,.jpeg,.png">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeUploadModal()">취소</button>
+      <button class="btn-ok" onclick="submitUpload()">업로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- 뷰어 모달 -->
+<div class="viewer-backdrop" id="viewerBackdrop">
+  <div class="viewer-box">
+    <div class="viewer-header">
+      <span class="viewer-title" id="viewerTitle">문서 보기</span>
+      <button class="viewer-close" onclick="closeViewer()">✕</button>
+    </div>
+    <div class="viewer-body" id="viewerBody"></div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+<script>
+  const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function fmtSize(bytes) {
+    if (!bytes) return '-';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function fmtDt(dt) {
+    if (!dt) return '-';
+    return String(dt).replace('T', ' ').substring(0, 16);
+  }
+
+  // ── 조회 ──────────────────────────────────────────────────
+  async function doSearch() {
+    const vehicleNo = document.getElementById('searchVehicleNo').value.trim();
+    const mgmtNo    = document.getElementById('searchMgmtNo').value.trim();
+
+    const qs = new URLSearchParams({ documentType: '차량등록증' });
+    if (vehicleNo) qs.set('vehicleNo', vehicleNo);
+    if (mgmtNo)    qs.set('vehicleMgmtNo', mgmtNo);
+
+    const tbody = document.getElementById('scanTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:24px;">조회 중...</td></tr>';
+
+    try {
+      const res = await fetch(`${BASE}/api/documents?${qs.toString()}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const list = await res.json();
+      renderTable(list);
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#ef4444; padding:24px;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById('scanTableBody');
+    if (!Array.isArray(list) || !list.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:32px;">데이터가 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((d, i) => `
+      <tr>
+        <td style="text-align:center;">${i + 1}</td>
+        <td>${esc(d.vehicleMgmtNo || '-')}</td>
+        <td>${esc(d.vehicleNo || '-')}</td>
+        <td>${esc(d.fileName || '-')}</td>
+        <td>${fmtSize(d.fileSize)}</td>
+        <td>${fmtDt(d.uploadedAt)}</td>
+        <td>
+          <button class="btn-view" onclick="openViewer(${d.id}, '${esc(d.fileName)}')">보기</button>
+          &nbsp;
+          <button class="btn-del btn-sm" onclick="deleteScan(${d.id})">삭제</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ── 업로드 모달 ──────────────────────────────────────────
+  function openUploadModal() {
+    const vehicleNo = document.getElementById('searchVehicleNo').value.trim();
+    const mgmtNo    = document.getElementById('searchMgmtNo').value.trim();
+    document.getElementById('uploadVehicleNo').value = vehicleNo;
+    document.getElementById('uploadMgmtNo').value    = mgmtNo;
+    document.getElementById('uploadFile').value      = '';
+    document.getElementById('uploadBackdrop').classList.add('open');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('uploadBackdrop').classList.remove('open');
+  }
+
+  async function submitUpload() {
+    const vehicleNo = document.getElementById('uploadVehicleNo').value.trim();
+    const mgmtNo    = document.getElementById('uploadMgmtNo').value.trim();
+    const fileInput = document.getElementById('uploadFile');
+    const file      = fileInput.files[0];
+
+    if (!vehicleNo && !mgmtNo) { alert('차량번호 또는 차량관리번호를 입력하세요.'); return; }
+    if (!file) { alert('파일을 선택하세요.'); return; }
+
+    const allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) { alert('PDF, JPG, JPEG, PNG 파일만 업로드 가능합니다.'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('파일 크기는 최대 10MB까지 가능합니다.'); return; }
+
+    const form = new FormData();
+    form.append('documentType', '차량등록증');
+    if (vehicleNo) form.append('vehicleNo', vehicleNo);
+    if (mgmtNo)    form.append('vehicleMgmtNo', mgmtNo);
+    form.append('file', file);
+
+    try {
+      const res = await fetch(`${BASE}/api/documents/upload`, {
+        method: 'POST', body: form, credentials: 'include'
+      });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const b = await res.json(); msg = b.message || b.error || msg; } catch(e) {}
+        throw new Error(msg);
+      }
+      alert('업로드 완료!');
+      closeUploadModal();
+      await doSearch();
+    } catch (e) {
+      alert('업로드 실패: ' + e.message);
+    }
+  }
+
+  // ── 뷰어 ──────────────────────────────────────────────────
+  function openViewer(id, fileName) {
+    const url = `${BASE}/api/documents/${id}/view`;
+    const ext = (fileName || '').split('.').pop().toLowerCase();
+    const body = document.getElementById('viewerBody');
+    document.getElementById('viewerTitle').textContent = fileName || '문서 보기';
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      body.innerHTML = `<img src="${url}" alt="${esc(fileName)}">`;
+    } else {
+      body.innerHTML = `<iframe src="${url}" title="${esc(fileName)}"></iframe>`;
+    }
+    document.getElementById('viewerBackdrop').classList.add('open');
+  }
+
+  function closeViewer() {
+    document.getElementById('viewerBackdrop').classList.remove('open');
+    document.getElementById('viewerBody').innerHTML = '';
+  }
+
+  // ── 삭제 ──────────────────────────────────────────────────
+  async function deleteScan(id) {
+    if (!confirm('이 파일을 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`${BASE}/api/documents/${id}`, {
+        method: 'DELETE', credentials: 'include'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      alert('삭제되었습니다.');
+      await doSearch();
+    } catch (e) {
+      alert('삭제 실패: ' + e.message);
+    }
+  }
+
+  // ── ESC / 바깥 클릭 닫기 ─────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeViewer();
+      closeUploadModal();
+    }
+  });
+  document.getElementById('uploadBackdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('uploadBackdrop')) closeUploadModal();
+  });
+  document.getElementById('viewerBackdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('viewerBackdrop')) closeViewer();
+  });
+
+  // ── 초기 로드 ─────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    doSearch();
+  });
+</script>
+</body>
+</html>

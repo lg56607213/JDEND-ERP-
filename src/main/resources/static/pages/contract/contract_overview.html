@@ -134,6 +134,64 @@
 
     /* 로딩 */
     .loading-text { text-align: center; color: #9ca3af; padding: 32px; font-size: 0.9rem; }
+
+    /* ── 계약 목록 카드 ── */
+    .contract-list-card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 16px 20px; margin-bottom: 16px;
+    }
+    .list-header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+    }
+    .list-header h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #1b253a; }
+    .list-filter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .list-filter input[type="date"] {
+      padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.88rem;
+    }
+    .list-filter button {
+      padding: 7px 16px; background: #23304e; color: #fff;
+      border: none; border-radius: 5px; cursor: pointer; font-size: 0.88rem; font-weight: 700;
+    }
+    .list-filter button:hover { background: #1b253a; }
+
+    /* ── 스캔 배지 ── */
+    .scan-badge {
+      display: inline-block; border-radius: 4px; padding: 2px 8px;
+      font-size: 0.76rem; font-weight: 700;
+    }
+    .scan-y { background: #dbeafe; color: #1d4ed8; }
+    .scan-n { background: #fee2e2; color: #b91c1c; }
+
+    /* ── 스캔 업로드 모달 ── */
+    #scanModalBackdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 9999; display: none;
+      align-items: center; justify-content: center;
+    }
+    #scanModalBackdrop.open { display: flex; }
+    .scan-modal-box {
+      background: #fff; border-radius: 10px; padding: 24px;
+      width: min(440px, 96vw); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    .scan-modal-box h3 { margin: 0 0 8px; font-size: 1.05rem; font-weight: 800; color: #1b253a; }
+    .scan-modal-cn { color: #6b7280; font-size: 0.88rem; margin-bottom: 14px; }
+    .scan-modal-box input[type="file"] {
+      width: 100%; box-sizing: border-box; padding: 8px 10px;
+      border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem;
+    }
+    .scan-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    .scan-modal-btns .btn-cancel {
+      padding: 8px 18px; background: #f3f4f6; border: 1px solid #d1d5db;
+      border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.88rem;
+    }
+    .scan-modal-btns .btn-cancel:hover { background: #e5e7eb; }
+    .scan-modal-btns .btn-ok {
+      padding: 8px 20px; background: #23304e; color: #fff;
+      border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.88rem;
+    }
+    .scan-modal-btns .btn-ok:hover { background: #1b253a; }
   </style>
 </head>
 <body>
@@ -142,6 +200,40 @@
   <div class="page-header">
     <h1>계약 총괄관리</h1>
     <p>계약관리 &gt; 계약등록 &gt; 관리</p>
+  </div>
+
+  <!-- 계약 목록 -->
+  <div class="contract-list-card" id="contractListCard">
+    <div class="list-header">
+      <h2>계약 목록</h2>
+      <div class="list-filter">
+        <span style="font-size:0.88rem; color:#374151;">계약시작일</span>
+        <input type="date" id="listStartDate">
+        <span style="font-size:0.88rem; color:#374151;">~</span>
+        <input type="date" id="listEndDate">
+        <button onclick="applyListFilter()">조회</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:340px; overflow-y:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44px;">번호</th>
+            <th>계약번호</th>
+            <th>고객명</th>
+            <th>차량번호</th>
+            <th>계약시작일</th>
+            <th>계약종료일</th>
+            <th>상태</th>
+            <th>스캔</th>
+            <th style="width:80px;">관리</th>
+          </tr>
+        </thead>
+        <tbody id="contractListBody">
+          <tr><td colspan="9" style="text-align:center; color:#9ca3af; padding:24px;">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- 검색 -->
@@ -339,6 +431,19 @@
     </div>
 
   </div><!-- /resultArea -->
+</div>
+
+<!-- 계약서 스캔 업로드 모달 -->
+<div id="scanModalBackdrop">
+  <div class="scan-modal-box">
+    <h3>계약서 스캔 업로드</h3>
+    <p class="scan-modal-cn" id="scanModalContractNo"></p>
+    <input type="file" id="scanFileInput" accept=".pdf,.jpg,.jpeg,.png">
+    <div class="scan-modal-btns">
+      <button class="btn-cancel" onclick="closeScanModal()">취소</button>
+      <button class="btn-ok" onclick="submitScanUpload()">업로드</button>
+    </div>
+  </div>
 </div>
 
 <script src="../../assets/js/sidebar.js"></script>
@@ -648,6 +753,128 @@
     }
   }
 
+  // ── 계약 목록 ────────────────────────────────────────────
+  let allListContracts = [];
+  let scanContractNumbers = {}; // { contractNumber: true/false }
+  let uploadingContractNumber = null;
+
+  async function loadContractList() {
+    const tbody = document.getElementById('contractListBody');
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#9ca3af; padding:20px;">불러오는 중...</td></tr>';
+    try {
+      const res = await fetch('/api/contracts', { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      allListContracts = await res.json();
+
+      // 스캔 상태 일괄 조회
+      const numbers = allListContracts.map(c => c.contractNumber).filter(Boolean);
+      if (numbers.length > 0) {
+        try {
+          const qs = numbers.map(n => 'contractNumbers=' + encodeURIComponent(n)).join('&');
+          const sr = await fetch('/api/documents/contract-scan-status?' + qs, { credentials: 'include' });
+          if (sr.ok) scanContractNumbers = await sr.json();
+        } catch (e) { /* 스캔상태 조회 실패해도 목록은 표시 */ }
+      }
+      renderContractList(allListContracts);
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#ef4444; padding:20px;">로드 실패: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function applyListFilter() {
+    const start = document.getElementById('listStartDate').value;
+    const end   = document.getElementById('listEndDate').value;
+    const filtered = allListContracts.filter(c => {
+      if (!start && !end) return true;
+      const d = c.startDate || '';
+      if (start && d < start) return false;
+      if (end   && d > end)   return false;
+      return true;
+    });
+    renderContractList(filtered);
+  }
+
+  function renderContractList(list) {
+    const tbody = document.getElementById('contractListBody');
+    if (!Array.isArray(list) || !list.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#9ca3af; padding:24px;">데이터 없음</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((c, i) => {
+      const hasScan = scanContractNumbers[c.contractNumber] === true;
+      const st = c.status || '';
+      const stClass = ['진행중','만기','종료','반납'].includes(st) ? 'st-' + st : 'st-other';
+      return `<tr style="cursor:pointer;" onclick="selectContract('${esc(c.contractNumber)}','${esc(c.vehicleNo||'')}')">
+        <td style="text-align:center;">${i + 1}</td>
+        <td>${esc(c.contractNumber || '-')}</td>
+        <td>${esc(c.customerName || '-')}</td>
+        <td>${esc(c.vehicleNo || '-')}</td>
+        <td style="text-align:center;">${esc(c.startDate || '-')}</td>
+        <td style="text-align:center;">${esc(c.endDate || '-')}</td>
+        <td style="text-align:center;"><span class="status-badge ${stClass}">${esc(st || '-')}</span></td>
+        <td style="text-align:center;" onclick="event.stopPropagation()">
+          <span class="scan-badge ${hasScan ? 'scan-y' : 'scan-n'}">${hasScan ? '스캔 유' : '스캔 무'}</span>
+        </td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn btn-sm btn-add" onclick="openScanModal('${esc(c.contractNumber)}')">스캔</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function selectContract(cn, vn) {
+    document.getElementById('searchContractNo').value = cn;
+    document.getElementById('searchVehicleNo').value  = vn || '';
+    await doSearch();
+    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function openScanModal(contractNumber) {
+    uploadingContractNumber = contractNumber;
+    document.getElementById('scanModalContractNo').textContent = '계약번호: ' + contractNumber;
+    document.getElementById('scanFileInput').value = '';
+    document.getElementById('scanModalBackdrop').classList.add('open');
+  }
+  function closeScanModal() {
+    document.getElementById('scanModalBackdrop').classList.remove('open');
+    uploadingContractNumber = null;
+  }
+  async function submitScanUpload() {
+    const file = document.getElementById('scanFileInput').files[0];
+    if (!file) { alert('파일을 선택하세요.'); return; }
+    const allowed = ['pdf','jpg','jpeg','png'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) { alert('PDF, JPG, JPEG, PNG 파일만 업로드 가능합니다.'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('파일 크기는 최대 10MB까지 가능합니다.'); return; }
+
+    const form = new FormData();
+    form.append('documentType', '계약서');
+    form.append('contractNumber', uploadingContractNumber);
+    form.append('file', file);
+    try {
+      const res = await fetch('/api/documents/upload', { method: 'POST', body: form, credentials: 'include' });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const b = await res.json(); msg = b.message || b.error || msg; } catch(e) {}
+        throw new Error(msg);
+      }
+      alert('업로드 완료!');
+      closeScanModal();
+      await loadContractList();
+    } catch (e) {
+      alert('업로드 실패: ' + e.message);
+    }
+  }
+
+  // ESC 닫기
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeScanModal();
+  });
+  document.getElementById('scanModalBackdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('scanModalBackdrop')) closeScanModal();
+  });
+
+  loadContractList();
   loadSidebar();
 </script>
 </body>

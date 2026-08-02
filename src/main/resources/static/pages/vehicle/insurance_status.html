@@ -30,7 +30,7 @@
     /* ✅ 검색그리드 폭/간격 강제 (계약/차량/날짜 같은 크기 + 간격 확보) */
     .search-section .search-grid{
       display:grid !important;
-      grid-template-columns: repeat(5, minmax(0, 1fr)) !important; /* 5칸 동일폭 */
+      grid-template-columns: repeat(6, minmax(0, 1fr)) !important; /* 6칸 동일폭 */
       gap:14px !important; /* 칸 사이 거리 */
       align-items:end;
     }
@@ -182,6 +182,49 @@
       border-radius:8px; font-weight:600; cursor:pointer;
     }
     .action-modal .btn-cancel-m:hover{ background:#e5e7eb; }
+
+    /* ===== 스캔 배지 ===== */
+    .scan-badge {
+      display: inline-block; border-radius: 4px; padding: 2px 7px;
+      font-size: 0.76rem; font-weight: 700; vertical-align: middle;
+    }
+    .scan-y { background: #dbeafe; color: #1d4ed8; }
+    .scan-n { background: #fee2e2; color: #b91c1c; }
+    .btn-scan {
+      padding: 3px 9px; font-size: 12px; font-weight: 600; border-radius: 5px;
+      border: 1px solid #6b7280; background: #f9fafb; color: #374151;
+      cursor: pointer; vertical-align: middle; margin-left: 4px;
+    }
+    .btn-scan:hover { background: #e5e7eb; }
+
+    /* ===== 보험 스캔 업로드 모달 ===== */
+    #insuranceScanModalBackdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 10001;
+      align-items: center; justify-content: center;
+    }
+    #insuranceScanModalBackdrop.open { display: flex; }
+    .ins-scan-box {
+      background: #fff; border-radius: 12px; padding: 26px;
+      width: min(440px, 96vw); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    .ins-scan-box h3 { margin: 0 0 8px; font-size: 1.05rem; font-weight: 800; color: #1b253a; }
+    .ins-scan-cn { color: #6b7280; font-size: 0.88rem; margin-bottom: 14px; }
+    .ins-scan-box input[type="file"] {
+      width: 100%; box-sizing: border-box; padding: 8px 10px;
+      border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem;
+    }
+    .ins-scan-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    .ins-scan-btns .btn-cancel-s {
+      padding: 8px 18px; background: #f3f4f6; border: 1px solid #d1d5db;
+      border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.88rem;
+    }
+    .ins-scan-btns .btn-cancel-s:hover { background: #e5e7eb; }
+    .ins-scan-btns .btn-ok-s {
+      padding: 8px 20px; background: #23304e; color: #fff;
+      border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.88rem;
+    }
+    .ins-scan-btns .btn-ok-s:hover { background: #1b253a; }
   </style>
 </head>
 
@@ -229,6 +272,14 @@
           </div>
 
           <div class="form-group">
+            <label for="searchScanStatus">스캔유무</label>
+            <select id="searchScanStatus" style="width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+              <option value="전체">전체</option>
+              <option value="스캔유">스캔 유</option>
+              <option value="스캔무">스캔 무</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>&nbsp;</label>
             <button type="button" class="btn-search" id="searchBtn">조회</button>
           </div>
@@ -256,11 +307,12 @@
             <th>자상</th>
             <th>무보험차상해</th>
             <th>긴급출동</th>
+            <th>스캔</th>
             <th>관리</th>
           </tr>
           </thead>
           <tbody id="insuranceTableBody">
-          <tr><td colspan="13" style="text-align:center; color:#888;">조회하세요.</td></tr>
+          <tr><td colspan="14" style="text-align:center; color:#888;">조회하세요.</td></tr>
           </tbody>
         </table>
       </div>
@@ -358,6 +410,19 @@
   </div>
 </div>
 
+<!-- ===== 보험증권 스캔 업로드 모달 ===== -->
+<div id="insuranceScanModalBackdrop">
+  <div class="ins-scan-box">
+    <h3>보험증권 스캔 업로드</h3>
+    <p class="ins-scan-cn" id="insuranceScanInfo"></p>
+    <input type="file" id="insuranceScanFile" accept=".pdf,.jpg,.jpeg,.png">
+    <div class="ins-scan-btns">
+      <button class="btn-cancel-s" onclick="closeInsuranceScanModal()">취소</button>
+      <button class="btn-ok-s" onclick="submitInsuranceScan()">업로드</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 변경/해지 입력 모달 ===== -->
 <div class="action-modal-backdrop" id="actionModalBackdrop" style="display:none;">
   <div class="action-modal">
@@ -412,11 +477,12 @@
     window.location.href = "insurance_detail.html?id="+encodeURIComponent(id);
   }
 
-  function renderInsurance(list){
+  function renderInsurance(list, scanMap){
+    scanMap = scanMap || {};
     const tbody=$('insuranceTableBody');
 
     if(!Array.isArray(list)||list.length===0){
-      tbody.innerHTML=`<tr><td colspan="13" style="text-align:center; color:#888;">검색 결과가 없습니다.</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="14" style="text-align:center; color:#888;">검색 결과가 없습니다.</td></tr>`;
       return;
     }
 
@@ -435,11 +501,39 @@
         <td>${escapeHtml(it.uninsured || '-')}</td>
         <td>${escapeHtml(it.emergency || '-')}</td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+          <span class="scan-badge ${scanMap[it.id] ? 'scan-y' : 'scan-n'}">${scanMap[it.id] ? '스캔 유' : '스캔 무'}</span>
+          <button class="btn-scan" onclick="openInsuranceScanModal(${it.id}, '${escapeHtml(it.contractNumber||'')}')">스캔</button>
+        </td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">
           <button class="btn-change" onclick="openActionModal(${it.id},'변경')">변경</button>
           <button class="btn-terminate" onclick="openActionModal(${it.id},'해지')">해지</button>
         </td>
       </tr>
     `).join('');
+  }
+
+  async function fetchAndRenderInsurance(list) {
+    if (!Array.isArray(list) || !list.length) {
+      renderInsurance(list, {});
+      return;
+    }
+    const ids = list.map(it => it.id).filter(Boolean);
+    let scanMap = {};
+    if (ids.length) {
+      try {
+        const qs = ids.map(id => 'insuranceIds=' + id).join('&');
+        const sr = await fetch(`${BASE}/api/documents/insurance-scan-status?${qs}`);
+        if (sr.ok) scanMap = await sr.json();
+      } catch (e) { /* 스캔상태 실패해도 목록 표시 */ }
+    }
+
+    // 스캔유무 필터 적용
+    const scanFilter = ($('searchScanStatus') ? $('searchScanStatus').value : '전체') || '전체';
+    let filtered = list;
+    if (scanFilter === '스캔유') filtered = list.filter(it => scanMap[it.id] === true);
+    if (scanFilter === '스캔무') filtered = list.filter(it => !scanMap[it.id]);
+
+    renderInsurance(filtered, scanMap);
   }
 
   async function searchInsurance(){
@@ -455,30 +549,70 @@
     if(endDate) qs.set("endDate", endDate);
 
     const tbody=$('insuranceTableBody');
-    tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;">조회중...</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;">조회중...</td></tr>`;
 
     try{
       const res=await fetch(`${BASE}/api/insurances?${qs.toString()}`);
       await mustOk(res);
       const data=await res.json();
-      renderInsurance(data);
+      await fetchAndRenderInsurance(data);
     }catch(e){
-      tbody.innerHTML=`<tr><td colspan="13" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="14" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
     }
   }
 
   async function searchAllInsurance(){
     const tbody=$('insuranceTableBody');
-    tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;">조회중...</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;">조회중...</td></tr>`;
     try{
       const res=await fetch(`${BASE}/api/insurances`);
       await mustOk(res);
       const data=await res.json();
-      renderInsurance(data);
+      await fetchAndRenderInsurance(data);
     }catch(e){
-      tbody.innerHTML=`<tr><td colspan="13" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="14" style="color:red; text-align:center;">오류: ${escapeHtml(e.message)}</td></tr>`;
     }
   }
+
+  /* ===== 보험증권 스캔 모달 ===== */
+  let _scanInsuranceId = null;
+
+  function openInsuranceScanModal(insuranceId, contractNumber) {
+    _scanInsuranceId = insuranceId;
+    $('insuranceScanInfo').textContent = contractNumber ? '계약번호: ' + contractNumber : '보험 ID: ' + insuranceId;
+    $('insuranceScanFile').value = '';
+    $('insuranceScanModalBackdrop').classList.add('open');
+  }
+  function closeInsuranceScanModal() {
+    $('insuranceScanModalBackdrop').classList.remove('open');
+    _scanInsuranceId = null;
+  }
+  async function submitInsuranceScan() {
+    const file = $('insuranceScanFile').files[0];
+    if (!file) { alert('파일을 선택하세요.'); return; }
+    const allowed = ['pdf','jpg','jpeg','png'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) { alert('PDF, JPG, JPEG, PNG 파일만 업로드 가능합니다.'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('파일 크기는 최대 10MB까지 가능합니다.'); return; }
+
+    const form = new FormData();
+    form.append('documentType', '보험증권');
+    form.append('insuranceId', _scanInsuranceId);
+    form.append('file', file);
+    try {
+      const res = await fetch(`${BASE}/api/documents/upload`, { method: 'POST', body: form, credentials: 'include' });
+      await mustOk(res);
+      alert('업로드 완료!');
+      closeInsuranceScanModal();
+      await searchInsurance();
+    } catch (e) {
+      alert('업로드 실패: ' + e.message);
+    }
+  }
+
+  document.getElementById('insuranceScanModalBackdrop').addEventListener('click', (e) => {
+    if (e.target === $('insuranceScanModalBackdrop')) closeInsuranceScanModal();
+  });
 
   /* ===== 변경/해지 모달 ===== */
   let _actionInsuranceId = null;
@@ -676,6 +810,7 @@
   /* ===== ESC로 모달 닫기, 바깥 클릭 닫기 ===== */
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Escape'){
+      if($('insuranceScanModalBackdrop').classList.contains('open')) { closeInsuranceScanModal(); return; }
       if($('actionModalBackdrop').style.display === 'flex') { closeActionModal(); return; }
       if($('contractModalBackdrop').style.display === 'flex') closeContractModal();
       if($('vehicleModalBackdrop').style.display === 'flex') closeVehicleModal();
