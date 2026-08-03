@@ -47,7 +47,7 @@
       <!-- 선급관리 계정분류 -->
       <div class="form-section">
         <h3 class="section-title">선급관리 계정분류</h3>
-        <p class="section-note">미지정 항목은 기본값 <b>차량운반구</b>로 처리됩니다.</p>
+        <p class="section-note">계정을 선택하지 않으면 <b>차량운반구</b>(기본값)로 자동 저장됩니다.</p>
 
         <!-- prepaid-item 들은 JS(renderPrepaidItems)가 재무제표 계정 목록으로 채웁니다.
              항목명은 차량선급 입력화면(vehicle_advance.html)의 항목명과 반드시 일치해야 합니다. -->
@@ -579,7 +579,7 @@
         `<label class="prepaid-label">${name}</label>` +
         `<div class="prepaid-inputs">` +
         `  <input type="text" class="account-code" placeholder="계정코드" />` +
-        `  <select class="account-select"></select>` +
+        `  <select class="account-select" data-default-name="차량운반구"></select>` +
         `</div>`;
       box.appendChild(item);
     });
@@ -599,9 +599,7 @@
   // 모든 계정 select(.account-select) 를 재무제표 계정 목록으로 채움 (은행계좌 select 은 제외 = .bank-select)
   function populateAccountSelects() {
     document.querySelectorAll(".account-select").forEach(sel => {
-      const isPrepaid = !!sel.closest("#prepaidAccountBody");
-      const placeholder = isPrepaid ? "미지정 (기본: 차량운반구)" : "선택";
-      sel.innerHTML = buildOptionsHtml(placeholder);
+      sel.innerHTML = buildOptionsHtml("선택");
 
       // 기본 계정명(data-default-name)이 목록에 있으면 미리 선택
       const defName = sel.getAttribute("data-default-name");
@@ -609,7 +607,8 @@
         const opt = Array.from(sel.options).find(o => o.textContent.trim() === defName);
         if (opt) {
           sel.value = opt.value;
-          const input = sel.closest(".account-input-group")?.querySelector(".account-code");
+          const input = sel.closest(".account-input-group")?.querySelector(".account-code")
+                     || sel.closest(".prepaid-inputs")?.querySelector(".account-code");
           if (input) input.value = opt.value;
         }
       }
