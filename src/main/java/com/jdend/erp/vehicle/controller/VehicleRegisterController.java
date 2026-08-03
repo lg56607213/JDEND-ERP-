@@ -20,16 +20,11 @@ public class VehicleRegisterController {
   private final VehicleOrderService service;
 
   // ✅ 차량관리번호로 조회 (등록화면용)
-  // /api/vehicle-register/J0003
+  // N대 발주 시 같은 mgmtNo를 공유 → "출고완료" 상태인 다음 차량을 순차 반환
   @GetMapping("/{mgmtNo}")
   public ResponseEntity<?> searchForRegister(@PathVariable String mgmtNo) {
     try {
-      VehicleOrderResponse res = service.detail(mgmtNo);
-
-      if (!"출고완료".equals(res.getOrderStatus())) {
-        return ResponseEntity.badRequest().body(Map.of("message", "출고완료 상태의 차량만 등록할 수 있습니다."));
-      }
-
+      VehicleOrderResponse res = service.detailForRegister(mgmtNo);
       return ResponseEntity.ok(res);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

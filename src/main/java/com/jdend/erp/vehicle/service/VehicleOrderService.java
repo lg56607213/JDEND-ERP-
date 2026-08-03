@@ -176,6 +176,15 @@ public class VehicleOrderService {
         return buildDetailResponse(o);
     }
 
+    /** 차량등록 화면용 조회: N대 발주 시 "출고완료" 상태인 다음 차량을 순차 반환 */
+    @Transactional(readOnly = true)
+    public VehicleOrderResponse detailForRegister(String mgmtNo) {
+        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoAndOrderStatusOrderByIdAsc(mgmtNo, "출고완료")
+                .orElseThrow(() -> new RuntimeException(
+                        "출고완료 상태의 차량이 없습니다. 이미 모두 등록 완료되었거나 출고 전 상태입니다."));
+        return buildDetailResponse(o);
+    }
+
     // 발주~선급(pre-실행) 단계 단건 조회는 행 PK(id)로 특정한다(…000 공유 대비).
     @Transactional(readOnly = true)
     public VehicleOrderResponse detailById(Long id) {
@@ -500,14 +509,11 @@ public class VehicleOrderService {
 
     @Transactional
     public void registerVehicle(String mgmtNo, VehicleRegisterRequest req, MultipartFile file) {
-        // BUG-2 수정: N대 발주 시 동일 …000 공유값으로 findByVehicleMgmtNo 가
-        // "Query did not return a unique result" 예외를 던지므로 findFirst 로 변경.
-        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoOrderByIdAsc(mgmtNo)
-                .orElseThrow(() -> new RuntimeException("차량 없음: " + mgmtNo));
+        // N대 발주 시 동일 mgmtNo(…000) 공유 → 등록 순서대로 "출고완료" 상태인 행을 순차 처리.
+        // findFirst(id ASC)는 이미 "등록완료"된 첫 행을 반환해 2번째부터 오류 발생 → 상태 필터 추가.
+        VehicleOrder o = orderRepo.findFirstByVehicleMgmtNoAndOrderStatusOrderByIdAsc(mgmtNo, "출고완료")
+                .orElseThrow(() -> new RuntimeException("출고완료 상태의 차량이 없습니다. 이미 모두 등록 완료되었거나 출고 전 상태입니다."));
 
-        if (!"출고완료".equals(o.getOrderStatus())) {
-            throw new RuntimeException("출고완료 상태의 차량만 등록할 수 있습니다.");
-        }
 
         if (req.getVehicleNo() == null || req.getVehicleNo().isBlank()) {
             throw new RuntimeException("차량번호(vehicleNo)는 필수");

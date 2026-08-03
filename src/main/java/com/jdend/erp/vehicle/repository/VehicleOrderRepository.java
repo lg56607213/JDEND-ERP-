@@ -18,6 +18,9 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
      */
     Optional<VehicleOrder> findFirstByVehicleMgmtNoOrderByIdAsc(String vehicleMgmtNo);
 
+    /** N대 발주 차량등록 시: 같은 mgmtNo 중 아직 "출고완료" 상태인 첫 번째 행 */
+    Optional<VehicleOrder> findFirstByVehicleMgmtNoAndOrderStatusOrderByIdAsc(String vehicleMgmtNo, String orderStatus);
+
     /**
      * BUG-2 수정: 순차 차량관리번호 채번용.
      * 순수 숫자로만 이루어진 vehicleMgmtNo 중 최대값(정수 변환 기준)을 반환한다.
