@@ -24,4 +24,39 @@ public interface DashboardVoucherRepository extends JpaRepository<VoucherLine, L
         order by v.voucher_date
     """, nativeQuery = true)
     List<Object[]> sumBankVoucherByDateRange(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    // ── 계좌명별 보통예금 잔액 계산 (대시보드 보통예금 현황 전표 기준) ─────────────
+
+    /** 특정 계좌명으로 특정일까지 누적 순잔액 (차변 합계 - 대변 합계) */
+    @Query("""
+        select coalesce(
+            sum(case when vl.lineType = 'DEBIT' then vl.amount else -vl.amount end), 0)
+        from VoucherLine vl
+        join vl.voucher v
+        where vl.accountName = :accountName
+          and v.voucherDate <= :d
+    """)
+    Long sumNetUpToByAccountName(@Param("accountName") String accountName, @Param("d") LocalDate d);
+
+    /** 특정 계좌명의 특정일 차변(수입) 합계 */
+    @Query("""
+        select coalesce(sum(vl.amount), 0)
+        from VoucherLine vl
+        join vl.voucher v
+        where vl.accountName = :accountName
+          and vl.lineType = 'DEBIT'
+          and v.voucherDate = :d
+    """)
+    Long sumDebitOnByAccountName(@Param("accountName") String accountName, @Param("d") LocalDate d);
+
+    /** 특정 계좌명의 특정일 대변(지출) 합계 */
+    @Query("""
+        select coalesce(sum(vl.amount), 0)
+        from VoucherLine vl
+        join vl.voucher v
+        where vl.accountName = :accountName
+          and vl.lineType = 'CREDIT'
+          and v.voucherDate = :d
+    """)
+    Long sumCreditOnByAccountName(@Param("accountName") String accountName, @Param("d") LocalDate d);
 }

@@ -84,6 +84,14 @@ public class ReceivableService {
     receivableRepo.deleteById(id);
   }
 
+  /** 상태만 변경 — 전표 발생 없음 (분개는 일일전표에서 수기 처리) */
+  public void updateStatus(Long id, String status) {
+    if (status == null || status.isBlank()) throw new RuntimeException("상태값이 필요합니다.");
+    Receivable r = receivableRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("미수 없음: " + id));
+    r.setStatus(status);
+  }
+
   private ReceivableResponse toResponse(Receivable r) {
     return ReceivableResponse.builder()
         .id(r.getId())

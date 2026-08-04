@@ -68,6 +68,7 @@
                 <th>미수유형</th>
                 <th>내용</th>
                 <th>상태</th>
+                <th>처리</th>
               </tr>
             </thead>
             <tbody id="receivableTableBody"></tbody>
@@ -138,7 +139,7 @@
       if(!list.length){
         tbody.innerHTML = `
           <tr>
-            <td colspan="9" class="no-data">
+            <td colspan="10" class="no-data">
               <div class="no-data-icon">📋</div>
               <div>검색 결과가 없습니다.</div>
             </td>
@@ -147,8 +148,13 @@
         return;
       }
 
-      tbody.innerHTML = list.map((r, idx) => `
-        <tr data-id="${r.id}">
+      tbody.innerHTML = list.map((r, idx) => {
+        const canComplete = (r.status === '미납' || r.status === '일부결제');
+        const btnHtml = canComplete
+          ? `<button class="btn-complete" data-id="${r.id}" onclick="event.stopPropagation(); markComplete(${r.id})">납입완료</button>`
+          : `<span style="color:#94a3b8; font-size:12px;">-</span>`;
+        return `
+        <tr data-id="${r.id}" style="cursor:pointer;">
           <td>${idx + 1}</td>
           <td>${esc(r.contractNumber)}</td>
           <td>${esc(r.customerName)}</td>
@@ -158,11 +164,13 @@
           <td>${esc(r.receivableType)}</td>
           <td>${esc(r.content)}</td>
           <td>${esc(r.status)}</td>
-        </tr>
-      `).join('');
+          <td>${btnHtml}</td>
+        </tr>`;
+      }).join('');
 
       tbody.querySelectorAll('tr[data-id]').forEach(tr=>{
-        tr.addEventListener('click', ()=>{
+        tr.addEventListener('click', (e)=>{
+          if(e.target.classList.contains('btn-complete')) return;
           const id = tr.getAttribute('data-id');
           window.location.href = `receivable_detail.html?id=${id}`;
         });
@@ -192,6 +200,22 @@
       }
     }
 
+    async function markComplete(id){
+      if(!confirm('납입완료로 변경하시겠습니까?\n(전표는 일일전표에서 별도 입력하세요.)')) return;
+      try{
+        const res = await fetch(`${API_BASE_URL}/api/receivables/${id}/status`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ status: '완료' })
+        });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        await doSearch();
+      }catch(e){
+        console.error(e);
+        alert('상태 변경 실패: ' + e.message);
+      }
+    }
+
     document.getElementById('btnSearch').addEventListener('click', doSearch);
 
     window.addEventListener('load', async ()=>{
@@ -200,6 +224,20 @@
       await doSearch();
     });
   </script>
+  <style>
+    .btn-complete {
+      padding: 4px 10px;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-complete:hover { background: #15803d; }
+  </style>
   <script src="../../assets/js/excel-export.js"></script>
 </body>
 </html>

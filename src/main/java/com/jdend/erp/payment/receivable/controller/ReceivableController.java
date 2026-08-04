@@ -6,10 +6,12 @@ import com.jdend.erp.payment.receivable.service.ReceivableService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -58,5 +60,15 @@ public class ReceivableController {
   public void delete(@PathVariable Long id, HttpSession session) {
     permissionService.requireManager(session);
     service.delete(id);
+  }
+
+  /** 상태만 변경 (전표 발생 없음) — PATCH /api/receivables/{id}/status */
+  @PatchMapping("/{id}/status")
+  public ResponseEntity<Void> updateStatus(
+      @PathVariable Long id,
+      @RequestBody Map<String, String> body) {
+    String status = body.get("status");
+    service.updateStatus(id, status);
+    return ResponseEntity.ok().build();
   }
 }

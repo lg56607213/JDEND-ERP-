@@ -84,7 +84,7 @@
     <div class="charts-container">
       <div class="chart-card" style="flex:2; min-width:0;">
         <div class="card-header">
-          <h2>보통예금 계좌별 현황 (기준일: 어제)</h2>
+          <h2>보통예금 계좌별 현황 (전표 기준)</h2>
         </div>
         <div class="card-body">
           <div class="table-container">
@@ -94,10 +94,10 @@
                   <th>은행</th>
                   <th>계좌번호</th>
                   <th>별칭</th>
-                  <th class="amount-cell">2일전 현금잔액</th>
-                  <th class="amount-cell">어제 입금잔액</th>
-                  <th class="amount-cell">어제 출금잔액</th>
-                  <th class="amount-cell">최종잔액</th>
+                  <th class="amount-cell">전일잔액</th>
+                  <th class="amount-cell">금일수입(차변)</th>
+                  <th class="amount-cell">금일지출(대변)</th>
+                  <th class="amount-cell">금일잔액</th>
                 </tr>
               </thead>
               <tbody id="bankSummaryTbody"></tbody>
@@ -266,11 +266,11 @@
         </div>
       </div>
 
-      <!-- 미수금 현황 -->
+      <!-- 연체현황 -->
       <div class="erp-card">
         <div class="card-header">
-          <h2>미수금 현황</h2>
-          <a href="pages/payment/receivable_status.html" class="view-all-link">전체보기 →</a>
+          <h2>연체현황</h2>
+          <a href="pages/payment/overdue_status.html" class="view-all-link">전체보기 →</a>
         </div>
         <div class="card-body">
           <div class="table-container">

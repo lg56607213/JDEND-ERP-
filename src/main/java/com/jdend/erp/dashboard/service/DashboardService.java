@@ -133,26 +133,33 @@ public class DashboardService {
   public List<DashboardBankSummaryRow> bankSummary() {
     LocalDate today = LocalDate.now();
     LocalDate yesterday = today.minusDays(1);
-    LocalDate twoDaysAgo = today.minusDays(2);
 
     List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
     List<DashboardBankSummaryRow> result = new ArrayList<>();
 
     for (BankAccount acct : accounts) {
-      String no = acct.getAccountNumber();
-      long bal2 = nz(bankTxRepo.sumNetUpToByAccount(no, twoDaysAgo));
-      long dep  = nz(bankTxRepo.sumDepositOnByAccount(no, yesterday));
-      long wit  = nz(bankTxRepo.sumWithdrawalOnByAccount(no, yesterday));
-      long cur  = bal2 + dep - wit;
+      // 전표 계정명 매핑: accountAlias 우선, 없으면 bankName 사용
+      String matchName = (acct.getAccountAlias() != null && !acct.getAccountAlias().isBlank())
+          ? acct.getAccountAlias()
+          : acct.getBankName();
+
+      // 전일잔액: 어제까지 voucher_lines 누적 (차변 - 대변)
+      long prevBal  = nz(voucherRepo.sumNetUpToByAccountName(matchName, yesterday));
+      // 금일수입: 오늘 차변(DEBIT) 합계
+      long todayDep = nz(voucherRepo.sumDebitOnByAccountName(matchName, today));
+      // 금일지출: 오늘 대변(CREDIT) 합계
+      long todayWit = nz(voucherRepo.sumCreditOnByAccountName(matchName, today));
+      // 금일잔액
+      long curBal   = prevBal + todayDep - todayWit;
 
       result.add(DashboardBankSummaryRow.builder()
           .bankName(acct.getBankName())
-          .accountNumber(no)
+          .accountNumber(acct.getAccountNumber())
           .accountAlias(acct.getAccountAlias())
-          .balance2DaysAgo(bal2)
-          .yesterdayDeposit(dep)
-          .yesterdayWithdrawal(wit)
-          .currentBalance(cur)
+          .balance2DaysAgo(prevBal)    // 전일잔액 (어제까지 전표 누적)
+          .yesterdayDeposit(todayDep)  // 금일수입 (오늘 차변)
+          .yesterdayWithdrawal(todayWit) // 금일지출 (오늘 대변)
+          .currentBalance(curBal)       // 금일잔액
           .build());
     }
     return result;
