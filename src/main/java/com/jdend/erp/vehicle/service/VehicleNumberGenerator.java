@@ -11,22 +11,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 차량 번호체계 채번 유틸 (Phase 2 - S1).
+ * 차량 번호체계 채번 유틸 (v5 - 2026-08 개정).
  *
- * <p>포맷 (설계 문서 v2~v4 기준):
+ * <p>포맷:
  * <ul>
- *   <li>발주번호(10자리)   = {@code J + YYMMDD + 발주순번3} (그 날짜 내 순번, 다음날 001 리셋)</li>
- *   <li>차량관리번호(13자리) = {@code 발주번호 + [재렌트회차1][대순번2]} (최초계약=재렌트0)</li>
+ *   <li>발주번호(12자리)   = {@code VFM + YYMMDD + 발주순번3} (당일 기준, 다음날 001 리셋)</li>
+ *   <li>발주단계 임시번호(15자리) = {@code 발주번호(12) + "000"}</li>
+ *   <li>실행 확정번호(15자리) = {@code 발주번호(12) + 실행순번3} (실행마다 001, 002, …)</li>
+ *   <li>재렌트 시 차량관리번호 변경 없음</li>
  * </ul>
- * 예) 2026-07-12 첫 발주 → 발주번호 {@code J260712001}
- *     · 최초계약 1대   → {@code J260712001001}
- *     · 최초계약 5대   → {@code J260712001001}~{@code J260712001005}
- *     · 1회 재렌트 1대 → {@code J260712001101}
+ * 예) 2026-08-04 첫 발주 → 발주번호 {@code VFM260804001}
+ *     · 임시번호        → {@code VFM260804001000}
+ *     · 1대 실행확정    → {@code VFM260804001001}
+ *     · 2대 실행확정    → {@code VFM260804001002}
  *
  * <p>동시성: {@link #nextOrderNo(LocalDate)}는 {@code synchronized}로 앱 인스턴스 내에서 직렬화한다.
- * 크로스 인스턴스(다중 서버) 상황까지는 이 메서드만으로는 완전 보장되지 않으나,
- * 최종 유니크 보장은 {@code vehicle_orders.vehicle_mgmt_no}의 UNIQUE 제약이 담당한다
- * (동시 발주로 같은 발주번호가 산출되면 13자리 차량관리번호 INSERT에서 제약 위반 → 저장 실패로 중복 데이터가 생기지 않음).
  */
 @Component
 @RequiredArgsConstructor
@@ -52,7 +51,7 @@ public class VehicleNumberGenerator {
      */
     public synchronized String nextOrderNo(LocalDate date) {
         LocalDate d = (date != null) ? date : LocalDate.now();
-        String prefix = "J" + d.format(YYMMDD); // J + 6자리 = 7자리
+        String prefix = "VFM" + d.format(YYMMDD); // VFM + 6자리 = 9자리
 
         int dbMax = orderRepo.findTopByOrderNoStartingWithOrderByOrderNoDesc(prefix)
                 .map(o -> parseOrderSeq(o.getOrderNo()))
@@ -77,34 +76,31 @@ public class VehicleNumberGenerator {
     public static final String ORDER_STAGE_SUFFIX = "000";
 
     /**
-     * 발주(미실행) 단계 차량관리번호(13자리) = 발주번호 + "000".
+     * 발주(미실행) 단계 차량관리번호(15자리) = 발주번호(12) + "000".
      * N대 발주면 모든 행이 이 동일값을 공유(제조사계약번호로 구분). 실행(S3) 시 실번호로 확정.
      */
     public static String buildOrderStageMgmtNo(String orderNo) {
-        if (orderNo == null || orderNo.length() != 10) {
-            throw new IllegalArgumentException("발주번호는 10자리여야 합니다: " + orderNo);
+        if (orderNo == null || orderNo.length() != 12) {
+            throw new IllegalArgumentException("발주번호는 12자리여야 합니다: " + orderNo);
         }
         return orderNo + ORDER_STAGE_SUFFIX;
     }
 
     /**
-     * 차량관리번호(13자리) 조립. 발주번호(10) + 재렌트회차(1) + 대순번(2).
+     * 차량관리번호(15자리) 조립. 발주번호(12) + 실행순번(3).
+     * 재렌트 시에도 번호는 변경하지 않으므로 재렌트 회차 파라미터는 없다.
      *
-     * @param orderNo      발주번호 10자리
-     * @param rerentRound  재렌트 회차 (최초계약=0, 최대 9)
-     * @param unitSeq      발주 내 대순번 (1..99)
+     * @param orderNo   발주번호 12자리 (VFM+YYMMDD+순번3)
+     * @param unitSeq   발주 내 실행순번 (1..999)
      */
-    public static String buildVehicleMgmtNo(String orderNo, int rerentRound, int unitSeq) {
-        if (orderNo == null || orderNo.length() != 10) {
-            throw new IllegalArgumentException("발주번호는 10자리여야 합니다: " + orderNo);
+    public static String buildVehicleMgmtNo(String orderNo, int unitSeq) {
+        if (orderNo == null || orderNo.length() != 12) {
+            throw new IllegalArgumentException("발주번호는 12자리여야 합니다: " + orderNo);
         }
-        if (rerentRound < 0 || rerentRound > 9) {
-            throw new IllegalArgumentException("재렌트 회차는 0~9만 가능합니다: " + rerentRound);
+        if (unitSeq < 1 || unitSeq > 999) {
+            throw new IllegalArgumentException("실행순번은 1~999만 가능합니다: " + unitSeq);
         }
-        if (unitSeq < 1 || unitSeq > 99) {
-            throw new IllegalArgumentException("대순번은 1~99만 가능합니다: " + unitSeq);
-        }
-        return orderNo + rerentRound + String.format("%02d", unitSeq);
+        return orderNo + String.format("%03d", unitSeq);
     }
 
     /**
@@ -136,42 +132,27 @@ public class VehicleNumberGenerator {
         int dbMax = orderRepo.findMaxUnitSeqByOrderNo(orderNo);
         int cached = lastUnitSeqByOrderNo.getOrDefault(orderNo, 0);
         int next = Math.max(dbMax, cached) + 1;
-        if (next > 99) {
+        if (next > 999) {
             throw new IllegalStateException(
-                    "한 발주에 실행 가능한 차량은 99대까지입니다. 발주번호=" + orderNo);
+                    "한 발주에 실행 가능한 차량은 999대까지입니다. 발주번호=" + orderNo);
         }
         lastUnitSeqByOrderNo.put(orderNo, next);
         return next;
     }
 
     /**
-     * 차량관리번호의 재렌트 회차(11번째 자리)를 1 올린다. 대순번은 유지된다.
-     * 예) J260730001001 → J260730001101 → J260730001201
+     * 재렌트 시 차량관리번호는 변경하지 않는다. 입력값을 그대로 반환한다.
+     * (v5 개정: 재렌트 회차 증가 로직 제거)
      */
     public static String nextRerentMgmtNo(String vehicleMgmtNo) {
-        if (vehicleMgmtNo == null || vehicleMgmtNo.length() != 13) {
-            throw new IllegalArgumentException("차량관리번호는 13자리여야 합니다: " + vehicleMgmtNo);
-        }
-        String orderNo = vehicleMgmtNo.substring(0, 10);
-        int round;
-        int unitSeq;
-        try {
-            round   = Integer.parseInt(vehicleMgmtNo.substring(10, 11));
-            unitSeq = Integer.parseInt(vehicleMgmtNo.substring(11, 13));
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("차량관리번호 형식이 올바르지 않습니다: " + vehicleMgmtNo);
-        }
-        if (round >= 9) {
-            throw new IllegalStateException("재렌트는 9회까지만 가능합니다: " + vehicleMgmtNo);
-        }
-        return buildVehicleMgmtNo(orderNo, round + 1, unitSeq);
+        return vehicleMgmtNo;
     }
 
     private int parseOrderSeq(String orderNo) {
-        // 발주번호 = J + YYMMDD(6) + 순번(3) = 10자리. 뒤 3자리가 순번.
-        if (orderNo == null || orderNo.length() < 10) return 0;
+        // 발주번호 = VFM + YYMMDD(6) + 순번(3) = 12자리. 뒤 3자리가 순번.
+        if (orderNo == null || orderNo.length() < 12) return 0;
         try {
-            return Integer.parseInt(orderNo.substring(7, 10));
+            return Integer.parseInt(orderNo.substring(9, 12));
         } catch (Exception ignored) {
             return 0;
         }

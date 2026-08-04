@@ -53,8 +53,8 @@ public class MaturityManagementService {
 
     String customerName = resolveCustomerName(old);
 
-    // 신규 계약번호는 ContractService와 동일한 채번 규칙(동시성 보호 포함)을 그대로 재사용한다.
-    String newContractNumber = contractService.generateNextContractNumber();
+    // 재렌트 계약번호: 기존 계약번호의 base(앞 12자리) 유지 + 회차 증가
+    String newContractNumber = contractService.generateRerentContractNumber(old.getContractNumber());
 
     MaturityManagement mm = MaturityManagement.builder()
         .oldContractId(old.getId())
@@ -71,16 +71,15 @@ public class MaturityManagementService {
 
     Long savedId = repo.save(mm).getId();
 
-    // 재렌트 — 차량관리번호의 재렌트 회차(11번째 자리)를 1 올린다. 대순번은 유지.
-    //   J260730001001 → J260730001101(1회) → J260730001201(2회)
+    // 재렌트 시 차량관리번호는 변경하지 않는다(v5 규칙). 이력 기록만 수행한다.
     // 아직 실행 확정 전이거나 차량을 못 찾는 경우는 만기관리 등록 자체를 막지 않는다.
     if (old.getVehicleNo() != null && !old.getVehicleNo().isBlank()) {
       try {
-        String newMgmtNo = vehicleOrderService.applyRerent(old.getVehicleNo());
-        log.info("재렌트 차량관리번호 확정: 계약 {} → {} (차량 {})",
-            old.getContractNumber(), newMgmtNo, old.getVehicleNo());
+        String mgmtNo = vehicleOrderService.applyRerent(old.getVehicleNo());
+        log.info("재렌트 이력 기록 완료: 계약 {} 차량관리번호 {} 유지 (차량 {})",
+            old.getContractNumber(), mgmtNo, old.getVehicleNo());
       } catch (Exception e) {
-        log.warn("재렌트 차량관리번호 변경 실패 (차량 {}): {}", old.getVehicleNo(), e.getMessage());
+        log.warn("재렌트 이력 기록 실패 (차량 {}): {}", old.getVehicleNo(), e.getMessage());
       }
     }
 

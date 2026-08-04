@@ -18,6 +18,9 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
   @Query("select max(c.contractNumber) from Contract c")
   String findMaxContractNumber();
 
+  @Query("SELECT MAX(c.contractNumber) FROM Contract c WHERE c.contractNumber LIKE CONCAT(:prefix, '%')")
+  Optional<String> findMaxContractNumberByPrefix(@Param("prefix") String prefix);
+
   Optional<Contract> findByContractNumber(String contractNumber);
 
   @Query("""

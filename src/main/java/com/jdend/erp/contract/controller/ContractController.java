@@ -34,11 +34,12 @@ public class ContractController {
     return service.list();
   }
 
-  // ✅ 계약번호 미리보기
+  // ✅ 계약번호 미리보기 (contractType: "장기" or "단기", 미지정 시 "장기" 기준)
   @GetMapping("/next-number")
-  public NextContractNumberResponse nextNumber() {
+  public NextContractNumberResponse nextNumber(
+      @RequestParam(value = "contractType", defaultValue = "장기") String contractType) {
     return NextContractNumberResponse.builder()
-      .contractNumber(service.nextNumberPreview())
+      .contractNumber(service.nextNumberPreview(contractType))
       .build();
   }
 

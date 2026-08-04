@@ -13,8 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -58,27 +60,64 @@ public class ContractService {
     return toFullResponse(c);
   }
 
-  @Transactional(readOnly = true)
-  public String nextNumberPreview() {
-    return generateNextContractNumber();
+  /**
+   * 계약번호 미리보기. contractType 미지정 시 "장기" 기준으로 채번한다.
+   */
+  public String nextNumberPreview(String contractType) {
+    return generateNextContractNumber(contractType != null ? contractType : "장기");
   }
 
-  // synchronized: 동시에 두 계약이 등록되면 둘 다 같은 max값을 읽어 같은 번호를 만들 수
-  // 있다(DB에 unique 제약은 있지만 그러면 한쪽이 그냥 오류로 실패한다). 만기관리(재계약)
-  // 화면도 같은 채번 규칙을 써야 하므로 이 메서드를 공유한다.
-  public synchronized String generateNextContractNumber() {
-    String max = contractRepo.findMaxContractNumber();
-    int next = 1001;
+  /**
+   * 신규 계약번호 채번.
+   * - 장기: LTC + YYMMDD(6) + 순번(3) + 회차(3) = 15자리
+   * - 단기: STC + YYMMDD(6) + 순번(3) + 회차(3) = 15자리
+   * 신규 계약의 회차는 항상 001. 재렌트는 {@link #generateRerentContractNumber} 사용.
+   */
+  public synchronized String generateNextContractNumber(String contractType) {
+    String prefix = "장기".equals(contractType) ? "LTC" : "STC";
+    String yymmdd = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
+    String datePrefix = prefix + yymmdd; // 예: LTC260804
 
-    if (max != null && max.startsWith("R")) {
-      String digits = max.replaceAll("[^0-9]", "");
-      if (!digits.isBlank()) {
-        try {
-          next = Integer.parseInt(digits) + 1;
-        } catch (Exception ignored) {}
-      }
+    Optional<String> maxOpt = contractRepo.findMaxContractNumberByPrefix(datePrefix);
+
+    int nextSeq = 1;
+    if (maxOpt.isPresent()) {
+      String max = maxOpt.get(); // 예: LTC260804003002
+      try {
+        // LTC(3)+YYMMDD(6) = 9자리 이후 순번(3자리)
+        String seqStr = max.substring(9, 12);
+        nextSeq = Integer.parseInt(seqStr) + 1;
+      } catch (Exception ignored) {}
     }
-    return String.format("R%08d", next);
+
+    // 신규 계약: 회차 001
+    return String.format("%s%03d001", datePrefix, nextSeq);
+  }
+
+  /**
+   * 재렌트 계약번호 채번. 기존 계약번호의 base(앞 12자리)를 유지하고 회차만 증가.
+   * 예) LTC260804001001 → LTC260804001002
+   */
+  public synchronized String generateRerentContractNumber(String existingContractNo) {
+    if (existingContractNo == null || existingContractNo.length() < 12) {
+      throw new IllegalArgumentException("기존 계약번호가 올바르지 않습니다: " + existingContractNo);
+    }
+    // base = prefix(3) + YYMMDD(6) + 순번(3) = 앞 12자리
+    String base = existingContractNo.substring(0, 12);
+
+    Optional<String> maxOpt = contractRepo.findMaxContractNumberByPrefix(base);
+
+    int nextRound = 1;
+    if (maxOpt.isPresent()) {
+      String max = maxOpt.get(); // 예: LTC260804001001
+      try {
+        // 마지막 3자리가 회차
+        String roundStr = max.substring(12, 15);
+        nextRound = Integer.parseInt(roundStr) + 1;
+      } catch (Exception ignored) {}
+    }
+
+    return String.format("%s%03d", base, nextRound);
   }
 
   @Transactional
@@ -93,7 +132,7 @@ public class ContractService {
     Long totalRent = (req.totalRent != null ? req.totalRent : monthlyRent * billingCount);
 
     Contract c = Contract.builder()
-        .contractNumber(generateNextContractNumber())
+        .contractNumber(generateNextContractNumber(req.contractType))
         .customer(customer)
         .customerNumber(req.customerNumber)
         .vehicleOrder(vo)

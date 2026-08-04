@@ -39,15 +39,15 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
     List<VehicleOrder> findByVehicleMgmtNoOrderByIdAsc(String vehicleMgmtNo);
 
     /**
-     * 같은 발주(발주번호) 안에서 이미 확정된 차량관리번호의 대순번(끝 2자리) 최대값.
-     * 차량관리번호 = 발주번호(10) + 재렌트회차(1) + 대순번(2) = 13자리.
-     * 발주단계(…000)와 13자리가 아닌 값은 제외한다. 없으면 0.
+     * 같은 발주(발주번호) 안에서 이미 확정된 차량관리번호의 실행순번(끝 3자리) 최대값.
+     * 차량관리번호 = 발주번호(12) + 실행순번(3) = 15자리.
+     * 발주단계(…000)와 15자리가 아닌 값은 제외한다. 없으면 0.
      */
     @Query(nativeQuery = true,
-           value = "SELECT COALESCE(MAX(CAST(RIGHT(vehicle_mgmt_no, 2) AS UNSIGNED)), 0) " +
+           value = "SELECT COALESCE(MAX(CAST(RIGHT(vehicle_mgmt_no, 3) AS UNSIGNED)), 0) " +
                    "FROM vehicle_orders " +
                    "WHERE order_no = :orderNo " +
-                   "  AND CHAR_LENGTH(vehicle_mgmt_no) = 13 " +
+                   "  AND CHAR_LENGTH(vehicle_mgmt_no) = 15 " +
                    "  AND RIGHT(vehicle_mgmt_no, 3) <> '000'")
     int findMaxUnitSeqByOrderNo(@Param("orderNo") String orderNo);
 

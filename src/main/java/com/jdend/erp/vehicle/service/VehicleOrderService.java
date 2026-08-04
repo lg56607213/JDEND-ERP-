@@ -622,18 +622,18 @@ public class VehicleOrderService {
     /**
      * 차량관리번호 실번호 확정 (실행 시점).
      *
-     * <p>차량관리번호(13자리) = 발주번호(10) + 재렌트회차(1) + 대순번(2)
-     * <p>최초계약이므로 재렌트회차는 0. 대순번은 같은 발주 안에서 실행하는 순서대로 1부터.
-     * <p>예) 발주 J260730001 을 5대 실행 → J260730001001 ~ J260730001005
+     * <p>차량관리번호(15자리) = 발주번호(12) + 실행순번(3)
+     * <p>실행순번은 같은 발주 안에서 실행하는 순서대로 001부터.
+     * <p>예) 발주 VFM260804001 을 5대 실행 → VFM260804001001 ~ VFM260804001005
      */
     private void confirmVehicleMgmtNo(VehicleOrder o) {
         String orderNo = o.getOrderNo();
-        if (orderNo == null || orderNo.length() != 10) {
+        if (orderNo == null || orderNo.length() != 12) {
             throw new RuntimeException(
                     "발주번호가 없어 차량관리번호를 확정할 수 없습니다. (id=" + o.getId() + ")");
         }
         int unitSeq = numberGenerator.nextUnitSeq(orderNo);
-        o.setVehicleMgmtNo(VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, 0, unitSeq));
+        o.setVehicleMgmtNo(VehicleNumberGenerator.buildVehicleMgmtNo(orderNo, unitSeq));
     }
 
     /**
@@ -650,37 +650,31 @@ public class VehicleOrderService {
     }
 
     /**
-     * 재렌트 시 차량관리번호의 재렌트 회차(11번째 자리)를 1 올린다. 대순번은 유지.
-     * 예) J260730001001 → J260730001101 (1회) → J260730001201 (2회)
+     * 재렌트 시 차량관리번호는 변경하지 않는다. (v5 개정: 회차 증가 로직 제거)
+     * 실행 확정된 차량인지(15자리, "000" 아님) 확인 후 현재 번호를 그대로 반환한다.
      *
-     * <p>전표에 붙어 있던 옛 번호도 함께 갱신한다.
-     *
-     * @return 변경된 차량관리번호
+     * @return 현재 차량관리번호 (변경 없음)
      */
     @Transactional
     public String applyRerent(String vehicleNo) {
         VehicleOrder o = orderRepo.findByVehicleNoNormalized(vehicleNo)
                 .orElseThrow(() -> new RuntimeException("차량 없음(차량번호): " + vehicleNo));
 
-        String oldMgmtNo = o.getVehicleMgmtNo();
-        if (oldMgmtNo == null || oldMgmtNo.length() != 13) {
+        String mgmtNo = o.getVehicleMgmtNo();
+        if (mgmtNo == null || mgmtNo.length() != 15 || mgmtNo.endsWith("000")) {
             throw new RuntimeException(
-                    "실행 확정된 차량만 재렌트할 수 있습니다. 현재 차량관리번호=" + oldMgmtNo);
+                    "실행 확정된 차량만 재렌트할 수 있습니다. 현재 차량관리번호=" + mgmtNo);
         }
 
-        String newMgmtNo = VehicleNumberGenerator.nextRerentMgmtNo(oldMgmtNo);
-        o.setVehicleMgmtNo(newMgmtNo);
-        orderRepo.save(o);
-        voucherService.updateVehicleMgmtNo(oldMgmtNo, newMgmtNo);
-
+        // 재렌트 시 차량관리번호는 변경하지 않으므로 이력만 기록한다.
         historyRepo.save(VehicleOrderHistory.builder()
                 .vehicleOrder(o)
                 .status(o.getOrderStatus())
                 .changedAt(LocalDateTime.now())
-                .note("재렌트 — 차량관리번호 " + oldMgmtNo + " → " + newMgmtNo)
+                .note("재렌트 — 차량관리번호 유지: " + mgmtNo)
                 .build());
 
-        return newMgmtNo;
+        return mgmtNo;
     }
 
     /** 발주단계(…000) 임시번호인지 */
