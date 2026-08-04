@@ -94,15 +94,15 @@
             </div>
             <div class="form-group">
               <label for="inspectionStart">검사유효기간(시작)</label>
-              <input type="date" id="inspectionStart">
+              <input type="text" id="inspectionStart" placeholder="YYYY-MM-DD" maxlength="10" oninput="autoDateFormat(this)">
             </div>
             <div class="form-group">
               <label for="firstRegDate">최초등록일 <span class="required">*</span></label>
-              <input type="date" id="firstRegDate">
+              <input type="text" id="firstRegDate" placeholder="YYYY-MM-DD" maxlength="10" oninput="autoDateFormat(this)">
             </div>
             <div class="form-group">
               <label for="inspectionEnd">검사유효기간(종료)</label>
-              <input type="date" id="inspectionEnd">
+              <input type="text" id="inspectionEnd" placeholder="YYYY-MM-DD" maxlength="10" oninput="autoDateFormat(this)">
             </div>
             <div class="form-group">
               <label for="modelYear">연식</label>
@@ -322,6 +322,13 @@
       document.getElementById('actionButtons').style.display = 'none';
     }
 
+    function autoDateFormat(el) {
+      let v = el.value.replace(/\D/g, '').slice(0, 8);
+      if (v.length >= 5) v = v.slice(0,4) + '-' + v.slice(4);
+      if (v.length >= 8) v = v.slice(0,7) + '-' + v.slice(7);
+      el.value = v;
+    }
+
     function resetForm() {
       if (confirm('모든 입력 내용을 초기화하시겠습니까?')) {
         document.getElementById('vehicleNo').value = '';
@@ -352,6 +359,13 @@
 
       if (!firstRegDate) {
         alert('최초등록일을 입력해주세요.');
+        document.getElementById('firstRegDate').focus();
+        return;
+      }
+
+      const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (!datePattern.test(firstRegDate)) {
+        alert('최초등록일 형식이 올바르지 않습니다. (YYYY-MM-DD)');
         document.getElementById('firstRegDate').focus();
         return;
       }

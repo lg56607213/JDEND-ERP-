@@ -109,9 +109,20 @@
         </div>
 
         <div class="info-text">
-          * 승인 / 삭제 선택가능
+          * 승인 / 삭제 선택가능 &nbsp;|&nbsp; * 행을 더블클릭하면 전표 상세를 볼 수 있습니다
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 전표 상세 모달 -->
+  <div id="detailModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; width:min(700px,96vw); max-height:90vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eee;">
+        <h3 id="detailTitle" style="margin:0;font-size:1rem;font-weight:700;">전표 상세</h3>
+        <button onclick="closeVoucherDetail()" style="border:1px solid #ddd;background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;">&#x2715;</button>
+      </div>
+      <div id="detailBody" style="padding:20px;"></div>
     </div>
   </div>
 
@@ -120,6 +131,8 @@
   <script src="../../assets/js/role.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
+
+    let lastRows = [];
 
     function mustOk(res){
       if(!res.ok) throw new Error("HTTP " + res.status);
@@ -205,6 +218,7 @@
     }
 
     function renderRows(rows){
+      lastRows = rows || [];
       const body = $("voucherTableBody");
       body.innerHTML = "";
 
@@ -215,7 +229,7 @@
 
       for(const r of rows){
         body.insertAdjacentHTML("beforeend", `
-          <tr>
+          <tr style="cursor:pointer;" ondblclick="openVoucherDetail('${esc(r.voucherNo)}')">
             <td>${r.showMain ? `<input type="checkbox" class="voucher-checkbox" data-id="${r.id}">` : ``}</td>
             <td>${r.showMain ? (r.voucherDate || "") : ``}</td>
             <td>${r.showMain ? (r.voucherNo || "") : ``}</td>
@@ -279,6 +293,65 @@
 
       alert("삭제 완료");
       await searchVouchers();
+    }
+
+    function openVoucherDetail(voucherNo) {
+      const group = lastRows.filter(r => r.voucherNo === voucherNo);
+      if (!group || group.length === 0) return;
+
+      const first = group[0];
+      const statusHtml = first.status === "승인"
+        ? `<span class="status-badge approved">승인</span>`
+        : `<span class="status-badge pending">대기</span>`;
+
+      let rowsHtml = "";
+      for (const r of group) {
+        if (r.debitAmount != null) {
+          rowsHtml += `
+            <tr>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; text-align:center; color:#c0392b; font-weight:600;">차변</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0;">${esc(r.debitAccount || "")}</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; text-align:right;">${num(r.debitAmount)}</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#555;">${esc(r.debitDescription || "")}</td>
+            </tr>`;
+        }
+        if (r.creditAmount != null) {
+          rowsHtml += `
+            <tr>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; text-align:center; color:#2980b9; font-weight:600;">대변</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0;">${esc(r.creditAccount || "")}</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; text-align:right;">${num(r.creditAmount)}</td>
+              <td style="padding:8px 10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#555;">${esc(r.creditDescription || "")}</td>
+            </tr>`;
+        }
+      }
+
+      const detailBodyHtml = `
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:16px;">
+          <div><span style="font-size:12px; color:#888;">전표번호</span><br><strong>${esc(first.voucherNo || "")}</strong></div>
+          <div><span style="font-size:12px; color:#888;">전표일자</span><br><strong>${esc(first.voucherDate || "")}</strong></div>
+          <div><span style="font-size:12px; color:#888;">상태</span><br>${statusHtml}</div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;">
+          <thead>
+            <tr style="background:#f8f9fa;">
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:center; width:60px;">구분</th>
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">계정</th>
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:right; width:120px;">금액</th>
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">적요</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
+
+      $("detailTitle").textContent = "전표 상세 — " + (first.voucherNo || "");
+      $("detailBody").innerHTML = detailBodyHtml;
+      $("detailModal").style.display = "flex";
+    }
+
+    function closeVoucherDetail() {
+      $("detailModal").style.display = "none";
     }
   </script>
   <script src="../../assets/js/excel-export.js"></script>
