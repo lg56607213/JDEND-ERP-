@@ -130,22 +130,6 @@
           </div>
         </div>
 
-        <!-- 차량등록증 스캔파일 섹션 -->
-        <div class="form-section" id="fileSection" style="display: none;">
-          <h3 class="section-title">차량등록증 스캔파일</h3>
-          <div class="file-upload-area">
-            <div class="file-upload-box" id="fileUploadBox">
-              <div class="file-icon">📄</div>
-              <div class="file-text">PDF, JPG, PNG 파일을 선택하세요 (최대 10MB)</div>
-              <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event)" hidden>
-              <button type="button" class="btn-file-select" onclick="document.getElementById('fileInput').click()">파일선택</button>
-            </div>
-            <div class="file-preview" id="filePreview" style="display: none;">
-              <span class="file-name" id="fileName"></span>
-              <button type="button" class="btn-file-remove" onclick="removeFile()">삭제</button>
-            </div>
-          </div>
-        </div>
 
         <!-- 버튼 영역 -->
         <div class="form-actions" id="actionButtons" style="display: none;">
@@ -216,7 +200,6 @@
 
   <script>
     const API_BASE = '';
-    let selectedFile = null;
 
     function openVehicleSearch() {
       document.getElementById('vehicleSearchModal').style.display = 'block';
@@ -327,7 +310,6 @@
 
         document.getElementById('vehicleInfoSection').style.display = 'block';
         document.getElementById('registerInfoSection').style.display = 'block';
-        document.getElementById('fileSection').style.display = 'block';
         document.getElementById('actionButtons').style.display = 'flex';
       } catch (e) {
         alert('서버 연결 실패: ' + e.message);
@@ -337,36 +319,7 @@
     function hideAllSections() {
       document.getElementById('vehicleInfoSection').style.display = 'none';
       document.getElementById('registerInfoSection').style.display = 'none';
-      document.getElementById('fileSection').style.display = 'none';
       document.getElementById('actionButtons').style.display = 'none';
-    }
-
-    function handleFileSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (file.size > 10 * 1024 * 1024) {
-        alert('파일 크기는 10MB 이하여야 합니다.');
-        return;
-      }
-
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('PDF, JPG, PNG 파일만 업로드 가능합니다.');
-        return;
-      }
-
-      selectedFile = file;
-      document.getElementById('fileName').textContent = file.name;
-      document.getElementById('filePreview').style.display = 'flex';
-      document.getElementById('fileUploadBox').style.display = 'none';
-    }
-
-    function removeFile() {
-      selectedFile = null;
-      document.getElementById('fileInput').value = '';
-      document.getElementById('filePreview').style.display = 'none';
-      document.getElementById('fileUploadBox').style.display = 'flex';
     }
 
     function resetForm() {
@@ -378,7 +331,6 @@
         document.getElementById('inspectionEnd').value = '';
         document.getElementById('fuelType').value = '';
         document.getElementById('displacement').value = '';
-        removeFile();
       }
     }
 
@@ -422,8 +374,6 @@
       if (inspectionEnd) formData.append('inspectionEnd', inspectionEnd);
       if (fuelType) formData.append('fuelType', fuelType);
       if (displacement) formData.append('displacement', displacement);
-
-      if (selectedFile) formData.append('file', selectedFile);
 
       try {
         const res = await fetch(`/api/vehicle-register/${encodeURIComponent(vehicleMgmtNo)}`, {

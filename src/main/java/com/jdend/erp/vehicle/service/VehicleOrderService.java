@@ -547,11 +547,6 @@ public class VehicleOrderService {
             String savedPath = saveFile(mgmtNo, file);
             o.setRegisterFileName(file.getOriginalFilename());
             o.setRegisterFilePath(savedPath);
-            // vehicle_documents 테이블에도 저장하여 스캔관리에서 조회 가능하게 함
-            try {
-                vehicleDocumentService.upload("차량등록증", mgmtNo, req.getVehicleNo(),
-                        null, null, file, "system");
-            } catch (Exception ignored) {}
         }
 
         o.setOrderStatus("등록완료");
@@ -602,10 +597,6 @@ public class VehicleOrderService {
             String savedPath = saveFile(o.getVehicleMgmtNo(), file);
             o.setRegisterFileName(file.getOriginalFilename());
             o.setRegisterFilePath(savedPath);
-            try {
-                vehicleDocumentService.upload("차량등록증", o.getVehicleMgmtNo(), req.getVehicleNo(),
-                        null, null, file, "system");
-            } catch (Exception ignored) {}
         }
 
         o.setOrderStatus("등록완료");
