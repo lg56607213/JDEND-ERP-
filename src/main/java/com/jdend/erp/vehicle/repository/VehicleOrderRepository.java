@@ -69,6 +69,12 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
 
     List<VehicleOrder> findByOrderDateBetween(LocalDate start, LocalDate end);
 
+    /** 차량등록일(registerDate) 기간 조회 — 차량등록증 스캔 화면용 */
+    List<VehicleOrder> findByRegisterDateBetween(LocalDate start, LocalDate end);
+
+    /** 차량등록일 기간 + 상태 */
+    List<VehicleOrder> findByOrderStatusAndRegisterDateBetween(String status, LocalDate start, LocalDate end);
+
     List<VehicleOrder> findByOrderStatus(String status);
 
     List<VehicleOrder> findByOrderStatusAndOrderDateBetween(String status, LocalDate start, LocalDate end);

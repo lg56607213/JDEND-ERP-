@@ -34,11 +34,15 @@ public class VehicleOrderController {
     public List<VehicleOrderResponse> list(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String registerDateStart,
+            @RequestParam(required = false) String registerDateEnd
     ) {
-        LocalDate s = (startDate == null || startDate.isBlank()) ? null : LocalDate.parse(startDate);
-        LocalDate e = (endDate == null || endDate.isBlank()) ? null : LocalDate.parse(endDate);
-        return service.search(s, e, status);
+        LocalDate s  = (startDate == null || startDate.isBlank()) ? null : LocalDate.parse(startDate);
+        LocalDate e  = (endDate   == null || endDate.isBlank())   ? null : LocalDate.parse(endDate);
+        LocalDate rs = (registerDateStart == null || registerDateStart.isBlank()) ? null : LocalDate.parse(registerDateStart);
+        LocalDate re = (registerDateEnd   == null || registerDateEnd.isBlank())   ? null : LocalDate.parse(registerDateEnd);
+        return service.search(s, e, status, rs, re);
     }
 
     // 등록 (1발주 N대 → 생성된 차량행 목록 반환)
