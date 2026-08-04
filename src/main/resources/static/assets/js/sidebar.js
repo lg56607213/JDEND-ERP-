@@ -120,6 +120,8 @@ function loadSidebar() {
                 <span class="menu-label">스캔관리</span>
                 <ul>
                   <li><a href="${basePath}pages/vehicle/vehicle_scan.html">차량등록증</a></li>
+                  <li><a href="${basePath}pages/vehicle/insurance_scan.html">보험증권</a></li>
+                  <li><a href="${basePath}pages/contract/contract_scan.html">계약서</a></li>
                 </ul>
               </li>
             </ul>

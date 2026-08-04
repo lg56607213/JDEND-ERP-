@@ -28,6 +28,10 @@ public interface VehicleDocumentRepository extends JpaRepository<VehicleDocument
     boolean existsByVehicleMgmtNoAndDocumentTypeAndDeletedYn(
             String vehicleMgmtNo, String documentType, String deletedYn);
 
+    /** documentType 전체 조회 — vehicleMgmtNo 등 키 없이 종류별 전체 조회용 */
+    List<VehicleDocument> findByDocumentTypeAndDeletedYnOrderByUploadedAtDesc(
+            String documentType, String deletedYn);
+
     @Query("select d.contractNumber from VehicleDocument d " +
            "where d.contractNumber in :numbers and d.deletedYn = 'N'")
     List<String> findContractNumbersWithDocument(@Param("numbers") List<String> numbers);

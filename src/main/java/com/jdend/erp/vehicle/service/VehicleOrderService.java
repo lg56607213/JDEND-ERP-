@@ -4,6 +4,7 @@ import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
+import com.jdend.erp.document.service.VehicleDocumentService;
 import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.entity.*;
 import com.jdend.erp.vehicle.repository.*;
@@ -30,6 +31,7 @@ public class VehicleOrderService {
     private final ContractRepository contractRepo;
     private final VehicleNumberGenerator numberGenerator;
     private final VehicleLoanService vehicleLoanService;
+    private final VehicleDocumentService vehicleDocumentService;
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -66,14 +68,24 @@ public class VehicleOrderService {
 
     @Transactional(readOnly = true)
     public List<VehicleOrderResponse> search(LocalDate start, LocalDate end, String status) {
+        return search(start, end, status, null, null);
+    }
+
+    public List<VehicleOrderResponse> search(LocalDate start, LocalDate end, String status,
+                                             LocalDate registerStart, LocalDate registerEnd) {
         List<VehicleOrder> list;
 
-        boolean hasDate = (start != null && end != null);
-        boolean hasStatus = (status != null && !status.isBlank());
+        boolean hasOrderDate    = (start != null && end != null);
+        boolean hasRegisterDate = (registerStart != null && registerEnd != null);
+        boolean hasStatus       = (status != null && !status.isBlank());
 
-        if (hasDate && hasStatus) {
+        if (hasRegisterDate && hasStatus) {
+            list = orderRepo.findByOrderStatusAndRegisterDateBetween(status, registerStart, registerEnd);
+        } else if (hasRegisterDate) {
+            list = orderRepo.findByRegisterDateBetween(registerStart, registerEnd);
+        } else if (hasOrderDate && hasStatus) {
             list = orderRepo.findByOrderStatusAndOrderDateBetween(status, start, end);
-        } else if (hasDate) {
+        } else if (hasOrderDate) {
             list = orderRepo.findByOrderDateBetween(start, end);
         } else if (hasStatus) {
             list = orderRepo.findByOrderStatus(status);
@@ -535,6 +547,11 @@ public class VehicleOrderService {
             String savedPath = saveFile(mgmtNo, file);
             o.setRegisterFileName(file.getOriginalFilename());
             o.setRegisterFilePath(savedPath);
+            // vehicle_documents 테이블에도 저장하여 스캔관리에서 조회 가능하게 함
+            try {
+                vehicleDocumentService.upload("차량등록증", mgmtNo, req.getVehicleNo(),
+                        null, null, file, "system");
+            } catch (Exception ignored) {}
         }
 
         o.setOrderStatus("등록완료");
@@ -585,6 +602,10 @@ public class VehicleOrderService {
             String savedPath = saveFile(o.getVehicleMgmtNo(), file);
             o.setRegisterFileName(file.getOriginalFilename());
             o.setRegisterFilePath(savedPath);
+            try {
+                vehicleDocumentService.upload("차량등록증", o.getVehicleMgmtNo(), req.getVehicleNo(),
+                        null, null, file, "system");
+            } catch (Exception ignored) {}
         }
 
         o.setOrderStatus("등록완료");

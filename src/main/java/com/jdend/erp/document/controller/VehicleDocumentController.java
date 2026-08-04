@@ -109,6 +109,39 @@ public class VehicleDocumentController {
     }
 
     // ──────────────────────────────────────────────
+    // GET /api/documents/{id}/download — 파일 다운로드
+    // ──────────────────────────────────────────────
+    @GetMapping("/{id}/download")
+    public ResponseEntity<?> download(@PathVariable Long id) {
+        try {
+            VehicleDocumentService.DocumentInfo info = service.getInfo(id);
+            byte[] bytes = service.getFileBytes(id);
+            String contentType = service.getContentType(id);
+
+            String filename = (info.fileName() != null && !info.fileName().isBlank())
+                    ? info.fileName() : "document";
+
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename*=UTF-8''" + encodedFilename);
+            headers.setContentLength(bytes.length);
+
+            return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "파일 다운로드 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    // ──────────────────────────────────────────────
     // DELETE /api/documents/{id} — 소프트 삭제
     // ──────────────────────────────────────────────
     @DeleteMapping("/{id}")

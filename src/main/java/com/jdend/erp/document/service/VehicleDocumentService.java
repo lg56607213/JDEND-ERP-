@@ -63,6 +63,10 @@ public class VehicleDocumentService {
             docs = repository.findByContractNumberAndDeletedYnOrderByUploadedAtDesc(contractNumber, "N");
         } else if (insuranceId != null) {
             docs = repository.findByInsuranceIdAndDeletedYnOrderByUploadedAtDesc(insuranceId, "N");
+        } else if (documentType != null && !documentType.isBlank()) {
+            // 키 없이 documentType만 있으면 해당 종류 전체 반환
+            docs = repository.findByDocumentTypeAndDeletedYnOrderByUploadedAtDesc(documentType, "N");
+            return docs.stream().map(this::toDocumentInfo).collect(Collectors.toList());
         } else {
             return Collections.emptyList();
         }
