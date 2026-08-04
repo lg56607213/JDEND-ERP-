@@ -27,13 +27,9 @@
     td.l{text-align:left}
     tr:hover td{background:#f9fafb}
     .empty-row td{text-align:center;color:#9ca3af;padding:32px}
-    .scan-y{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:2px 8px;font-size:.76rem;font-weight:700}
-    .scan-n{display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:4px;padding:2px 8px;font-size:.76rem;font-weight:700}
-    .btn-add{background:#3b82f6;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:.8rem;font-weight:700;padding:4px 10px}
-    .btn-add:hover{background:#2563eb}
     .btn-view{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:5px;cursor:pointer;font-size:.8rem;font-weight:700;padding:4px 10px}
     .btn-view:hover{background:#dcfce7}
-    .btn-dl{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;cursor:pointer;font-size:.8rem;font-weight:700;padding:4px 10px}
+    .btn-dl{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;font-size:.8rem;font-weight:700;padding:4px 10px;text-decoration:none;display:inline-block}
     .btn-dl:hover{background:#dbeafe}
     .btn-del{background:#fff5f5;color:#c53030;border:1px solid #fed7d7;border-radius:5px;cursor:pointer;font-size:.8rem;font-weight:700;padding:4px 10px}
     .btn-del:hover{background:#fed7d7}
@@ -45,8 +41,8 @@
     .modal-sub{color:#6b7280;font-size:.82rem;margin-bottom:18px}
     .modal-field{margin-bottom:14px}
     .modal-field label{display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:5px}
-    .modal-field input{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:.9rem;outline:none}
-    .modal-field input:focus{border-color:#23304e}
+    .modal-field input,.modal-field select{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:.9rem;outline:none}
+    .modal-field input:focus,.modal-field select:focus{border-color:#23304e}
     .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
     .btn-cancel-m{padding:9px 18px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-weight:600;cursor:pointer;font-size:.88rem}
     .btn-cancel-m:hover{background:#e5e7eb}
@@ -76,14 +72,12 @@
   <div class="search-card">
     <div class="search-row">
       <div class="sfg">
-        <label>계약번호</label>
-        <input type="text" id="searchContract" placeholder="계약번호" style="width:140px;" onkeydown="if(event.key==='Enter')doSearch()">
-      </div>
-      <div class="sfg">
-        <label>차량번호</label>
-        <input type="text" id="searchVehicleNo" placeholder="차량번호" style="width:130px;" onkeydown="if(event.key==='Enter')doSearch()">
+        <label>차량번호 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="searchVehicleNo" placeholder="예) 12가3456" style="width:160px;"
+               onkeydown="if(event.key==='Enter')doSearch()">
       </div>
       <button class="btn btn-primary" onclick="doSearch()">조회</button>
+      <button class="btn" style="background:#3b82f6;color:#fff;" onclick="openUploadModal()">업로드</button>
     </div>
   </div>
 
@@ -98,15 +92,16 @@
           <tr>
             <th style="width:44px;">#</th>
             <th>파일명</th>
-            <th>계약번호</th>
             <th>차량번호</th>
+            <th>보험시작일</th>
+            <th>보험종료일</th>
             <th>크기</th>
             <th>업로드일시</th>
-            <th style="width:160px;">관리</th>
+            <th style="width:180px;">관리</th>
           </tr>
         </thead>
         <tbody id="scanTableBody">
-          <tr class="empty-row"><td colspan="7">조회 버튼을 눌러 검색하세요.</td></tr>
+          <tr class="empty-row"><td colspan="8">차량번호를 입력하고 조회하세요.</td></tr>
         </tbody>
       </table>
     </div>
@@ -117,14 +112,23 @@
 <div class="modal-backdrop" id="uploadBackdrop">
   <div class="modal-box">
     <h3>보험증권 업로드</h3>
-    <p class="modal-sub" id="uploadSubTitle"></p>
+    <p class="modal-sub">차량번호로 보험을 선택한 뒤 파일을 업로드합니다.</p>
+    <div class="modal-field">
+      <label>차량번호 <span style="color:#ef4444;">*</span></label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="uploadVehicleNo" placeholder="예) 12가3456" style="flex:1;">
+        <button class="btn-ok-m" style="white-space:nowrap;" onclick="loadInsuranceList()">조회</button>
+      </div>
+    </div>
+    <div class="modal-field" id="insuranceSelectField" style="display:none;">
+      <label>보험 선택 <span style="color:#ef4444;">*</span></label>
+      <select id="insuranceSelect">
+        <option value="">-- 보험 선택 --</option>
+      </select>
+    </div>
     <div class="modal-field">
       <label>파일 선택 <span style="color:#6b7280;font-weight:400;">(PDF/JPG/JPEG/PNG, 최대 10MB)</span></label>
       <input type="file" id="uploadFile" accept=".pdf,.jpg,.jpeg,.png">
-    </div>
-    <div class="modal-field">
-      <label>보험 ID (선택)</label>
-      <input type="number" id="uploadInsuranceId" placeholder="보험 레코드 ID">
     </div>
     <div class="modal-btns">
       <button class="btn-cancel-m" onclick="closeUploadModal()">취소</button>
@@ -152,79 +156,141 @@
   function fmtSize(b){if(!b)return'-';if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
   function fmtDt(dt){return dt?String(dt).replace('T',' ').substring(0,16):'-';}
 
+  // 차량번호 → 보험 목록 → 문서 조회
   async function doSearch() {
-    const contract = document.getElementById('searchContract').value.trim();
     const vehicleNo = document.getElementById('searchVehicleNo').value.trim();
+    if (!vehicleNo) { alert('차량번호를 입력하세요.'); document.getElementById('searchVehicleNo').focus(); return; }
+
     const tbody = document.getElementById('scanTableBody');
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">조회 중...</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조회 중...</td></tr>';
     document.getElementById('resultCount').textContent = '';
 
     try {
-      const qs = new URLSearchParams({documentType:'보험증권'});
-      if (contract) qs.set('contractNumber', contract);
-      if (vehicleNo) qs.set('vehicleNo', vehicleNo);
+      // 1) 차량번호로 보험 목록 조회
+      const insRes = await fetch(`${BASE}/api/insurances?vehicleNo=${encodeURIComponent(vehicleNo)}`, {credentials:'include'});
+      if (!insRes.ok) throw new Error('보험 조회 HTTP ' + insRes.status);
+      const insurances = await insRes.json();
 
-      const res = await fetch(`${BASE}/api/documents?${qs.toString()}`, {credentials:'include'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const list = await res.json();
-
-      document.getElementById('resultCount').textContent = list.length + '건';
-      if (!list.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">조회 결과가 없습니다.</td></tr>';
+      if (!insurances.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">해당 차량번호의 보험 데이터가 없습니다.</td></tr>';
         return;
       }
-      tbody.innerHTML = list.map((d,i)=>`
+
+      // 2) 각 보험 ID로 문서 조회 (병렬)
+      const docResults = await Promise.all(
+        insurances.map(ins =>
+          fetch(`${BASE}/api/documents?documentType=보험증권&insuranceId=${ins.id}`, {credentials:'include'})
+            .then(r => r.ok ? r.json() : [])
+            .then(docs => docs.map(d => ({...d, _vehicleNo: ins.vehicleNo || vehicleNo, _insStart: ins.insuranceStartDate, _insEnd: ins.insuranceEndDate})))
+            .catch(() => [])
+        )
+      );
+      const allDocs = docResults.flat();
+
+      document.getElementById('resultCount').textContent = allDocs.length + '건';
+      if (!allDocs.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">스캔된 보험증권 파일이 없습니다.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = allDocs.map((d,i)=>`
         <tr>
           <td>${i+1}</td>
           <td class="l">${esc(d.fileName||'-')}</td>
-          <td>${esc(d.contractNumber||'-')}</td>
-          <td>${esc(d.vehicleNo||'-')}</td>
+          <td>${esc(d._vehicleNo||'-')}</td>
+          <td>${esc(d._insStart||'-')}</td>
+          <td>${esc(d._insEnd||'-')}</td>
           <td>${fmtSize(d.fileSize)}</td>
           <td>${fmtDt(d.uploadedAt)}</td>
           <td>
             <button class="btn-view" onclick="openViewer(${d.id},'${esc(d.fileName)}')">보기</button>&nbsp;
-            <a href="${BASE}/api/documents/${d.id}/download" class="btn-dl" style="display:inline-block;text-decoration:none;">다운로드</a>&nbsp;
+            <a href="${BASE}/api/documents/${d.id}/download" class="btn-dl">다운로드</a>&nbsp;
             <button class="btn-del" onclick="deleteScan(${d.id})">삭제</button>
           </td>
         </tr>`).join('');
     } catch(e) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="7" style="color:#ef4444;">오류: ${esc(e.message)}</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8" style="color:#ef4444;">오류: ${esc(e.message)}</td></tr>`;
     }
   }
 
-  let _uploadContractNumber = '';
-  function openUploadModal(contractNumber) {
-    _uploadContractNumber = contractNumber || '';
-    document.getElementById('uploadSubTitle').textContent = contractNumber ? '계약번호: ' + contractNumber : '';
+  // ── 업로드 모달 ────────────────────────────────
+  function openUploadModal() {
+    const searchVehicleNo = document.getElementById('searchVehicleNo').value.trim();
+    document.getElementById('uploadVehicleNo').value = searchVehicleNo;
+    document.getElementById('insuranceSelectField').style.display = 'none';
+    document.getElementById('insuranceSelect').innerHTML = '<option value="">-- 보험 선택 --</option>';
     document.getElementById('uploadFile').value = '';
-    document.getElementById('uploadInsuranceId').value = '';
     document.getElementById('uploadBackdrop').classList.add('open');
+    if (searchVehicleNo) loadInsuranceList();
   }
   function closeUploadModal() { document.getElementById('uploadBackdrop').classList.remove('open'); }
 
+  async function loadInsuranceList() {
+    const vehicleNo = document.getElementById('uploadVehicleNo').value.trim();
+    if (!vehicleNo) { alert('차량번호를 입력하세요.'); return; }
+
+    const sel = document.getElementById('insuranceSelect');
+    sel.innerHTML = '<option value="">조회 중...</option>';
+
+    try {
+      const res = await fetch(`${BASE}/api/insurances?vehicleNo=${encodeURIComponent(vehicleNo)}`, {credentials:'include'});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const list = await res.json();
+
+      if (!list.length) {
+        sel.innerHTML = '<option value="">보험 데이터 없음</option>';
+        document.getElementById('insuranceSelectField').style.display = 'block';
+        return;
+      }
+
+      sel.innerHTML = '<option value="">-- 보험 선택 --</option>' +
+        list.map(ins =>
+          `<option value="${ins.id}" data-vehicleno="${esc(ins.vehicleNo||vehicleNo)}">
+            ${esc(ins.insuranceStartDate||'')} ~ ${esc(ins.insuranceEndDate||'')}
+            (${esc(ins.vehicleNo||vehicleNo)})
+          </option>`
+        ).join('');
+      document.getElementById('insuranceSelectField').style.display = 'block';
+    } catch(e) {
+      sel.innerHTML = '<option value="">조회 실패</option>';
+      alert('보험 조회 실패: ' + e.message);
+    }
+  }
+
   async function submitUpload() {
+    const vehicleNo = document.getElementById('uploadVehicleNo').value.trim();
+    const sel = document.getElementById('insuranceSelect');
+    const insuranceId = sel.value;
     const file = document.getElementById('uploadFile').files[0];
+
+    if (!vehicleNo) { alert('차량번호를 입력하세요.'); return; }
+    if (!insuranceId) { alert('보험을 선택하세요.'); return; }
     if (!file) { alert('파일을 선택하세요.'); return; }
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['pdf','jpg','jpeg','png'].includes(ext)) { alert('PDF, JPG, JPEG, PNG만 가능합니다.'); return; }
     if (file.size > 10*1024*1024) { alert('최대 10MB까지 업로드 가능합니다.'); return; }
 
+    const selectedOpt = sel.options[sel.selectedIndex];
+    const storedVehicleNo = selectedOpt?.dataset?.vehicleno || vehicleNo;
+
     const form = new FormData();
     form.append('documentType', '보험증권');
-    if (_uploadContractNumber) form.append('contractNumber', _uploadContractNumber);
-    const insId = document.getElementById('uploadInsuranceId').value.trim();
-    if (insId) form.append('insuranceId', insId);
+    form.append('insuranceId', insuranceId);
+    form.append('vehicleNo', storedVehicleNo);
     form.append('file', file);
 
     try {
       const res = await fetch(`${BASE}/api/documents/upload`, {method:'POST', body:form, credentials:'include'});
-      if (!res.ok) { const b=await res.json(); throw new Error(b.error||'HTTP '+res.status); }
+      if (!res.ok) { const b=await res.json().catch(()=>{}); throw new Error(b?.error||'HTTP '+res.status); }
       alert('업로드 완료!');
       closeUploadModal();
+      // 검색창에 차량번호 설정 후 재조회
+      document.getElementById('searchVehicleNo').value = vehicleNo;
       doSearch();
     } catch(e) { alert('업로드 실패: '+e.message); }
   }
 
+  // ── 삭제 ────────────────────────────────────────
   async function deleteScan(id) {
     if (!confirm('이 파일을 삭제하시겠습니까?')) return;
     try {
@@ -235,11 +301,12 @@
     } catch(e) { alert('삭제 실패: '+e.message); }
   }
 
+  // ── 뷰어 ────────────────────────────────────────
   function openViewer(id, fileName) {
     const url = `${BASE}/api/documents/${id}/view`;
     const ext = (fileName||'').split('.').pop().toLowerCase();
-    const body = document.getElementById('viewerBody');
     document.getElementById('viewerTitle').textContent = fileName||'문서 보기';
+    const body = document.getElementById('viewerBody');
     body.innerHTML = ['jpg','jpeg','png','gif','webp'].includes(ext)
       ? `<img src="${url}" alt="${esc(fileName)}">`
       : `<iframe src="${url}" title="${esc(fileName)}"></iframe>`;
@@ -263,8 +330,6 @@
       }
     });
   });
-
-  document.addEventListener('DOMContentLoaded', doSearch);
 </script>
 </body>
 </html>

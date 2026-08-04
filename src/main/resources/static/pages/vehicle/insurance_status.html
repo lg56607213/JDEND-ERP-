@@ -527,7 +527,7 @@
         <td>${escapeHtml(it.emergency || '-')}</td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap;">
           <span class="scan-badge ${scanMap[it.id] ? 'scan-y' : 'scan-n'}">${scanMap[it.id] ? '스캔 유' : '스캔 무'}</span>
-          <button class="btn-scan" onclick="openInsuranceScanModal(${it.id}, '${escapeHtml(it.contractNumber||'')}')">업로드</button>
+          <button class="btn-scan" onclick="openInsuranceScanModal(${it.id}, '${escapeHtml(it.contractNumber||'')}', '${escapeHtml(it.vehicleNo||'')}')">업로드</button>
           ${scanMap[it.id] ? `<button class="btn-scan" style="background:#e0f2fe;color:#0369a1;" onclick="openInsScanList(${it.id})">파일</button>` : ''}
         </td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap;">
@@ -638,10 +638,14 @@
 
   /* ===== 보험증권 스캔 모달 ===== */
   let _scanInsuranceId = null;
+  let _scanVehicleNo   = '';
 
-  function openInsuranceScanModal(insuranceId, contractNumber) {
+  function openInsuranceScanModal(insuranceId, contractNumber, vehicleNo) {
     _scanInsuranceId = insuranceId;
-    $('insuranceScanInfo').textContent = contractNumber ? '계약번호: ' + contractNumber : '보험 ID: ' + insuranceId;
+    _scanVehicleNo   = vehicleNo || '';
+    $('insuranceScanInfo').textContent =
+      (vehicleNo ? '차량번호: ' + vehicleNo + '  ' : '') +
+      (contractNumber ? '계약번호: ' + contractNumber : '보험 ID: ' + insuranceId);
     $('insuranceScanFile').value = '';
     $('insuranceScanModalBackdrop').classList.add('open');
   }
@@ -660,6 +664,7 @@
     const form = new FormData();
     form.append('documentType', '보험증권');
     form.append('insuranceId', _scanInsuranceId);
+    if (_scanVehicleNo) form.append('vehicleNo', _scanVehicleNo);
     form.append('file', file);
     try {
       const res = await fetch(`${BASE}/api/documents/upload`, { method: 'POST', body: form, credentials: 'include' });
