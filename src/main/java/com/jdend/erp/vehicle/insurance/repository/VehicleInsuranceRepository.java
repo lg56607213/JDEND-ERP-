@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface VehicleInsuranceRepository extends JpaRepository<VehicleInsurance, Long> {
 
@@ -24,4 +25,7 @@ public interface VehicleInsuranceRepository extends JpaRepository<VehicleInsuran
     @Param("startDate") LocalDate startDate,
     @Param("endDate") LocalDate endDate
   );
+
+  @Query("SELECT MAX(i.insuranceEndDate) FROM VehicleInsurance i WHERE i.vehicleMgmtNo = :mgmtNo")
+  Optional<LocalDate> findLatestEndDateByVehicleMgmtNo(@Param("mgmtNo") String mgmtNo);
 }

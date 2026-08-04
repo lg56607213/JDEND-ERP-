@@ -3,6 +3,7 @@ package com.jdend.erp.vehicle.controller;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.vehicle.dto.VehicleAvailableResponse;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
+import com.jdend.erp.vehicle.insurance.repository.VehicleInsuranceRepository;
 import com.jdend.erp.vehicle.repository.VehicleOrderRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,7 @@ public class VehicleOrderQueryController {
 
   private final VehicleOrderRepository vehicleOrderRepo;
   private final ContractRepository contractRepo;
+  private final VehicleInsuranceRepository vehicleInsuranceRepo;
 
   // ✅ 정비등록(돋보기)용: 차량 검색 (kw 비어도 OK)
   // GET /api/vehicle-orders/search?kw=
@@ -32,12 +34,16 @@ public class VehicleOrderQueryController {
 
     List<VehicleSearchRow> out = new ArrayList<>();
     for (VehicleOrder v : list) {
+      LocalDate latestInsuranceEndDate = v.getVehicleMgmtNo() != null
+          ? vehicleInsuranceRepo.findLatestEndDateByVehicleMgmtNo(v.getVehicleMgmtNo()).orElse(null)
+          : null;
       out.add(new VehicleSearchRow(
           v.getVehicleMgmtNo(),
           v.getVehicleNo(),
           v.getCarModel(),
           v.getInspectionStart(),
-          v.getInspectionEnd()
+          v.getInspectionEnd(),
+          latestInsuranceEndDate
       ));
     }
     return out;
@@ -88,5 +94,6 @@ public class VehicleOrderQueryController {
     private String carModel;
     private LocalDate inspectionStart;
     private LocalDate inspectionEnd;
+    private LocalDate latestInsuranceEndDate;
   }
 }

@@ -400,10 +400,11 @@
             <th style="width:200px;">차량관리번호</th>
             <th style="width:160px;">차량번호</th>
             <th>차종/기타</th>
+            <th style="width:130px;">최근보험종료일</th>
           </tr>
         </thead>
         <tbody id="vehiclePickBody">
-          <tr><td colspan="3" style="text-align:center; color:#888;">불러오는 중...</td></tr>
+          <tr><td colspan="4" style="text-align:center; color:#888;">불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -838,7 +839,7 @@
   function renderVehicles(list){
     const body = $('vehiclePickBody');
     if(!Array.isArray(list) || list.length===0){
-      body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">결과 없음</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">결과 없음</td></tr>`;
       return;
     }
 
@@ -848,6 +849,7 @@
         <td>${escapeHtml(it.vehicleMgmtNo || it.mgmtNo || '-')}</td>
         <td>${escapeHtml(it.vehicleNo || '-')}</td>
         <td>${escapeHtml(it.model || it.vehicleModel || it.carModel || '-')}</td>
+        <td>${escapeHtml(it.latestInsuranceEndDate || '-')}</td>
       </tr>
     `).join('');
 
@@ -862,7 +864,7 @@
 
   async function loadVehicles(kw){
     const body = $('vehiclePickBody');
-    body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">불러오는 중...</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">불러오는 중...</td></tr>`;
 
     try{
       const res = await fetch(`${BASE}/api/vehicle-orders/search?kw=${encodeURIComponent(kw||'')}`);
@@ -870,7 +872,7 @@
       const data = await res.json();
       renderVehicles(data);
     }catch(e){
-      body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
     }
   }
 

@@ -177,10 +177,11 @@
             <th style="width:140px;">차량관리번호</th>
             <th style="width:140px;">차량번호</th>
             <th>차종</th>
+            <th style="width:130px;">최근보험종료일</th>
           </tr>
         </thead>
         <tbody id="pickerBody">
-          <tr><td class="muted" colspan="3">조회중...</td></tr>
+          <tr><td class="muted" colspan="4">조회중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -266,7 +267,7 @@
         $("pickerBackdrop").style.display = "block";
         $("pickerModal").style.display = "block";
         $("pickerKw").value = "";
-        $("pickerBody").innerHTML = `<tr><td class="muted" colspan="3">조회중...</td></tr>`;
+        $("pickerBody").innerHTML = `<tr><td class="muted" colspan="4">조회중...</td></tr>`;
 
         setTimeout(() => {
           $("pickerKw").focus();
@@ -281,7 +282,7 @@
     };
 
     async function pickerSearch(kw){
-      $("pickerBody").innerHTML = `<tr><td class="muted" colspan="3">조회중...</td></tr>`;
+      $("pickerBody").innerHTML = `<tr><td class="muted" colspan="4">조회중...</td></tr>`;
 
       try{
         const res = await fetch(`${BASE}/api/vehicle-orders/search?kw=${encodeURIComponent(kw ?? "")}`);
@@ -289,7 +290,7 @@
         const list = await res.json();
 
         if(!Array.isArray(list) || list.length === 0){
-          $("pickerBody").innerHTML = `<tr><td class="muted" colspan="3">검색 결과 없음</td></tr>`;
+          $("pickerBody").innerHTML = `<tr><td class="muted" colspan="4">검색 결과 없음</td></tr>`;
           return;
         }
 
@@ -298,6 +299,7 @@
             <td>${escapeHtml(v.vehicleMgmtNo || "-")}</td>
             <td>${escapeHtml(v.vehicleNo || "-")}</td>
             <td>${escapeHtml(v.carModel || "-")}</td>
+            <td>${escapeHtml(v.latestInsuranceEndDate || "-")}</td>
           </tr>
         `).join("");
 
@@ -315,7 +317,7 @@
           });
         });
       }catch(e){
-        $("pickerBody").innerHTML = `<tr><td class="error-text" colspan="3">오류: ${escapeHtml(e.message)}</td></tr>`;
+        $("pickerBody").innerHTML = `<tr><td class="error-text" colspan="4">오류: ${escapeHtml(e.message)}</td></tr>`;
       }
     }
 

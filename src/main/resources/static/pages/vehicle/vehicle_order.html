@@ -193,6 +193,7 @@
                 <th>총 선급가액</th>
                 <th>차량번호</th>
                 <th>등록일자</th>
+                <th>검사종료일</th>
               </tr>
             </thead>
             <tbody id="vehicleTableBody"></tbody>
@@ -495,7 +496,7 @@
     if (!data || data.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="16" class="no-data">검색 결과가 없습니다.</td>
+          <td colspan="17" class="no-data">검색 결과가 없습니다.</td>
         </tr>
       `;
       return;
@@ -533,6 +534,7 @@
           <td class="amount-cell">${item.totalAdvancePrice ? formatAmount(item.totalAdvancePrice) : '-'}</td>
           <td>${escHtml(item.vehicleNo ?? '-')}</td>
           <td>${item.registerDate ?? '-'}</td>
+          <td>${item.inspectionEnd ?? '-'}</td>
         </tr>
       `;
     }).join('');

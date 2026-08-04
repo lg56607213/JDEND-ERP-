@@ -542,6 +542,8 @@ public class VehicleOrderService {
         o.setFirstRegDate(req.getFirstRegDate());
         // registerDate 는 시스템 등록완료일 — 미제공 시 오늘
         o.setRegisterDate(req.getRegisterDate() != null ? req.getRegisterDate() : LocalDate.now());
+        if (req.getInspectionStart() != null) o.setInspectionStart(req.getInspectionStart());
+        if (req.getInspectionEnd() != null)   o.setInspectionEnd(req.getInspectionEnd());
 
         if (file != null && !file.isEmpty()) {
             String savedPath = saveFile(mgmtNo, file);
