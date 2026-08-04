@@ -24,6 +24,6 @@ public class CustomerNumberGenerator {
       }
     }
 
-    return String.format("C%03d", next);
+    return String.format("C%05d", next);
   }
 }

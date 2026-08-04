@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>거래처 상세 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/customer/customer_register.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>거래처 상세</h1>
+      <p>고객관리 &gt; 기타거래처 &gt; 상세보기</p>
+    </div>
+
+    <!-- 거래처 상세 정보 섹션 -->
+    <div class="erp-card" id="partnerDetailSection">
+      <div class="card-header">
+        <h2>거래처 상세 정보</h2>
+        <button type="button" class="btn btn-secondary" onclick="goBack()">목록으로</button>
+      </div>
+      <div class="card-body">
+        <!-- 기본 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">기본 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>거래처번호</label>
+              <div class="detail-value" id="partnerNumber">-</div>
+            </div>
+            <div class="detail-item">
+              <label>거래처 유형</label>
+              <div class="detail-value" id="customerType">-</div>
+            </div>
+            <div class="detail-item">
+              <label>종류</label>
+              <div class="detail-value" id="partnerType">-</div>
+            </div>
+            <div class="detail-item">
+              <label>거래처명</label>
+              <div class="detail-value" id="customerName">-</div>
+            </div>
+            <div class="detail-item">
+              <label id="registrationNumberLabel">사업자/주민번호</label>
+              <div class="detail-value" id="registrationNumber">-</div>
+            </div>
+            <div class="detail-item">
+              <label id="phoneDetailLabel">연락처/법인등록번호</label>
+              <div class="detail-value" id="phone">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 사업자 정보 섹션 -->
+        <div class="form-section" id="businessInfoSection">
+          <h3 class="section-title">사업자 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>대표자명</label>
+              <div class="detail-value" id="ceo">-</div>
+            </div>
+            <div class="detail-item">
+              <label>업태</label>
+              <div class="detail-value" id="businessType">-</div>
+            </div>
+            <div class="detail-item">
+              <label>업종</label>
+              <div class="detail-value" id="businessItem">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 주소 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">주소 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item full-width">
+              <label>주소</label>
+              <div class="detail-value" id="address">-</div>
+            </div>
+            <div class="detail-item full-width">
+              <label>청구지 주소</label>
+              <div class="detail-value" id="billAddress">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 담당자 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">담당자 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>담당자명</label>
+              <div class="detail-value" id="manager">-</div>
+            </div>
+            <div class="detail-item">
+              <label>담당자 연락처</label>
+              <div class="detail-value" id="managerPhone">-</div>
+            </div>
+            <div class="detail-item">
+              <label>담당자 이메일</label>
+              <div class="detail-value" id="managerEmail">-</div>
+            </div>
+            <div class="detail-item">
+              <label>청구지 이메일</label>
+              <div class="detail-value" id="billEmail">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 등록 정보 섹션 -->
+        <div class="form-section">
+          <h3 class="section-title">등록 정보</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>등록일</label>
+              <div class="detail-value" id="registerDate">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 수정하기 버튼 -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="editPartnerBtn">수정하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 거래처 수정 폼 섹션 -->
+    <div class="erp-card hidden" id="partnerEditSection">
+      <div class="card-header">
+        <h2>거래처 수정</h2>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">취소</button>
+      </div>
+      <div class="card-body">
+        <form id="partnerEditForm">
+          <!-- 기본 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editCustomerType" class="required">거래처 유형</label>
+                <select id="editCustomerType" name="customerType" required>
+                  <option value="">선택하세요</option>
+                  <option value="개인">일반 (개인)</option>
+                  <option value="개인사업자">개인사업자</option>
+                  <option value="법인">법인</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editPartnerType">종류</label>
+                <select id="editPartnerType" name="partnerType">
+                  <option value="">선택하세요</option>
+                  <option value="정비업체">정비업체</option>
+                  <option value="수리업체">수리업체</option>
+                  <option value="탁송업체">탁송업체</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editCustomerName" class="required">거래처명</label>
+                <input type="text" id="editCustomerName" name="customerName" placeholder="거래처명을 입력하세요" required>
+              </div>
+
+              <!-- 일반 주민등록번호 -->
+              <div class="form-group hidden" id="editIdNumberGroup">
+                <label for="editIdNumber" class="required">주민등록번호</label>
+                <input type="text" id="editIdNumber" name="idNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인사업자 사업자등록번호 -->
+              <div class="form-group hidden" id="editBusinessNumberGroup">
+                <label for="editBusinessNumber" class="required">사업자등록번호</label>
+                <input type="text" id="editBusinessNumber" name="businessNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인 사업자등록번호 -->
+              <div class="form-group hidden" id="editCorpBizNumberGroup">
+                <label for="editCorpBizNumber" class="required">사업자등록번호</label>
+                <input type="text" id="editCorpBizNumber" name="corpBizNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인 법인등록번호 -->
+              <div class="form-group hidden" id="editCorpNumberGroup">
+                <label for="editCorpNumber" class="required">법인등록번호</label>
+                <input type="text" id="editCorpNumber" name="corpNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인/개인사업자 연락처 -->
+              <div class="form-group" id="editPhoneGroup">
+                <label for="editPhone">연락처</label>
+                <input type="tel" id="editPhone" name="phone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
+              </div>
+            </div>
+          </div>
+
+          <!-- 사업자/법인 정보 섹션 -->
+          <div class="form-section hidden" id="editBusinessSection">
+            <h3 class="section-title">사업자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editCeo">대표자명</label>
+                <input type="text" id="editCeo" name="ceo" placeholder="대표자명을 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="editBusinessType">업태</label>
+                <input type="text" id="editBusinessType" name="businessType" placeholder="예: 제조업, 도소매업">
+              </div>
+              <div class="form-group">
+                <label for="editBusinessItem">업종</label>
+                <input type="text" id="editBusinessItem" name="businessItem" placeholder="예: 차량정비">
+              </div>
+            </div>
+          </div>
+
+          <!-- 주소 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">주소 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editAddress">주소</label>
+                <input type="text" id="editAddress" name="address" placeholder="주소를 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="editBillAddress">청구지 주소</label>
+                <input type="text" id="editBillAddress" name="billAddress" placeholder="청구지 주소를 입력하세요">
+              </div>
+            </div>
+          </div>
+
+          <!-- 담당자 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">담당자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editManager">담당자명</label>
+                <input type="text" id="editManager" name="manager" placeholder="담당자명을 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="editManagerPhone">담당자 연락처</label>
+                <input type="tel" id="editManagerPhone" name="managerPhone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
+              </div>
+              <div class="form-group">
+                <label for="editManagerEmail">담당자 이메일</label>
+                <input type="email" id="editManagerEmail" name="managerEmail" placeholder="example@email.com">
+              </div>
+              <div class="form-group">
+                <label for="editBillEmail">청구지 이메일</label>
+                <input type="email" id="editBillEmail" name="billEmail" placeholder="billing@email.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- 버튼 영역 -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetEditForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    const API_BASE = `${API_BASE_URL}/api`;
+
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE}${path}`);
+      if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPut(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `PUT ${path} failed: ${res.status}`);
+      return JSON.parse(text);
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const partnerId = urlParams.get('id');
+
+    const partnerDetailSection = document.getElementById('partnerDetailSection');
+    const partnerEditSection = document.getElementById('partnerEditSection');
+    const editPartnerBtn = document.getElementById('editPartnerBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const editCustomerTypeSelect = document.getElementById('editCustomerType');
+
+    const editIdNumberGroup = document.getElementById('editIdNumberGroup');
+    const editBusinessNumberGroup = document.getElementById('editBusinessNumberGroup');
+    const editCorpBizNumberGroup = document.getElementById('editCorpBizNumberGroup');
+    const editCorpNumberGroup = document.getElementById('editCorpNumberGroup');
+    const editBusinessSection = document.getElementById('editBusinessSection');
+    const editPhoneGroup = document.getElementById('editPhoneGroup');
+
+    let partnerData = null;
+
+    function formatPhone(v) {
+      const d = (v || '').replace(/\D/g, '').slice(0, 11);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
+    function formatBizNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+      return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+    }
+
+    function formatCorpNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 13);
+      if (digits.length <= 6) return digits;
+      return digits.slice(0, 6) + '-' + digits.slice(6);
+    }
+
+    document.getElementById('editBusinessNumber').addEventListener('input', (e) => { e.target.value = formatBizNo(e.target.value); });
+    document.getElementById('editCorpBizNumber').addEventListener('input', (e) => { e.target.value = formatBizNo(e.target.value); });
+    document.getElementById('editIdNumber').addEventListener('input', (e) => { e.target.value = formatCorpNo(e.target.value); });
+    document.getElementById('editCorpNumber').addEventListener('input', (e) => { e.target.value = formatCorpNo(e.target.value); });
+    document.getElementById('editPhone').addEventListener('input', (e) => { e.target.value = formatPhone(e.target.value); });
+    document.getElementById('editManagerPhone').addEventListener('input', (e) => { e.target.value = formatPhone(e.target.value); });
+
+    function hideAllEditGroups() {
+      editIdNumberGroup.classList.add('hidden');
+      editBusinessNumberGroup.classList.add('hidden');
+      editCorpBizNumberGroup.classList.add('hidden');
+      editCorpNumberGroup.classList.add('hidden');
+      editBusinessSection.classList.add('hidden');
+      editPhoneGroup.classList.remove('hidden');
+
+      document.getElementById('editIdNumber').removeAttribute('required');
+      document.getElementById('editBusinessNumber').removeAttribute('required');
+      document.getElementById('editCorpBizNumber').removeAttribute('required');
+      document.getElementById('editCorpNumber').removeAttribute('required');
+    }
+
+    function updateEditFields(customerType) {
+      hideAllEditGroups();
+
+      switch (customerType) {
+        case '개인':
+          editIdNumberGroup.classList.remove('hidden');
+          document.getElementById('editIdNumber').setAttribute('required', 'required');
+          break;
+        case '개인사업자':
+          editBusinessNumberGroup.classList.remove('hidden');
+          editBusinessSection.classList.remove('hidden');
+          document.getElementById('editBusinessNumber').setAttribute('required', 'required');
+          break;
+        case '법인':
+          editCorpBizNumberGroup.classList.remove('hidden');
+          editCorpNumberGroup.classList.remove('hidden');
+          editBusinessSection.classList.remove('hidden');
+          editPhoneGroup.classList.add('hidden');
+          document.getElementById('editCorpBizNumber').setAttribute('required', 'required');
+          document.getElementById('editCorpNumber').setAttribute('required', 'required');
+          break;
+      }
+    }
+
+    function paintDetail(p) {
+      document.getElementById('partnerNumber').textContent = p.partnerNumber ?? '-';
+      document.getElementById('customerType').textContent = p.customerType ?? '-';
+      document.getElementById('partnerType').textContent = p.partnerType || '-';
+      document.getElementById('customerName').textContent = p.customerName ?? '-';
+      document.getElementById('registrationNumber').textContent = p.registrationNumber ?? '-';
+      document.getElementById('phone').textContent = formatPhone(p.phone) || '-';
+      document.getElementById('ceo').textContent = p.ceo || '-';
+      document.getElementById('businessType').textContent = p.businessType || '-';
+      document.getElementById('businessItem').textContent = p.businessItem || '-';
+      document.getElementById('address').textContent = p.address ?? '-';
+      document.getElementById('billAddress').textContent = p.billAddress ?? '-';
+      document.getElementById('manager').textContent = p.manager ?? '-';
+      document.getElementById('managerPhone').textContent = formatPhone(p.managerPhone) || '-';
+      document.getElementById('managerEmail').textContent = p.managerEmail ?? '-';
+      document.getElementById('billEmail').textContent = p.billEmail || '-';
+      document.getElementById('registerDate').textContent = p.registerDate ?? '-';
+
+      // 사업자 정보 섹션 표시/숨김
+      if (p.customerType === '개인') {
+        document.getElementById('businessInfoSection').classList.add('hidden');
+      } else {
+        document.getElementById('businessInfoSection').classList.remove('hidden');
+      }
+
+      // 라벨 변경
+      const regLabel = document.getElementById('registrationNumberLabel');
+      const phoneLabel = document.getElementById('phoneDetailLabel');
+      if (p.customerType === '법인') {
+        if (regLabel) regLabel.textContent = '사업자등록번호';
+        if (phoneLabel) phoneLabel.textContent = '법인등록번호';
+      } else if (p.customerType === '개인사업자') {
+        if (regLabel) regLabel.textContent = '사업자등록번호';
+        if (phoneLabel) phoneLabel.textContent = '연락처';
+      } else {
+        if (regLabel) regLabel.textContent = '주민등록번호';
+        if (phoneLabel) phoneLabel.textContent = '연락처';
+      }
+    }
+
+    async function loadPartnerDetail() {
+      try {
+        partnerData = await apiGet(`/partners/${partnerId}`);
+        paintDetail(partnerData);
+      } catch (err) {
+        alert('불러오기 실패: ' + err.message);
+        goBack();
+      }
+    }
+
+    editPartnerBtn.addEventListener('click', () => {
+      document.getElementById('editCustomerType').value = partnerData.customerType || '';
+      document.getElementById('editPartnerType').value = partnerData.partnerType || '';
+      document.getElementById('editCustomerName').value = partnerData.customerName || '';
+      document.getElementById('editCeo').value = partnerData.ceo || '';
+      document.getElementById('editBusinessType').value = partnerData.businessType || '';
+      document.getElementById('editBusinessItem').value = partnerData.businessItem || '';
+      document.getElementById('editAddress').value = partnerData.address || '';
+      document.getElementById('editBillAddress').value = partnerData.billAddress || '';
+      document.getElementById('editManager').value = partnerData.manager || '';
+      document.getElementById('editManagerPhone').value = formatPhone(partnerData.managerPhone || '');
+      document.getElementById('editManagerEmail').value = partnerData.managerEmail || '';
+      document.getElementById('editBillEmail').value = partnerData.billEmail || '';
+
+      updateEditFields(partnerData.customerType);
+
+      document.getElementById('editIdNumber').value = '';
+      document.getElementById('editBusinessNumber').value = '';
+      document.getElementById('editCorpBizNumber').value = '';
+      document.getElementById('editCorpNumber').value = '';
+
+      if (partnerData.customerType === '개인') {
+        document.getElementById('editIdNumber').value = partnerData.registrationNumber || '';
+        document.getElementById('editPhone').value = formatPhone(partnerData.phone || '');
+      }
+      if (partnerData.customerType === '개인사업자') {
+        document.getElementById('editBusinessNumber').value = partnerData.registrationNumber || '';
+        document.getElementById('editPhone').value = formatPhone(partnerData.phone || '');
+      }
+      if (partnerData.customerType === '법인') {
+        document.getElementById('editCorpBizNumber').value = partnerData.registrationNumber || '';
+        document.getElementById('editCorpNumber').value = partnerData.phone || '';
+      }
+
+      partnerDetailSection.classList.add('hidden');
+      partnerEditSection.classList.remove('hidden');
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+      if (confirm('수정을 취소하시겠습니까?')) {
+        partnerEditSection.classList.add('hidden');
+        partnerDetailSection.classList.remove('hidden');
+      }
+    });
+
+    editCustomerTypeSelect.addEventListener('change', function () {
+      updateEditFields(this.value);
+    });
+
+    document.getElementById('partnerEditForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!confirm('수정하시겠습니까?')) return;
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      const type = data.customerType;
+      let reg = '';
+      let phoneValue = null;
+
+      if (type === '개인') {
+        reg = data.idNumber || '';
+        phoneValue = data.phone || null;
+      }
+      if (type === '개인사업자') {
+        reg = data.businessNumber || '';
+        phoneValue = data.phone || null;
+      }
+      if (type === '법인') {
+        const bizNo = (data.corpBizNumber || '').trim();
+        const corpNo = (data.corpNumber || '').trim();
+
+        if (!/^\d{3}-\d{2}-\d{5}$/.test(bizNo)) {
+          alert('법인 사업자등록번호 형식이 아닙니다. 예: 000-00-00000');
+          return;
+        }
+        if (!/^\d{6}-\d{7}$/.test(corpNo)) {
+          alert('법인등록번호 형식이 아닙니다. 예: 000000-0000000');
+          return;
+        }
+        reg = bizNo;
+        phoneValue = corpNo;
+      }
+
+      const payload = {
+        customerType: data.customerType,
+        partnerType: data.partnerType || null,
+        customerName: data.customerName,
+        registrationNumber: reg,
+        phone: phoneValue,
+        ceo: data.ceo || null,
+        businessType: data.businessType || null,
+        businessItem: data.businessItem || null,
+        address: data.address || null,
+        billAddress: data.billAddress || null,
+        manager: data.manager || null,
+        managerPhone: data.managerPhone || null,
+        managerEmail: data.managerEmail || null,
+        billEmail: data.billEmail || null
+      };
+
+      try {
+        partnerData = await apiPut(`/partners/${partnerId}`, payload);
+        paintDetail(partnerData);
+        partnerEditSection.classList.add('hidden');
+        partnerDetailSection.classList.remove('hidden');
+        alert('수정 완료');
+      } catch (err) {
+        alert('수정 실패: ' + err.message);
+      }
+    });
+
+    function resetEditForm() {
+      if (confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+        editPartnerBtn.click();
+      }
+    }
+
+    function goBack() {
+      window.location.href = 'partner_register.html';
+    }
+
+    window.goBack = goBack;
+    window.resetEditForm = resetEditForm;
+
+    loadPartnerDetail();
+  </script>
+</body>
+</html>

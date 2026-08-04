@@ -23,6 +23,13 @@ function loadSidebar() {
             <ul>
               <li><a href="${basePath}pages/customer/customer_register.html">고객등록</a></li>
               <li><a href="${basePath}pages/customer/account_register.html">계좌등록</a></li>
+              <li class="has-sub">
+                <span class="menu-label">기타거래처</span>
+                <ul>
+                  <li><a href="${basePath}pages/customer/partner_register.html">거래처등록</a></li>
+                  <li><a href="${basePath}pages/customer/partner_account_register.html">계좌등록</a></li>
+                </ul>
+              </li>
             </ul>
           </li>
           <li class="has-sub">

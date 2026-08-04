@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>거래처 계좌관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/customer/account_register.css">
+
+  <style>
+    /* 거래처조회 팝업(모달) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-backdrop.active { display:flex; }
+    .modal-box {
+      width: 900px;
+      max-width: calc(100vw - 40px);
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .modal-header {
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #ddd;
+    }
+    .modal-body { padding: 14px 16px; }
+    .modal-close {
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      border: 0;
+      background: transparent;
+    }
+    .modal-toolbar {
+      display:flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .modal-toolbar input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .modal-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .modal-table th, .modal-table td {
+      border-bottom: 1px solid #eee;
+      padding: 10px;
+      text-align: left;
+      font-size: 14px;
+    }
+    .pick-row { cursor: pointer; }
+    .pick-row:hover { background: #f5f7ff; }
+    .inline-row {
+      display:flex;
+      gap: 8px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .inline-row .btn-small {
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+    .inline-row .input-wrap {
+      display:flex;
+      gap: 8px;
+      flex: 1;
+      min-width: 320px;
+    }
+    .inline-row .input-wrap input { width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>거래처 계좌 관리</h1>
+      <p>고객관리 &gt; 기타거래처 &gt; 계좌목록</p>
+    </div>
+
+    <!-- 계좌 목록 섹션 -->
+    <div class="erp-card" id="accountListSection">
+      <div class="card-header">
+        <h2>거래처 계좌 목록</h2>
+        <button type="button" class="btn btn-primary" id="addAccountBtn">
+          <span>+ 계좌 추가</span>
+        </button>
+      </div>
+
+      <div class="card-body">
+        <!-- 필터 섹션 -->
+        <div class="filter-section">
+          <label for="startDate">등록일:</label>
+          <input type="date" id="startDate" class="filter-date">
+          <span class="date-separator">~</span>
+          <input type="date" id="endDate" class="filter-date">
+          <button type="button" class="btn-small btn-primary" id="searchBtn">검색</button>
+          <button type="button" class="btn-small btn-secondary" id="resetBtn">초기화</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>거래처번호</th>
+                <th>은행명</th>
+                <th>은행코드</th>
+                <th>계좌번호</th>
+                <th>예금주명</th>
+                <th>관계</th>
+                <th>등록번호</th>
+                <th>등록일</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody id="accountTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="pagination" id="pagination">
+          <button class="pagination-btn" id="prevBtn" disabled>이전</button>
+          <div class="pagination-numbers" id="pageNumbers"></div>
+          <button class="pagination-btn" id="nextBtn" disabled>다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 계좌 등록 폼 섹션 -->
+    <div class="erp-card hidden" id="accountFormSection">
+      <div class="card-header">
+        <h2>거래처 계좌 등록</h2>
+        <button type="button" class="btn btn-secondary" id="cancelFormBtn">취소</button>
+      </div>
+
+      <div class="card-body">
+        <form id="accountForm">
+
+          <!-- 기본 정보 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label for="partnerNumber" class="required">거래처번호</label>
+                <div class="inline-row">
+                  <div class="input-wrap">
+                    <input type="text" id="partnerNumber" name="partnerNumber" placeholder="거래처조회 버튼으로 선택" required readonly>
+                    <input type="text" id="partnerName" placeholder="거래처명(자동표시)" readonly>
+                  </div>
+                  <button type="button" class="btn-small btn-primary" id="openPartnerPopupBtn">거래처조회</button>
+                  <button type="button" class="btn-small btn-secondary" id="clearPartnerBtn">지우기</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="bankName" class="required">은행명</label>
+                <select id="bankName" name="bankName" required>
+                  <option value="">선택하세요</option>
+                  <option value="KB국민은행">KB국민은행</option>
+                  <option value="신한은행">신한은행</option>
+                  <option value="우리은행">우리은행</option>
+                  <option value="하나은행">하나은행</option>
+                  <option value="NH농협은행">NH농협은행</option>
+                  <option value="IBK기업은행">IBK기업은행</option>
+                  <option value="카카오뱅크">카카오뱅크</option>
+                  <option value="케이뱅크">케이뱅크</option>
+                  <option value="토스뱅크">토스뱅크</option>
+                  <option value="SC제일은행">SC제일은행</option>
+                  <option value="한국씨티은행">한국씨티은행</option>
+                  <option value="부산은행">부산은행</option>
+                  <option value="대구은행">대구은행</option>
+                  <option value="광주은행">광주은행</option>
+                  <option value="경남은행">경남은행</option>
+                  <option value="전북은행">전북은행</option>
+                  <option value="제주은행">제주은행</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="bankCode">은행코드</label>
+                <input type="text" id="bankCode" name="bankCode" placeholder="은행코드 (자동입력)" readonly>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 계좌 정보 -->
+          <div class="form-section">
+            <h3 class="section-title">계좌 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="accountNumber" class="required">계좌번호</label>
+                <input type="text" id="accountNumber" name="accountNumber" placeholder="계좌번호를 입력하세요" required>
+              </div>
+              <div class="form-group">
+                <label for="accountHolder" class="required">예금주명</label>
+                <input type="text" id="accountHolder" name="accountHolder" placeholder="예금주명을 입력하세요" required>
+              </div>
+              <div class="form-group">
+                <label for="relationship">이용자와의 관계</label>
+                <select id="relationship" name="relationship">
+                  <option value="">선택하세요</option>
+                  <option value="본인">본인</option>
+                  <option value="배우자">배우자</option>
+                  <option value="부모">부모</option>
+                  <option value="자녀">자녀</option>
+                  <option value="형제자매">형제자매</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="registrationNumber">사업자/주민등록번호</label>
+                <input type="text" id="registrationNumber" name="registrationNumber" placeholder="000000-0000000">
+              </div>
+            </div>
+          </div>
+
+          <!-- 버튼 -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">계좌 등록</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 거래처조회 팝업 -->
+  <div class="modal-backdrop" id="partnerModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div><b>거래처 조회</b> (클릭하면 선택됩니다)</div>
+        <button class="modal-close" id="closePartnerModalBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-toolbar">
+          <input type="text" id="partnerSearchInput" placeholder="거래처번호(P00001) / 거래처명 / 종류 검색">
+          <button type="button" class="btn-small btn-primary" id="partnerSearchBtn">검색</button>
+          <button type="button" class="btn-small btn-secondary" id="partnerSearchResetBtn">초기화</button>
+        </div>
+
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>거래처번호</th>
+              <th>유형</th>
+              <th>종류</th>
+              <th>거래처명</th>
+              <th>등록번호</th>
+            </tr>
+          </thead>
+          <tbody id="partnerModalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
+
+  <script>
+    const API_BASE = `${API_BASE_URL}/api/partner-accounts`;
+    const API_ROOT = `${API_BASE_URL}/api`;
+
+    const itemsPerPage = 15;
+
+    const accountListSection = document.getElementById('accountListSection');
+    const accountFormSection = document.getElementById('accountFormSection');
+    const addAccountBtn = document.getElementById('addAccountBtn');
+    const cancelFormBtn = document.getElementById('cancelFormBtn');
+    const accountTableBody = document.getElementById("accountTableBody");
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageNumbersDiv = document.getElementById('pageNumbers');
+
+    let allAccounts = [];
+    let filteredAccounts = [];
+    let currentPage = 1;
+
+    const partnerNumberInput = document.getElementById('partnerNumber');
+    const partnerNameInput = document.getElementById('partnerName');
+
+    // 모달
+    const partnerModal = document.getElementById('partnerModal');
+    const closePartnerModalBtn = document.getElementById('closePartnerModalBtn');
+    const partnerModalTbody = document.getElementById('partnerModalTbody');
+    const partnerSearchInput = document.getElementById('partnerSearchInput');
+    const partnerSearchBtn = document.getElementById('partnerSearchBtn');
+    const partnerSearchResetBtn = document.getElementById('partnerSearchResetBtn');
+
+    let allPartnersForModal = [];
+
+    addAccountBtn.addEventListener('click', () => {
+      accountListSection.classList.add('hidden');
+      accountFormSection.classList.remove('hidden');
+    });
+
+    cancelFormBtn.addEventListener('click', () => {
+      if (confirm('작성 중인 내용이 있습니다. 취소하시겠습니까?')) {
+        accountFormSection.classList.add('hidden');
+        accountListSection.classList.remove('hidden');
+        document.getElementById('accountForm').reset();
+        partnerNumberInput.value = "";
+        partnerNameInput.value = "";
+      }
+    });
+
+    // 은행 코드
+    const bankCodes = {
+      'KB국민은행': '004','신한은행': '088','우리은행': '020','하나은행': '081','NH농협은행': '011',
+      'IBK기업은행': '003','카카오뱅크': '090','케이뱅크': '089','토스뱅크': '092','SC제일은행': '023',
+      '한국씨티은행': '027','부산은행': '032','대구은행': '031','광주은행': '034','경남은행': '039',
+      '전북은행': '037','제주은행': '035'
+    };
+
+    document.getElementById('bankName').addEventListener('change', function () {
+      document.getElementById('bankCode').value = bankCodes[this.value] || '';
+    });
+
+    // 계좌 목록 로드
+    async function loadAccounts() {
+      const res = await fetch(API_BASE);
+      if (!res.ok) {
+        const text = await res.text();
+        alert("목록 불러오기 실패: " + (text || res.status));
+        return;
+      }
+      allAccounts = await res.json();
+      allAccounts.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+      filteredAccounts = [...allAccounts];
+      currentPage = 1;
+      renderTable();
+      updatePagination();
+    }
+
+    function renderTable() {
+      accountTableBody.innerHTML = "";
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = filteredAccounts.slice(start, end);
+
+      if (pageItems.length === 0) {
+        accountTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px;">데이터가 없습니다.</td></tr>`;
+        return;
+      }
+
+      pageItems.forEach((acc, idx) => {
+        const no = start + idx + 1;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${no}</td>
+          <td>${escHtml(acc.partnerNumber ?? "")}</td>
+          <td>${escHtml(acc.bankName ?? "")}</td>
+          <td>${escHtml(acc.bankCode ?? "")}</td>
+          <td>${escHtml(acc.accountNumber ?? "")}</td>
+          <td>${escHtml(acc.accountHolder ?? "")}</td>
+          <td>${escHtml(acc.relationship ?? "")}</td>
+          <td>${escHtml(acc.registrationNumber ?? "")}</td>
+          <td>${acc.registerDate ?? ""}</td>
+          <td>
+            <button class="btn-small btn-edit" data-id="${acc.id}">수정</button>
+            <button class="btn-small btn-delete" data-id="${acc.id}">삭제</button>
+          </td>
+        `;
+
+        tr.addEventListener("click", (e) => {
+          if (e.target.closest(".btn-edit") || e.target.closest(".btn-delete")) return;
+          window.location.href = `partner_account_detail.html?id=${acc.id}`;
+        });
+
+        accountTableBody.appendChild(tr);
+      });
+
+      document.querySelectorAll(".btn-edit").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          window.location.href = `partner_account_detail.html?id=${btn.getAttribute("data-id")}`;
+        });
+      });
+
+      document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute("data-id");
+          if (!confirm("정말로 이 계좌를 삭제하시겠습니까?")) return;
+
+          const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 204) {
+            const text = await res.text();
+            alert("삭제 실패: " + (text || res.status));
+            return;
+          }
+          alert("삭제 완료");
+          await loadAccounts();
+        });
+      });
+    }
+
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
+      pageNumbersDiv.innerHTML = '';
+      for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.textContent = i;
+        pageBtn.className = 'pagination-number' + (i === currentPage ? ' active' : '');
+        pageBtn.addEventListener('click', () => { currentPage = i; renderTable(); updatePagination(); });
+        pageNumbersDiv.appendChild(pageBtn);
+      }
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages || totalPages === 0;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; renderTable(); updatePagination(); }
+    });
+    nextBtn.addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
+      if (currentPage < totalPages) { currentPage++; renderTable(); updatePagination(); }
+    });
+
+    // 날짜 필터
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      filteredAccounts = allAccounts.filter(acc => {
+        const d = acc.registerDate;
+        if (!d) return false;
+        if (startDate && d < startDate) return false;
+        if (endDate && d > endDate) return false;
+        return true;
+      });
+      currentPage = 1;
+      renderTable();
+      updatePagination();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
+      filteredAccounts = [...allAccounts];
+      currentPage = 1;
+      renderTable();
+      updatePagination();
+    });
+
+    function resetForm() {
+      if (confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+        document.getElementById('accountForm').reset();
+        partnerNumberInput.value = "";
+        partnerNameInput.value = "";
+      }
+    }
+    window.resetForm = resetForm;
+
+    // 계좌 등록
+    document.getElementById('accountForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const payload = {
+        partnerNumber: partnerNumberInput.value.trim(),
+        bankName: document.getElementById('bankName').value,
+        bankCode: document.getElementById('bankCode').value || null,
+        accountNumber: document.getElementById('accountNumber').value.trim(),
+        accountHolder: document.getElementById('accountHolder').value.trim(),
+        relationship: document.getElementById('relationship').value || null,
+        registrationNumber: document.getElementById('registrationNumber').value.trim() || null
+      };
+
+      try {
+        const res = await fetch(API_BASE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(text || `등록 실패 (${res.status})`);
+
+        alert("계좌 등록 완료");
+
+        this.reset();
+        partnerNumberInput.value = "";
+        partnerNameInput.value = "";
+
+        await loadAccounts();
+
+        accountFormSection.classList.add('hidden');
+        accountListSection.classList.remove('hidden');
+
+      } catch (err) {
+        alert("등록 실패: " + err.message);
+      }
+    });
+
+    // ============================
+    // 거래처 조회 팝업
+    // ============================
+    async function loadPartnersForModal() {
+      const res = await fetch(`${API_ROOT}/partners`);
+      if (!res.ok) throw new Error(`거래처 목록 불러오기 실패 (${res.status})`);
+      allPartnersForModal = await res.json();
+      allPartnersForModal.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+      renderPartnerModalTable(allPartnersForModal);
+    }
+
+    function renderPartnerModalTable(list) {
+      partnerModalTbody.innerHTML = "";
+      if (!list || list.length === 0) {
+        partnerModalTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px;">데이터 없음</td></tr>`;
+        return;
+      }
+
+      list.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "pick-row";
+        tr.innerHTML = `
+          <td>${escHtml(p.partnerNumber ?? "")}</td>
+          <td>${escHtml(p.customerType ?? "")}</td>
+          <td>${escHtml(p.partnerType ?? "")}</td>
+          <td>${escHtml(p.customerName ?? "")}</td>
+          <td>${escHtml(p.registrationNumber ?? "")}</td>
+        `;
+
+        tr.addEventListener("click", () => {
+          if (!p.partnerNumber) {
+            alert("이 거래처는 거래처번호가 없습니다.");
+            return;
+          }
+          partnerNumberInput.value = p.partnerNumber;
+          partnerNameInput.value = p.customerName ?? "";
+          closePartnerModal();
+        });
+
+        partnerModalTbody.appendChild(tr);
+      });
+    }
+
+    function openPartnerModal() {
+      partnerModal.classList.add("active");
+      partnerSearchInput.value = "";
+      loadPartnersForModal().catch(err => alert(err.message));
+    }
+
+    function closePartnerModal() {
+      partnerModal.classList.remove("active");
+    }
+
+    document.getElementById('openPartnerPopupBtn').addEventListener("click", openPartnerModal);
+    closePartnerModalBtn.addEventListener("click", closePartnerModal);
+
+    partnerModal.addEventListener("click", (e) => {
+      if (e.target === partnerModal) closePartnerModal();
+    });
+
+    document.getElementById('clearPartnerBtn').addEventListener("click", () => {
+      partnerNumberInput.value = "";
+      partnerNameInput.value = "";
+    });
+
+    function applyPartnerSearch() {
+      const q = (partnerSearchInput.value || "").trim().toLowerCase();
+      if (!q) {
+        renderPartnerModalTable(allPartnersForModal);
+        return;
+      }
+      const filtered = allPartnersForModal.filter(p => {
+        return (p.partnerNumber || "").toLowerCase().includes(q) ||
+               (p.customerName || "").toLowerCase().includes(q) ||
+               (p.partnerType || "").toLowerCase().includes(q) ||
+               (p.customerType || "").toLowerCase().includes(q);
+      });
+      renderPartnerModalTable(filtered);
+    }
+
+    partnerSearchBtn.addEventListener("click", applyPartnerSearch);
+    partnerSearchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); applyPartnerSearch(); }
+    });
+    partnerSearchResetBtn.addEventListener("click", () => {
+      partnerSearchInput.value = "";
+      renderPartnerModalTable(allPartnersForModal);
+    });
+
+    // 시작
+    loadAccounts();
+  </script>
+</body>
+</html>

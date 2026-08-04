@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기타거래처 관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/customer/customer_register.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>기타거래처 등록</h1>
+      <p>고객관리 &gt; 기타거래처</p>
+    </div>
+
+    <!-- 거래처 목록 섹션 -->
+    <div class="erp-card" id="partnerListSection">
+      <div class="card-header">
+        <h2>거래처 목록</h2>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="addPartnerBtn">
+            <span>+ 거래처 추가</span>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- 필터 섹션 -->
+        <div class="filter-section" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+          <label for="customerTypeFilter">거래처 유형:</label>
+          <select id="customerTypeFilter" class="filter-select">
+            <option value="all">전체</option>
+            <option value="법인">법인</option>
+            <option value="개인사업자">개인사업자</option>
+            <option value="개인">개인</option>
+          </select>
+          <label for="partnerTypeFilter">종류:</label>
+          <select id="partnerTypeFilter" class="filter-select">
+            <option value="all">전체</option>
+            <option value="정비업체">정비업체</option>
+            <option value="수리업체">수리업체</option>
+            <option value="탁송업체">탁송업체</option>
+            <option value="기타">기타</option>
+          </select>
+          <button type="button" class="btn btn-primary" id="searchBtn">조회</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>거래처번호</th>
+                <th>거래처 유형</th>
+                <th>종류</th>
+                <th>거래처명</th>
+                <th>사업자/주민번호</th>
+                <th>대표자명</th>
+                <th>연락처</th>
+                <th>주소</th>
+                <th>담당자</th>
+                <th>담당자 연락처</th>
+                <th>등록일</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody id="partnerTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="pagination" id="pagination">
+          <button class="pagination-btn" id="prevBtn" disabled>이전</button>
+          <div class="pagination-numbers" id="pageNumbers"></div>
+          <button class="pagination-btn" id="nextBtn" disabled>다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 거래처 등록 폼 섹션 -->
+    <div class="erp-card hidden" id="partnerFormSection">
+      <div class="card-header">
+        <h2>거래처 등록</h2>
+        <button type="button" class="btn btn-secondary" id="cancelFormBtn">취소</button>
+      </div>
+      <div class="card-body">
+        <form id="partnerForm">
+          <!-- 기본 정보 섹션 -->
+          <div class="form-section">
+            <h3 class="section-title">기본 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="customerType" class="required">거래처 유형</label>
+                <select id="customerType" name="customerType" required>
+                  <option value="">선택하세요</option>
+                  <option value="개인">일반 (개인)</option>
+                  <option value="개인사업자">개인사업자</option>
+                  <option value="법인">법인</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="partnerType">종류</label>
+                <select id="partnerType" name="partnerType">
+                  <option value="">선택하세요</option>
+                  <option value="정비업체">정비업체</option>
+                  <option value="수리업체">수리업체</option>
+                  <option value="탁송업체">탁송업체</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="customerName" class="required">거래처명</label>
+                <input type="text" id="customerName" name="customerName" placeholder="거래처명을 입력하세요" required>
+              </div>
+
+              <!-- 개인 주민등록번호 -->
+              <div class="form-group hidden" id="idNumberGroup">
+                <label for="idNumber" class="required">주민등록번호</label>
+                <input type="text" id="idNumber" name="idNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인사업자 사업자등록번호 -->
+              <div class="form-group hidden" id="businessNumberGroup">
+                <label for="businessNumber" class="required">사업자등록번호</label>
+                <input type="text" id="businessNumber" name="businessNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인 사업자등록번호 -->
+              <div class="form-group hidden" id="corpBizNumberGroup">
+                <label for="corpBizNumber" class="required">사업자등록번호</label>
+                <input type="text" id="corpBizNumber" name="corpBizNumber" placeholder="000-00-00000">
+              </div>
+
+              <!-- 법인 법인등록번호 -->
+              <div class="form-group hidden" id="corpNumberGroup">
+                <label for="corpNumber" class="required">법인등록번호</label>
+                <input type="text" id="corpNumber" name="corpNumber" placeholder="000000-0000000">
+              </div>
+
+              <!-- 개인/개인사업자 연락처 -->
+              <div class="form-group" id="phoneGroup">
+                <label for="phone">연락처</label>
+                <input type="tel" id="phone" name="phone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
+              </div>
+            </div>
+          </div>
+
+          <!-- 사업자/법인 정보 섹션 -->
+          <div class="form-section hidden" id="businessSection">
+            <h3 class="section-title">사업자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="ceo">대표자명</label>
+                <input type="text" id="ceo" name="ceo" placeholder="대표자명을 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="businessType">업태</label>
+                <input type="text" id="businessType" name="businessType" placeholder="예: 제조업, 도소매업">
+              </div>
+              <div class="form-group">
+                <label for="businessItem">업종</label>
+                <input type="text" id="businessItem" name="businessItem" placeholder="예: 차량정비">
+              </div>
+            </div>
+          </div>
+
+          <!-- 주소 정보 -->
+          <div class="form-section">
+            <h3 class="section-title">주소 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="address">주소</label>
+                <input type="text" id="address" name="address" placeholder="주소를 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="billAddress">청구지 주소</label>
+                <input type="text" id="billAddress" name="billAddress" placeholder="청구지 주소를 입력하세요">
+              </div>
+            </div>
+          </div>
+
+          <!-- 담당자 정보 -->
+          <div class="form-section">
+            <h3 class="section-title">담당자 정보</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="manager">담당자명</label>
+                <input type="text" id="manager" name="manager" placeholder="담당자명을 입력하세요">
+              </div>
+              <div class="form-group">
+                <label for="managerPhone">담당자 연락처</label>
+                <input type="tel" id="managerPhone" name="managerPhone" placeholder="하이픈(-) 없이 숫자만 입력  예) 01012345678">
+              </div>
+              <div class="form-group">
+                <label for="managerEmail">담당자 이메일</label>
+                <input type="email" id="managerEmail" name="managerEmail" placeholder="example@email.com">
+              </div>
+              <div class="form-group">
+                <label for="billEmail">청구지 이메일</label>
+                <input type="email" id="billEmail" name="billEmail" placeholder="billing@email.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- 버튼 -->
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+            <button type="submit" class="btn btn-primary">거래처 등록</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/html-escape.js"></script>
+  <script src="../../assets/js/role.js"></script>
+
+  <script>
+    const API_BASE = `${API_BASE_URL}/api`;
+
+    // 섹션 토글
+    const partnerListSection = document.getElementById('partnerListSection');
+    const partnerFormSection = document.getElementById('partnerFormSection');
+    const addPartnerBtn = document.getElementById('addPartnerBtn');
+    const cancelFormBtn = document.getElementById('cancelFormBtn');
+
+    // 거래처 유형 관련
+    const customerTypeSelect = document.getElementById('customerType');
+    const idNumberGroup = document.getElementById('idNumberGroup');
+    const businessNumberGroup = document.getElementById('businessNumberGroup');
+    const corpBizNumberGroup = document.getElementById('corpBizNumberGroup');
+    const corpNumberGroup = document.getElementById('corpNumberGroup');
+    const businessSection = document.getElementById('businessSection');
+    const phoneGroup = document.getElementById('phoneGroup');
+    const phoneInput = document.getElementById('phone');
+
+    // 테이블
+    const tbody = document.getElementById('partnerTableBody');
+
+    // 페이지네이션
+    const itemsPerPage = 15;
+    let currentPage = 1;
+    let allPartners = [];
+    let filteredPartners = [];
+
+    // API 헬퍼
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE}${path}`);
+      if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || `POST ${path} failed: ${res.status}`);
+      return JSON.parse(text);
+    }
+
+    async function apiDelete(path) {
+      const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+      return true;
+    }
+
+    // UI 토글
+    addPartnerBtn.addEventListener('click', () => {
+      partnerListSection.classList.add('hidden');
+      partnerFormSection.classList.remove('hidden');
+    });
+
+    cancelFormBtn.addEventListener('click', () => {
+      if (confirm('작성 중인 내용이 있습니다. 취소하시겠습니까?')) {
+        partnerFormSection.classList.add('hidden');
+        partnerListSection.classList.remove('hidden');
+        document.getElementById('partnerForm').reset();
+        hideAllNumberGroups();
+      }
+    });
+
+    function hideAllNumberGroups() {
+      idNumberGroup.classList.add('hidden');
+      businessNumberGroup.classList.add('hidden');
+      corpBizNumberGroup.classList.add('hidden');
+      corpNumberGroup.classList.add('hidden');
+      businessSection.classList.add('hidden');
+      phoneGroup.classList.remove('hidden');
+
+      document.getElementById('idNumber').removeAttribute('required');
+      document.getElementById('businessNumber').removeAttribute('required');
+      document.getElementById('corpBizNumber').removeAttribute('required');
+      document.getElementById('corpNumber').removeAttribute('required');
+    }
+
+    // 포맷터
+    function formatPhone(v) {
+      const d = (v || '').replace(/\D/g, '').slice(0, 11);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
+    function formatBizNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+      return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+    }
+
+    function formatCorpNo(v) {
+      const digits = (v || '').replace(/\D/g, '').slice(0, 13);
+      if (digits.length <= 6) return digits;
+      return digits.slice(0, 6) + '-' + digits.slice(6);
+    }
+
+    phoneInput.addEventListener('input', (e) => { e.target.value = formatPhone(e.target.value); });
+    document.getElementById('managerPhone').addEventListener('input', (e) => { e.target.value = formatPhone(e.target.value); });
+    document.getElementById('businessNumber').addEventListener('input', (e) => { e.target.value = formatBizNo(e.target.value); });
+    document.getElementById('corpBizNumber').addEventListener('input', (e) => { e.target.value = formatBizNo(e.target.value); });
+    document.getElementById('idNumber').addEventListener('input', (e) => { e.target.value = formatCorpNo(e.target.value); });
+    document.getElementById('corpNumber').addEventListener('input', (e) => { e.target.value = formatCorpNo(e.target.value); });
+
+    customerTypeSelect.addEventListener('change', function () {
+      hideAllNumberGroups();
+
+      switch (this.value) {
+        case '개인':
+          idNumberGroup.classList.remove('hidden');
+          document.getElementById('idNumber').setAttribute('required', 'required');
+          break;
+        case '개인사업자':
+          businessNumberGroup.classList.remove('hidden');
+          businessSection.classList.remove('hidden');
+          document.getElementById('businessNumber').setAttribute('required', 'required');
+          break;
+        case '법인':
+          corpBizNumberGroup.classList.remove('hidden');
+          corpNumberGroup.classList.remove('hidden');
+          businessSection.classList.remove('hidden');
+          phoneGroup.classList.add('hidden');
+          document.getElementById('corpBizNumber').setAttribute('required', 'required');
+          document.getElementById('corpNumber').setAttribute('required', 'required');
+          break;
+      }
+    });
+
+    // 필터 및 조회
+    document.getElementById('searchBtn').addEventListener('click', () => applyFilterAndRender());
+    document.getElementById('customerTypeFilter').addEventListener('change', () => applyFilterAndRender());
+    document.getElementById('partnerTypeFilter').addEventListener('change', () => applyFilterAndRender());
+
+    function applyFilterAndRender() {
+      const cv = document.getElementById('customerTypeFilter').value;
+      const pv = document.getElementById('partnerTypeFilter').value;
+
+      filteredPartners = allPartners.filter(p => {
+        if (cv !== 'all' && p.customerType !== cv) return false;
+        if (pv !== 'all' && p.partnerType !== pv) return false;
+        return true;
+      });
+
+      filteredPartners.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+      currentPage = 1;
+      renderTable();
+      updatePagination();
+    }
+
+    // 테이블 렌더
+    function renderTable() {
+      tbody.innerHTML = '';
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = filteredPartners.slice(start, end);
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">데이터가 없습니다.</td></tr>`;
+        return;
+      }
+
+      pageItems.forEach((p, idx) => {
+        const no = start + idx + 1;
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${no}</td>
+          <td>${escHtml(p.partnerNumber ?? '')}</td>
+          <td>${escHtml(p.customerType ?? '')}</td>
+          <td>${escHtml(p.partnerType ?? '-')}</td>
+          <td>${escHtml(p.customerName ?? '')}</td>
+          <td>${escHtml(p.registrationNumber ?? '')}</td>
+          <td>${escHtml(p.ceo ?? '-')}</td>
+          <td>${escHtml(formatPhone(p.phone) ?? '')}</td>
+          <td>${escHtml(p.address ?? '')}</td>
+          <td>${escHtml(p.manager ?? '')}</td>
+          <td>${escHtml(formatPhone(p.managerPhone) ?? '')}</td>
+          <td>${escHtml(p.registerDate ?? '')}</td>
+          <td>
+            <button class="btn-small btn-edit" data-id="${p.id}">수정</button>
+            <button class="btn-small btn-delete" data-id="${p.id}">삭제</button>
+          </td>
+        `;
+
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-edit') || e.target.closest('.btn-delete')) return;
+          window.location.href = `partner_detail.html?id=${p.id}`;
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.location.href = `partner_detail.html?id=${btn.getAttribute('data-id')}`;
+        });
+      });
+
+      tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute('data-id');
+          if (!confirm('정말로 이 거래처를 삭제하시겠습니까?')) return;
+          try {
+            await apiDelete(`/partners/${id}`);
+            alert('삭제 완료');
+            await loadPartners();
+          } catch (err) {
+            alert('삭제 실패: ' + err.message);
+          }
+        });
+      });
+
+      if (typeof disableForStaff === 'function') {
+        disableForStaff(tbody.querySelectorAll('.btn-edit, .btn-delete'), '책임자만 거래처정보를 수정/삭제할 수 있습니다.');
+      }
+    }
+
+    // 페이지네이션
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredPartners.length / itemsPerPage);
+      const pageNumbersDiv = document.getElementById('pageNumbers');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+
+      pageNumbersDiv.innerHTML = '';
+      for (let i = 1; i <= totalPages; i++) {
+        const b = document.createElement('button');
+        b.textContent = i;
+        b.className = 'pagination-number' + (i === currentPage ? ' active' : '');
+        b.addEventListener('click', () => {
+          currentPage = i;
+          renderTable();
+          updatePagination();
+        });
+        pageNumbersDiv.appendChild(b);
+      }
+
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; renderTable(); updatePagination(); }
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredPartners.length / itemsPerPage);
+      if (currentPage < totalPages) { currentPage++; renderTable(); updatePagination(); }
+    });
+
+    // 등록
+    document.getElementById('partnerForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      const type = data.customerType;
+      let reg = '';
+      let phoneValue = null;
+
+      if (type === '개인') {
+        reg = data.idNumber || '';
+        phoneValue = data.phone || null;
+      }
+      if (type === '개인사업자') {
+        reg = data.businessNumber || '';
+        phoneValue = data.phone || null;
+      }
+      if (type === '법인') {
+        const bizNo = (data.corpBizNumber || '').trim();
+        const corpNo = (data.corpNumber || '').trim();
+
+        if (!/^\d{3}-\d{2}-\d{5}$/.test(bizNo)) {
+          alert('법인 사업자등록번호 형식이 아닙니다. 예: 000-00-00000');
+          return;
+        }
+        if (!/^\d{6}-\d{7}$/.test(corpNo)) {
+          alert('법인등록번호 형식이 아닙니다. 예: 000000-0000000');
+          return;
+        }
+        reg = bizNo;
+        phoneValue = corpNo;
+      }
+
+      const payload = {
+        customerType: data.customerType,
+        partnerType: data.partnerType || null,
+        customerName: data.customerName,
+        registrationNumber: reg,
+        phone: phoneValue,
+        ceo: data.ceo || null,
+        businessType: data.businessType || null,
+        businessItem: data.businessItem || null,
+        address: data.address || null,
+        billAddress: data.billAddress || null,
+        manager: data.manager || null,
+        managerPhone: data.managerPhone || null,
+        managerEmail: data.managerEmail || null,
+        billEmail: data.billEmail || null
+      };
+
+      try {
+        const saved = await apiPost('/partners', payload);
+        alert(`거래처 등록 완료 (거래처번호: ${saved.partnerNumber})`);
+
+        this.reset();
+        hideAllNumberGroups();
+
+        partnerFormSection.classList.add('hidden');
+        partnerListSection.classList.remove('hidden');
+
+        await loadPartners();
+      } catch (err) {
+        alert('등록 실패: ' + err.message);
+      }
+    });
+
+    function resetForm() {
+      if (confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+        document.getElementById('partnerForm').reset();
+        hideAllNumberGroups();
+      }
+    }
+    window.resetForm = resetForm;
+
+    // 초기 데이터 로드
+    async function loadPartners() {
+      try {
+        allPartners = await apiGet('/partners');
+        applyFilterAndRender();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">불러오기 실패: ${err.message}</td></tr>`;
+      }
+    }
+
+    hideAllNumberGroups();
+    loadPartners();
+  </script>
+</body>
+</html>
