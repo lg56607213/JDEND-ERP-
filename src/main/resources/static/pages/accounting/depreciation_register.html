@@ -136,11 +136,86 @@
 
           <div class="bottom-actions">
             <button type="button" class="btn btn-secondary" onclick="clearSelection()">선택초기화</button>
-            <button type="button" class="btn btn-primary" onclick="registerVoucher()">감가상각전표등록</button>
+            <button type="button" class="btn btn-primary" onclick="openSchedulePopup()">감가상각전표등록</button>
             <button type="button" class="btn btn-warning" onclick="completeDepreciation()">감가상각종료</button>
             <button type="button" class="btn btn-info" onclick="changeSchedule()">감가상각스케줄변경</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       감가상각 스케줄 팝업 (전표등록 전 확인)
+  ==================================================== -->
+  <div class="modal-overlay" id="schedulePopupModal">
+    <div class="modal-box" style="width:min(860px,95vw); max-height:90vh; display:flex; flex-direction:column;">
+      <div class="modal-head">
+        <h3 id="schedulePopupTitle">감가상각 스케줄 확인 및 전표등록</h3>
+        <button type="button" class="modal-close" onclick="closeSchedulePopup()">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y:auto; flex:1; padding:14px 16px;">
+
+        <!-- 전표등록 파라미터 -->
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; background:#f8f9fc; border-radius:8px; padding:10px 12px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">상각기준월</label>
+            <input type="month" id="popupBaseMonth" style="height:34px; padding:0 8px; border:1px solid #CBD5E1; border-radius:6px; font-size:.875rem;">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">전표발생일</label>
+            <input type="date" id="popupVoucherDate" style="height:34px; padding:0 8px; border:1px solid #CBD5E1; border-radius:6px; font-size:.875rem;">
+          </div>
+        </div>
+
+        <!-- 단일 자산: 스케줄 그리드 -->
+        <div id="scheduleGridSection">
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+            <span id="scheduleAssetLabel" style="font-size:.85rem; font-weight:700; color:#1E293B;"></span>
+            <span id="scheduleRoundSummary" style="font-size:.8rem; color:#64748B;"></span>
+          </div>
+          <div style="max-height:340px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;">
+            <table class="lookup-table" style="font-size:.8rem;">
+              <thead style="position:sticky; top:0; background:#1E293B; color:#fff; z-index:1;">
+                <tr>
+                  <th style="padding:8px 10px; text-align:center; color:#fff; font-weight:600; width:60px;">회차</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff; font-weight:600; width:90px;">기준월</th>
+                  <th style="padding:8px 10px; text-align:right; color:#fff; font-weight:600;">감가상각금액</th>
+                  <th style="padding:8px 10px; text-align:right; color:#fff; font-weight:600;">잔액</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff; font-weight:600; width:80px;">전표발생</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff; font-weight:600; width:100px;">전표일자</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleGridBody">
+                <tr><td colspan="6" style="text-align:center; padding:14px; color:#94A3B8;">로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 다중 자산: 요약 목록 -->
+        <div id="multiAssetSection" style="display:none;">
+          <p style="font-size:.82rem; color:#475569; margin-bottom:8px;">선택한 자산 <strong id="multiAssetCount">0</strong>건에 대해 기준월 전표를 등록합니다.</p>
+          <div style="max-height:280px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;">
+            <table class="lookup-table" style="font-size:.8rem;">
+              <thead style="background:#1E293B; color:#fff;">
+                <tr>
+                  <th style="padding:8px 10px; color:#fff;">차량번호</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">총회차</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">기등록</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">이번회차</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">이번회차상태</th>
+                </tr>
+              </thead>
+              <tbody id="multiAssetBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-primary" id="btnExecPosting" onclick="execPosting()">전표등록 실행</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSchedulePopup()">닫기</button>
       </div>
     </div>
   </div>
@@ -433,49 +508,162 @@
       searchAssets();
     }
 
-    async function registerVoucher() {
-      const ids = getCheckedAssetIds();
-      if(ids.length === 0) return alert("전표등록할 자산을 선택해주세요.");
+    // ============================================================
+    // 스케줄 팝업 관련 함수
+    // ============================================================
+    let _popupSelectedIds = [];
+
+    async function openSchedulePopup() {
+      _popupSelectedIds = getCheckedAssetIds();
+      if(_popupSelectedIds.length === 0) return alert("전표등록할 자산을 선택해주세요.");
+
+      // 기준월 / 전표발생일 초기화
+      $("popupBaseMonth").value  = $("baseMonth").value || ymToday();
+      $("popupVoucherDate").value = ymdToday();
+
+      const selectedAssets = assetRows.filter(r => _popupSelectedIds.includes(Number(r.id)));
+
+      if(_popupSelectedIds.length === 1) {
+        // 단일 자산: 스케줄 그리드 표시
+        const asset = selectedAssets[0];
+        $("scheduleGridSection").style.display = "block";
+        $("multiAssetSection").style.display   = "none";
+        $("schedulePopupTitle").textContent = `감가상각 스케줄 — ${asset.vehicleNo || "(차량번호없음)"}`;
+        $("scheduleAssetLabel").textContent = asset.vehicleNo || "";
+        $("scheduleRoundSummary").textContent = "";
+        $("scheduleGridBody").innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#94A3B8;">스케줄 로딩 중...</td></tr>`;
+
+        $("schedulePopupModal").style.display = "flex";
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/depreciation/assets/${asset.id}/schedule`);
+          await mustOk(res);
+          const lines = await res.json();
+          renderScheduleGrid(lines, asset);
+        } catch(e) {
+          $("scheduleGridBody").innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#dc2626;">스케줄 조회 실패: ${e.message}</td></tr>`;
+        }
+      } else {
+        // 다중 자산: 요약 목록 표시
+        $("scheduleGridSection").style.display = "none";
+        $("multiAssetSection").style.display   = "block";
+        $("schedulePopupTitle").textContent = `감가상각 전표등록 (${_popupSelectedIds.length}건)`;
+        $("multiAssetCount").textContent = _popupSelectedIds.length;
+
+        const tbody = $("multiAssetBody");
+        tbody.innerHTML = "";
+        for(const r of selectedAssets) {
+          const statusHtml = r.currentRoundPosted
+            ? `<span class="round-badge round-done">등록완료</span>`
+            : `<span class="round-badge round-pending">미등록</span>`;
+          tbody.insertAdjacentHTML("beforeend", `
+            <tr>
+              <td>${escapeHtml(r.vehicleNo || "")}</td>
+              <td style="text-align:center;">${r.totalRounds ?? "-"}</td>
+              <td style="text-align:center;">${r.postedRounds ?? 0}</td>
+              <td style="text-align:center;">${r.currentRound ?? "-"}</td>
+              <td style="text-align:center;">${statusHtml}</td>
+            </tr>
+          `);
+        }
+        $("schedulePopupModal").style.display = "flex";
+      }
+    }
+
+    function renderScheduleGrid(lines, asset) {
+      // periodNo=0 (취득원가 기준선) 제외하고 1~N 회차만 표시
+      const filtered = lines.filter(l => l.period > 0);
+      const totalRounds  = filtered.length;
+      const postedRounds = filtered.filter(l => l.hasVoucher).length;
+      $("scheduleRoundSummary").textContent =
+        `총 ${totalRounds}회차 / 전표등록 완료 ${postedRounds}회차`;
+
+      const tbody = $("scheduleGridBody");
+      if(filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#94A3B8;">스케줄 없음</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = "";
+
+      // 현재 팝업 기준월에 해당하는 회차 강조
+      const curBaseMonth = $("popupBaseMonth").value; // YYYY-MM
+
+      for(const l of filtered) {
+        const baseMonth = l.date ? l.date.substring(0,7) : "";
+        const isCurrentMonth = (baseMonth === curBaseMonth);
+
+        const voucherBadge = l.hasVoucher
+          ? `<span class="round-badge round-done" title="전표일: ${l.voucherDate}">O</span>`
+          : `<span class="round-badge round-pending">X</span>`;
+
+        tbody.insertAdjacentHTML("beforeend", `
+          <tr style="${isCurrentMonth ? "background:#fffbeb; font-weight:700;" : ""}">
+            <td style="text-align:center;">${l.period}회</td>
+            <td style="text-align:center;">${escapeHtml(baseMonth)}</td>
+            <td style="text-align:right;">${num(l.amount)}</td>
+            <td style="text-align:right;">${num(l.balance)}</td>
+            <td style="text-align:center;">${voucherBadge}</td>
+            <td style="text-align:center; color:#64748B;">${escapeHtml(l.voucherDate || "")}</td>
+          </tr>
+        `);
+      }
+    }
+
+    function closeSchedulePopup() {
+      $("schedulePopupModal").style.display = "none";
+      _popupSelectedIds = [];
+    }
+
+    async function execPosting() {
+      const ids = _popupSelectedIds;
+      if(ids.length === 0) return alert("선택된 자산이 없습니다.");
+
+      const baseMonth   = $("popupBaseMonth").value;
+      const voucherDate = $("popupVoucherDate").value;
+      if(!baseMonth)   return alert("상각기준월을 선택해주세요.");
+      if(!voucherDate) return alert("전표발생일을 선택해주세요.");
 
       const selectedAssets = assetRows.filter(r => ids.includes(Number(r.id)));
       const preview = selectedAssets.map(r =>
         `[${r.vehicleNo || "-"}] 총 ${r.totalRounds ?? "-"}회 / 기등록 ${r.postedRounds ?? 0}회 / 이번 ${r.currentRound ?? "-"}회`
       ).join("\n");
 
-      const baseMonth = $("baseMonth").value;
-      const voucherDate = ymdToday();
+      if(!confirm(`선택한 ${ids.length}건의 감가상각 전표를 등록하시겠습니까?\n기준월: ${baseMonth}  전표발생일: ${voucherDate}\n\n${preview}`)) return;
 
-      if(!confirm(`선택한 ${ids.length}건의 감가상각 전표를 등록하시겠습니까?\n\n${preview}`)) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/depreciation/postings`, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ baseMonth, voucherDate, assetIds: ids })
+        });
+        await mustOk(res);
+        const result = await res.json();
 
-      const res = await fetch(`${API_BASE_URL}/api/depreciation/postings`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ baseMonth, voucherDate, assetIds: ids })
-      });
-      await mustOk(res);
+        const processedText = Array.isArray(result.processedRounds) && result.processedRounds.length
+          ? result.processedRounds.join("\n")
+          : "-";
+        const voucherText = Array.isArray(result.voucherNos) && result.voucherNos.length
+          ? result.voucherNos.join(", ")
+          : "-";
 
-      const result = await res.json();
+        alert(
+          `감가상각 전표등록 완료\n\n` +
+          `- posting 저장: ${result.postingSavedCount ?? 0}건\n` +
+          `- 실제 전표 생성: ${result.voucherCreatedCount ?? 0}건\n` +
+          `- 스킵: ${result.skippedCount ?? 0}건\n\n` +
+          `[등록 회차]\n${processedText}\n\n` +
+          `[생성 전표번호]\n${voucherText}`
+        );
 
-      const processedText = Array.isArray(result.processedRounds) && result.processedRounds.length
-        ? result.processedRounds.join("\n")
-        : "-";
-
-      const voucherText = Array.isArray(result.voucherNos) && result.voucherNos.length
-        ? result.voucherNos.join(", ")
-        : "-";
-
-      alert(
-        `감가상각 전표등록 완료\n\n` +
-        `- posting 저장: ${result.postingSavedCount ?? 0}건\n` +
-        `- 실제 전표 생성: ${result.voucherCreatedCount ?? 0}건\n` +
-        `- 스킵: ${result.skippedCount ?? 0}건\n\n` +
-        `[등록 회차]\n${processedText}\n\n` +
-        `[생성 전표번호]\n${voucherText}`
-      );
-
-      clearSelection();
-      searchAssets();
+        closeSchedulePopup();
+        clearSelection();
+        searchAssets();
+      } catch(e) {
+        alert("전표등록 실패: " + e.message);
+      }
     }
+
+    // (구) registerVoucher — 팝업 방식으로 대체됨. 하위호환을 위해 alias 유지.
+    function registerVoucher() { openSchedulePopup(); }
 
     async function completeDepreciation() {
       const ids = getCheckedAssetIds();
@@ -557,11 +745,13 @@
 
     window.addEventListener("keydown", (e) => {
       if(e.key === "Escape"){
+        if($("schedulePopupModal").style.display === "flex") closeSchedulePopup();
         if($("vehicleLookupModal").style.display === "flex") closeVehicleLookup();
         if($("addModal").style.display === "flex") closeAddModal();
       }
     });
 
+    $("schedulePopupModal").addEventListener("click", (e)=>{ if(e.target === $("schedulePopupModal")) closeSchedulePopup(); });
     $("vehicleLookupModal").addEventListener("click", (e)=>{ if(e.target === $("vehicleLookupModal")) closeVehicleLookup(); });
     $("addModal").addEventListener("click", (e)=>{ if(e.target === $("addModal")) closeAddModal(); });
   </script>

@@ -105,4 +105,34 @@ public interface VoucherCashAggRepository extends JpaRepository<VoucherLine, Lon
       @Param("k6") String k6,
       @Param("k7") String k7
   );
+
+  // ─── 전체 계정 조회 (현금성 키워드 필터 없음) ───────────────────────────────
+
+  /** 특정 일자의 모든 계정별 전표 합계 — II. 일일 자금 세부내역 전체 계정용 */
+  @Query("""
+    select l.accountName as accountName,
+           l.lineType as lineType,
+           coalesce(sum(l.amount),0) as amt
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and v.voucherDate = :date
+     group by l.accountName, l.lineType
+     order by l.lineType, l.accountName
+  """)
+  List<AccountCashSumRow> sumAllByAccountOn(@Param("date") LocalDate date);
+
+  /** 기간(start~end) 모든 계정별 전표 합계 — IV. 월별 자금 세부내역 전체 계정용 */
+  @Query("""
+    select l.accountName as accountName,
+           l.lineType as lineType,
+           coalesce(sum(l.amount),0) as amt
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and v.voucherDate between :start and :end
+     group by l.accountName, l.lineType
+     order by l.lineType, l.accountName
+  """)
+  List<AccountCashSumRow> sumAllByAccountBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }

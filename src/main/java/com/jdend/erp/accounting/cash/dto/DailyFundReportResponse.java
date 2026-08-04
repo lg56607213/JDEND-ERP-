@@ -39,6 +39,7 @@ public class DailyFundReportResponse {
   private Long bankExpenseTotal;
   private Long bankBalanceTotal;      // 금일잔액 합계
 
+  /** II. 세부내역 — 현금성 계정(은행/예금 키워드) */
   private List<VoucherRow> voucherIncomes;
   private Long voucherIncomeTotal;
 
@@ -47,4 +48,10 @@ public class DailyFundReportResponse {
 
   private Long incomeDiff;   // bankIncomeTotal - voucherIncomeTotal
   private Long expenseDiff;  // bankExpenseTotal - voucherExpenseTotal
+
+  /** II. 세부내역 — 그날 승인된 모든 전표 계정(현금성 필터 없음) */
+  private List<VoucherRow> allVoucherDebits;    // 차변(DEBIT) 전체
+  private Long allVoucherDebitTotal;
+  private List<VoucherRow> allVoucherCredits;   // 대변(CREDIT) 전체
+  private Long allVoucherCreditTotal;
 }

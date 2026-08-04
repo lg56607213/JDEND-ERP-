@@ -137,7 +137,7 @@ public class DailyCashService {
           .build());
     }
 
-    // 전표(현금성 계정만, 계정별 합계)
+    // 전표(현금성 계정만, 계정별 합계) — 기존 호환 유지
     List<VoucherCashAggRepository.AccountCashSumRow> vRows =
         voucherCashRepo.sumCashByAccountOn(date,
             CASH_KEYS[0], CASH_KEYS[1], CASH_KEYS[2], CASH_KEYS[3], CASH_KEYS[4], CASH_KEYS[5], CASH_KEYS[6]);
@@ -149,21 +149,24 @@ public class DailyCashService {
     for (var r : vRows) {
       long amt = nz(r.getAmt());
       String name = r.getAccountName() == null ? "" : r.getAccountName();
-
       DailyFundReportResponse.VoucherRow row = DailyFundReportResponse.VoucherRow.builder()
-          .accountCode("")
-          .accountName(name)
-          .amount(amt)
-          .memo("")
-          .build();
+          .accountCode("").accountName(name).amount(amt).memo("").build();
+      if ("DEBIT".equalsIgnoreCase(r.getLineType())) { vIn.add(row); vInSum += amt; }
+      else { vOut.add(row); vOutSum += amt; }
+    }
 
-      if ("DEBIT".equalsIgnoreCase(r.getLineType())) {
-        vIn.add(row);
-        vInSum += amt;
-      } else {
-        vOut.add(row);
-        vOutSum += amt;
-      }
+    // 전표 전체 계정(II. 일일 자금 세부내역 — 모든 전표)
+    List<DailyFundReportResponse.VoucherRow> allDebits  = new ArrayList<>();
+    List<DailyFundReportResponse.VoucherRow> allCredits = new ArrayList<>();
+    long allDebitSum=0, allCreditSum=0;
+
+    for (var r : voucherCashRepo.sumAllByAccountOn(date)) {
+      long amt = nz(r.getAmt());
+      String name = r.getAccountName() == null ? "" : r.getAccountName();
+      DailyFundReportResponse.VoucherRow row = DailyFundReportResponse.VoucherRow.builder()
+          .accountCode("").accountName(name).amount(amt).memo("").build();
+      if ("DEBIT".equalsIgnoreCase(r.getLineType())) { allDebits.add(row);  allDebitSum  += amt; }
+      else                                            { allCredits.add(row); allCreditSum += amt; }
     }
 
     return DailyFundReportResponse.builder()
@@ -178,6 +181,10 @@ public class DailyCashService {
         .voucherExpenseTotal(vOutSum)
         .incomeDiff(bankIn - vInSum)
         .expenseDiff(bankOut - vOutSum)
+        .allVoucherDebits(allDebits)
+        .allVoucherDebitTotal(allDebitSum)
+        .allVoucherCredits(allCredits)
+        .allVoucherCreditTotal(allCreditSum)
         .build();
   }
 
@@ -234,7 +241,7 @@ public class DailyCashService {
           .build());
     }
 
-    // IV. 월별 세부내역 (전표 현금성 계정, 계정별 집계)
+    // IV. 월별 세부내역 (전표 현금성 계정, 계정별 집계) — 기존 호환 유지
     List<MonthlyFundReportResponse.VoucherRow> mvIn  = new ArrayList<>();
     List<MonthlyFundReportResponse.VoucherRow> mvOut = new ArrayList<>();
     long mvInSum=0, mvOutSum=0;
@@ -252,6 +259,23 @@ public class DailyCashService {
       }
     }
 
+    // 전체 계정(IV. 월별 자금 세부내역 — 모든 전표)
+    List<MonthlyFundReportResponse.VoucherRow> allMvDebits  = new ArrayList<>();
+    List<MonthlyFundReportResponse.VoucherRow> allMvCredits = new ArrayList<>();
+    long allMvDebitSum=0, allMvCreditSum=0;
+
+    for (var r : voucherCashRepo.sumAllByAccountBetween(monthStart, monthEnd)) {
+      long amt = nz(r.getAmt());
+      String name = r.getAccountName() == null ? "" : r.getAccountName();
+      if ("DEBIT".equalsIgnoreCase(r.getLineType())) {
+        allMvDebits.add(MonthlyFundReportResponse.VoucherRow.builder().accountName(name).amount(amt).build());
+        allMvDebitSum += amt;
+      } else {
+        allMvCredits.add(MonthlyFundReportResponse.VoucherRow.builder().accountName(name).amount(amt).build());
+        allMvCreditSum += amt;
+      }
+    }
+
     return MonthlyFundReportResponse.builder()
         .banks(banks)
         .totalPrevBalance(totalPrev)
@@ -262,6 +286,10 @@ public class DailyCashService {
         .voucherIncomeTotal(mvInSum)
         .voucherExpenses(mvOut)
         .voucherExpenseTotal(mvOutSum)
+        .allVoucherDebits(allMvDebits)
+        .allVoucherDebitTotal(allMvDebitSum)
+        .allVoucherCredits(allMvCredits)
+        .allVoucherCreditTotal(allMvCreditSum)
         .build();
   }
 

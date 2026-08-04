@@ -175,7 +175,22 @@ public class DepreciationService {
   public List<ScheduleLineResponse> getSchedule(Long assetId) {
     int ver = lineRepo.findMaxVersion(assetId);
     if (ver == 0) ver = 1;
-    return toScheduleResponse(lineRepo.findByAsset_IdAndVersionNoOrderByPeriodNoAsc(assetId, ver));
+    List<DepreciationScheduleLine> lines =
+        lineRepo.findByAsset_IdAndVersionNoOrderByPeriodNoAsc(assetId, ver);
+
+    // 이 자산의 모든 전표 등록 정보를 한 번에 조회해 Map으로 변환(회차→baseMonth 매핑)
+    // DepreciationPosting.baseMonth = "YYYY-MM" 형식 → 스케줄의 depreciationDate와 비교
+    List<DepreciationPosting> postings = postingRepo.findAll().stream()
+        .filter(p -> p.getAsset() != null && assetId.equals(p.getAsset().getId()))
+        .toList();
+    // baseMonth(YYYY-MM) → voucherDate 매핑
+    Map<String, String> postedMonthToDate = new java.util.LinkedHashMap<>();
+    for (DepreciationPosting p : postings) {
+      postedMonthToDate.put(p.getBaseMonth(),
+          p.getVoucherDate() == null ? "" : p.getVoucherDate().toString());
+    }
+
+    return toScheduleResponseWithPosting(lines, postedMonthToDate);
   }
 
   @Transactional
@@ -432,13 +447,36 @@ public class DepreciationService {
   }
 
   private List<ScheduleLineResponse> toScheduleResponse(List<DepreciationScheduleLine> lines) {
-    return lines.stream().map(l -> ScheduleLineResponse.builder()
-      .period(l.getPeriodNo())
-      .date(l.getDepreciationDate() == null ? "" : l.getDepreciationDate().toString())
-      .amount(l.getAmount())
-      .balance(l.getBalance())
-      .note(l.getNote() == null ? "" : l.getNote())
-      .build()).toList();
+    return toScheduleResponseWithPosting(lines, Map.of());
+  }
+
+  /** 회차별 전표 등록 여부(hasVoucher, voucherDate)를 포함한 스케줄 응답 변환 */
+  private List<ScheduleLineResponse> toScheduleResponseWithPosting(
+      List<DepreciationScheduleLine> lines,
+      Map<String, String> postedMonthToDate   // baseMonth(YYYY-MM) → voucherDate 문자열
+  ) {
+    return lines.stream().map(l -> {
+      // periodNo=0은 취득원가 기준선(기간외) 이므로 hasVoucher 불필요
+      boolean hasVoucher = false;
+      String voucherDateStr = "";
+      if (l.getDepreciationDate() != null) {
+        // 스케줄 라인의 depreciationDate의 "YYYY-MM" 형식이 posting baseMonth와 매칭
+        String baseMonth = l.getDepreciationDate().toString().substring(0, 7);
+        if (postedMonthToDate.containsKey(baseMonth)) {
+          hasVoucher = true;
+          voucherDateStr = postedMonthToDate.get(baseMonth);
+        }
+      }
+      return ScheduleLineResponse.builder()
+          .period(l.getPeriodNo())
+          .date(l.getDepreciationDate() == null ? "" : l.getDepreciationDate().toString())
+          .amount(l.getAmount())
+          .balance(l.getBalance())
+          .note(l.getNote() == null ? "" : l.getNote())
+          .hasVoucher(hasVoucher)
+          .voucherDate(voucherDateStr)
+          .build();
+    }).toList();
   }
 
   private static int monthsInclusive(LocalDate start, LocalDate end) {

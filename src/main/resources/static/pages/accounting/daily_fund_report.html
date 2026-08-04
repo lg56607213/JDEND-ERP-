@@ -107,6 +107,18 @@
     .btn-primary { background: #2563EB; color: #fff; }
     .btn-primary:hover { background: #1D4ED8; }
 
+    /* ── 섹션 II/IV 탭 ── */
+    .detail-tab {
+      height: 28px; padding: 0 12px; border-radius: 14px;
+      font-size: .78rem; font-weight: 600; cursor: pointer;
+      border: 1px solid #CBD5E1; background: #fff; color: #475569;
+      transition: background .15s, color .15s;
+    }
+    .detail-tab.active {
+      background: #1E293B; color: #fff; border-color: #1E293B;
+    }
+    .detail-tab:hover:not(.active) { background: #F1F5F9; }
+
     /* ── 인쇄 ── */
     @media print {
       .search-bar, .form-actions, #sidebar-container, .page-header { display: none !important; }
@@ -143,7 +155,7 @@
 
         <!-- 보고서 제목 -->
         <div class="report-title-wrap">
-          <h2>제이디엔드 자금 일보</h2>
+          <h2>일일자금일보</h2>
           <div class="report-date-label" id="reportDateLabel"></div>
         </div>
 
@@ -178,50 +190,103 @@
         </div>
 
         <!-- ───────────────────────────────────────────
-             II. 일일 자금 세부내역
+             II. 일일 자금 세부내역 (그날 발생한 모든 전표 계정과목)
         ─────────────────────────────────────────── -->
         <div class="fund-section">
           <div class="fund-section-title">II. 일일 자금 세부내역</div>
-          <div class="detail-grid">
-            <div>
-              <span class="detail-half-title in">▲ 입금 내역</span>
-              <table class="fund-table">
-                <thead>
-                  <tr>
-                    <th style="width:45%">계정명</th>
-                    <th class="num" style="width:55%">금액</th>
-                  </tr>
-                </thead>
-                <tbody id="dailyVoucherInBody">
-                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td class="td-label">합계</td>
-                    <td class="num income" id="dailyVInTotal">-</td>
-                  </tr>
-                </tfoot>
-              </table>
+          <!-- 탭 선택: 전체 계정 / 현금성 계정 -->
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button class="detail-tab active" id="dailyTabAll"    onclick="switchDailyTab('all')">전체 계정</button>
+            <button class="detail-tab"        id="dailyTabCash"   onclick="switchDailyTab('cash')">현금성 계정</button>
+          </div>
+          <!-- 전체 계정 패널 -->
+          <div id="dailyPanelAll">
+            <div class="detail-grid">
+              <div>
+                <span class="detail-half-title in">▲ 차변(DEBIT)</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:55%">계정명</th>
+                      <th class="num" style="width:45%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dailyAllDebitBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">차변 합계</td>
+                      <td class="num income" id="dailyAllDebitTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <span class="detail-half-title out">▼ 대변(CREDIT)</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:55%">계정명</th>
+                      <th class="num" style="width:45%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dailyAllCreditBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">대변 합계</td>
+                      <td class="num expense" id="dailyAllCreditTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-            <div>
-              <span class="detail-half-title out">▼ 출금 내역</span>
-              <table class="fund-table">
-                <thead>
-                  <tr>
-                    <th style="width:45%">계정명</th>
-                    <th class="num" style="width:55%">금액</th>
-                  </tr>
-                </thead>
-                <tbody id="dailyVoucherOutBody">
-                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td class="td-label">합계</td>
-                    <td class="num expense" id="dailyVOutTotal">-</td>
-                  </tr>
-                </tfoot>
-              </table>
+          </div>
+          <!-- 현금성 계정 패널 (기존) -->
+          <div id="dailyPanelCash" style="display:none;">
+            <div class="detail-grid">
+              <div>
+                <span class="detail-half-title in">▲ 입금 내역</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:45%">계정명</th>
+                      <th class="num" style="width:55%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dailyVoucherInBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">합계</td>
+                      <td class="num income" id="dailyVInTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <span class="detail-half-title out">▼ 출금 내역</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:45%">계정명</th>
+                      <th class="num" style="width:55%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dailyVoucherOutBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">합계</td>
+                      <td class="num expense" id="dailyVOutTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           </div>
           <!-- 은행내역 vs 전표 차액 요약 -->
@@ -231,7 +296,7 @@
                 <tr>
                   <th style="width:30%">구분</th>
                   <th class="num" style="width:23%">은행내역</th>
-                  <th class="num" style="width:23%">전표내역</th>
+                  <th class="num" style="width:23%">전표내역(현금성)</th>
                   <th class="num" style="width:24%">차액</th>
                 </tr>
               </thead>
@@ -284,50 +349,103 @@
         </div>
 
         <!-- ───────────────────────────────────────────
-             IV. 월별 자금 세부내역
+             IV. 월별 자금 세부내역 (해당 월 모든 전표 계정과목 합산)
         ─────────────────────────────────────────── -->
         <div class="fund-section">
           <div class="fund-section-title">IV. 월별 자금 세부내역</div>
-          <div class="detail-grid">
-            <div>
-              <span class="detail-half-title in">▲ 월 입금 내역</span>
-              <table class="fund-table">
-                <thead>
-                  <tr>
-                    <th style="width:45%">계정명</th>
-                    <th class="num" style="width:55%">금액</th>
-                  </tr>
-                </thead>
-                <tbody id="monthlyVInBody">
-                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td class="td-label">합계</td>
-                    <td class="num income" id="monthlyVInTotal">-</td>
-                  </tr>
-                </tfoot>
-              </table>
+          <!-- 탭 선택 -->
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button class="detail-tab active" id="monthlyTabAll"  onclick="switchMonthlyTab('all')">전체 계정</button>
+            <button class="detail-tab"        id="monthlyTabCash" onclick="switchMonthlyTab('cash')">현금성 계정</button>
+          </div>
+          <!-- 전체 계정 패널 -->
+          <div id="monthlyPanelAll">
+            <div class="detail-grid">
+              <div>
+                <span class="detail-half-title in">▲ 차변(DEBIT) 합계</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:55%">계정명</th>
+                      <th class="num" style="width:45%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyAllDebitBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">차변 합계</td>
+                      <td class="num income" id="monthlyAllDebitTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <span class="detail-half-title out">▼ 대변(CREDIT) 합계</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:55%">계정명</th>
+                      <th class="num" style="width:45%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyAllCreditBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">대변 합계</td>
+                      <td class="num expense" id="monthlyAllCreditTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-            <div>
-              <span class="detail-half-title out">▼ 월 출금 내역</span>
-              <table class="fund-table">
-                <thead>
-                  <tr>
-                    <th style="width:45%">계정명</th>
-                    <th class="num" style="width:55%">금액</th>
-                  </tr>
-                </thead>
-                <tbody id="monthlyVOutBody">
-                  <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td class="td-label">합계</td>
-                    <td class="num expense" id="monthlyVOutTotal">-</td>
-                  </tr>
-                </tfoot>
-              </table>
+          </div>
+          <!-- 현금성 계정 패널 (기존) -->
+          <div id="monthlyPanelCash" style="display:none;">
+            <div class="detail-grid">
+              <div>
+                <span class="detail-half-title in">▲ 월 입금 내역</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:45%">계정명</th>
+                      <th class="num" style="width:55%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyVInBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">합계</td>
+                      <td class="num income" id="monthlyVInTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <span class="detail-half-title out">▼ 월 출금 내역</span>
+                <table class="fund-table">
+                  <thead>
+                    <tr>
+                      <th style="width:45%">계정명</th>
+                      <th class="num" style="width:55%">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyVOutBody">
+                    <tr><td colspan="2" class="center" style="color:#94A3B8">-</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td class="td-label">합계</td>
+                      <td class="num expense" id="monthlyVOutTotal">-</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -424,6 +542,22 @@
       }
     }
 
+    /* ── 탭 전환 ── */
+    function switchDailyTab(tab) {
+      const isAll = (tab === 'all');
+      document.getElementById('dailyPanelAll').style.display  = isAll ? '' : 'none';
+      document.getElementById('dailyPanelCash').style.display = isAll ? 'none' : '';
+      document.getElementById('dailyTabAll').classList.toggle('active', isAll);
+      document.getElementById('dailyTabCash').classList.toggle('active', !isAll);
+    }
+    function switchMonthlyTab(tab) {
+      const isAll = (tab === 'all');
+      document.getElementById('monthlyPanelAll').style.display  = isAll ? '' : 'none';
+      document.getElementById('monthlyPanelCash').style.display = isAll ? 'none' : '';
+      document.getElementById('monthlyTabAll').classList.toggle('active', isAll);
+      document.getElementById('monthlyTabCash').classList.toggle('active', !isAll);
+    }
+
     /* ── I. 일일 자금 현황 렌더 ── */
     function renderDaily(d) {
       const tbody = document.getElementById('dailyBalanceBody');
@@ -448,7 +582,13 @@
       setEl('dailyTotalOut',  fmtAlways(d.bankExpenseTotal));
       setEl('dailyTotalBal',  fmtAlways(d.bankBalanceTotal));
 
-      /* II. 세부내역 */
+      /* II-전체: 그날 모든 전표 계정 */
+      renderVoucherList('dailyAllDebitBody',  d.allVoucherDebits,  'income');
+      renderVoucherList('dailyAllCreditBody', d.allVoucherCredits, 'expense');
+      setEl('dailyAllDebitTotal',  fmtAlways(d.allVoucherDebitTotal));
+      setEl('dailyAllCreditTotal', fmtAlways(d.allVoucherCreditTotal));
+
+      /* II-현금성: 기존 현금성 계정 */
       renderVoucherList('dailyVoucherInBody', d.voucherIncomes, 'income');
       renderVoucherList('dailyVoucherOutBody', d.voucherExpenses, 'expense');
       setEl('dailyVInTotal',  fmtAlways(d.voucherIncomeTotal));
@@ -494,7 +634,13 @@
       setEl('monthTotalOut',  fmtAlways(d.totalExpense));
       setEl('monthTotalBal',  fmtAlways(d.totalBalance));
 
-      /* IV. 월별 세부내역 */
+      /* IV-전체: 해당 월 모든 전표 계정 */
+      renderVoucherList('monthlyAllDebitBody',  d.allVoucherDebits,  'income');
+      renderVoucherList('monthlyAllCreditBody', d.allVoucherCredits, 'expense');
+      setEl('monthlyAllDebitTotal',  fmtAlways(d.allVoucherDebitTotal));
+      setEl('monthlyAllCreditTotal', fmtAlways(d.allVoucherCreditTotal));
+
+      /* IV-현금성: 기존 현금성 계정 */
       renderVoucherList('monthlyVInBody',  d.voucherIncomes,  'income');
       renderVoucherList('monthlyVOutBody', d.voucherExpenses, 'expense');
       setEl('monthlyVInTotal',  fmtAlways(d.voucherIncomeTotal));
@@ -544,19 +690,19 @@
       }
       lines.push('');
 
-      /* II. 세부 */
-      lines.push('II. 일일 자금 세부내역 (입금)');
+      /* II. 세부 — 전체 계정 */
+      lines.push('II. 일일 자금 세부내역 (차변 - 전체 계정)');
       lines.push('계정명,금액');
       if (lastDaily) {
-        (lastDaily.voucherIncomes||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
-        lines.push(['합계', lastDaily.voucherIncomeTotal||0].join(','));
+        (lastDaily.allVoucherDebits||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['차변합계', lastDaily.allVoucherDebitTotal||0].join(','));
       }
       lines.push('');
-      lines.push('II. 일일 자금 세부내역 (출금)');
+      lines.push('II. 일일 자금 세부내역 (대변 - 전체 계정)');
       lines.push('계정명,금액');
       if (lastDaily) {
-        (lastDaily.voucherExpenses||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
-        lines.push(['합계', lastDaily.voucherExpenseTotal||0].join(','));
+        (lastDaily.allVoucherCredits||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['대변합계', lastDaily.allVoucherCreditTotal||0].join(','));
       }
       lines.push('');
 
@@ -572,19 +718,19 @@
       }
       lines.push('');
 
-      /* IV. 월별 세부 */
-      lines.push('IV. 월별 자금 세부내역 (입금)');
+      /* IV. 월별 세부 — 전체 계정 */
+      lines.push('IV. 월별 자금 세부내역 (차변 - 전체 계정)');
       lines.push('계정명,금액');
       if (lastMonthly) {
-        (lastMonthly.voucherIncomes||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
-        lines.push(['합계', lastMonthly.voucherIncomeTotal||0].join(','));
+        (lastMonthly.allVoucherDebits||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['차변합계', lastMonthly.allVoucherDebitTotal||0].join(','));
       }
       lines.push('');
-      lines.push('IV. 월별 자금 세부내역 (출금)');
+      lines.push('IV. 월별 자금 세부내역 (대변 - 전체 계정)');
       lines.push('계정명,금액');
       if (lastMonthly) {
-        (lastMonthly.voucherExpenses||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
-        lines.push(['합계', lastMonthly.voucherExpenseTotal||0].join(','));
+        (lastMonthly.allVoucherCredits||[]).forEach(r => lines.push([r.accountName||'', r.amount||0].join(',')));
+        lines.push(['대변합계', lastMonthly.allVoucherCreditTotal||0].join(','));
       }
 
       const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });

@@ -38,9 +38,15 @@ public class MonthlyFundReportResponse {
   private Long totalExpense;
   private Long totalBalance;
 
-  /** IV. 월별 세부내역 (전표 현금성 계정) */
+  /** IV. 월별 세부내역 — 현금성 계정(은행/예금 키워드) */
   private List<VoucherRow> voucherIncomes;
   private Long voucherIncomeTotal;
   private List<VoucherRow> voucherExpenses;
   private Long voucherExpenseTotal;
+
+  /** IV. 월별 세부내역 — 해당 월 승인된 모든 전표 계정(현금성 필터 없음) */
+  private List<VoucherRow> allVoucherDebits;    // 차변(DEBIT) 전체
+  private Long allVoucherDebitTotal;
+  private List<VoucherRow> allVoucherCredits;   // 대변(CREDIT) 전체
+  private Long allVoucherCreditTotal;
 }
