@@ -13,4 +13,5 @@ public class BillingCreateRequest {
   private LocalDate taxEndDate;
   private String customerNumber;  // 개별생성일 때만
   private String overdueType;     // all | exclude | only
+  private String contractCategory; // 장기 | 단기 | null(전체)
 }

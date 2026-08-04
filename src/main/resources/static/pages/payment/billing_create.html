@@ -107,7 +107,14 @@
                 <option value="only">연체만</option>
               </select>
             </div>
-            <div class="form-group"></div>
+            <div class="form-group">
+              <label for="contractCategory">계약구분</label>
+              <select id="contractCategory">
+                <option value="">전체</option>
+                <option value="장기">장기</option>
+                <option value="단기">단기</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -325,13 +332,16 @@
 
       if (!confirm(msg)) return;
 
+      const contractCategory = document.getElementById('contractCategory').value;
+
       const payload = {
         type,
         billingDate,
         taxStartDate,
         taxEndDate,
         customerNumber: type === "individual" ? customerNumber : null,
-        overdueType
+        overdueType,
+        contractCategory: contractCategory || null
       };
 
       try {
@@ -370,6 +380,7 @@
       document.getElementById('taxStartDate').value = firstDay.toISOString().split('T')[0];
       document.getElementById('taxEndDate').value = lastDay.toISOString().split('T')[0];
       document.getElementById('overdueType').value = 'all';
+      document.getElementById('contractCategory').value = '';
 
       changeBillingType();
     }

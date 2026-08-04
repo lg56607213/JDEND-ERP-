@@ -7,6 +7,7 @@ import java.time.LocalDate;
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 public class TaxInvoicePreviewRow {
+    private Long scheduleId;      // PaymentSchedules.id (수정/선택다운로드 식별자)
     private String contractNumber;
     private Integer installmentNo;
     private String vehicleNo;

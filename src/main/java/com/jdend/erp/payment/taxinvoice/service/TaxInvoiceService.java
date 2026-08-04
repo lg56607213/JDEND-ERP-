@@ -9,6 +9,7 @@ import com.jdend.erp.myinfo.repository.SupplierInfoRepository;
 import com.jdend.erp.payment.billing.entity.PaymentSchedules;
 import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
 import com.jdend.erp.payment.taxinvoice.dto.TaxInvoicePreviewRow;
+import com.jdend.erp.payment.taxinvoice.dto.TaxInvoiceUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -58,6 +59,7 @@ public class TaxInvoiceService {
             long supplyAmount = total - taxAmount;
 
             TaxInvoicePreviewRow row = TaxInvoicePreviewRow.builder()
+                    .scheduleId(ps.getId())
                     .contractNumber(cn)
                     .installmentNo(ps.getInstallmentNo())
                     .vehicleNo(contract.getVehicleNo())
@@ -262,6 +264,69 @@ public class TaxInvoiceService {
             case 19, 20, 25, 26, 27, 28, 35, 36, 43, 44, 51, 52, 54, 55, 56, 57 -> true;
             default -> false;
         };
+    }
+
+    /** 선택된 스케줄 ID 목록으로 미리보기 행 생성 (선택 다운로드용) */
+    public List<TaxInvoicePreviewRow> previewByIds(List<Long> scheduleIds) {
+        if (scheduleIds == null || scheduleIds.isEmpty()) return List.of();
+        List<PaymentSchedules> schedules = schedulesRepo.findAllById(scheduleIds);
+        List<TaxInvoicePreviewRow> result = new ArrayList<>();
+
+        for (PaymentSchedules ps : schedules) {
+            String cn = ps.getContractNumber();
+            if (cn == null || cn.isBlank()) continue;
+
+            Optional<Contract> contractOpt = contractRepo.findWithCustomerByContractNumber(cn);
+            if (contractOpt.isEmpty()) continue;
+            Contract contract = contractOpt.get();
+
+            Customer customer = contract.getCustomer();
+            if (customer == null && contract.getCustomerNumber() != null) {
+                customer = customerRepo.findByCustomerNumber(contract.getCustomerNumber()).orElse(null);
+            }
+
+            long total        = ps.getRentAmount() != null ? ps.getRentAmount() : 0L;
+            long taxAmount    = Math.round(total / 11.0);
+            long supplyAmount = total - taxAmount;
+
+            TaxInvoicePreviewRow row = TaxInvoicePreviewRow.builder()
+                    .scheduleId(ps.getId())
+                    .contractNumber(cn)
+                    .installmentNo(ps.getInstallmentNo())
+                    .vehicleNo(contract.getVehicleNo())
+                    .vehicleModel(contract.getVehicleModel())
+                    .taxInvoiceDate(ps.getTaxInvoiceDate())
+                    .supplyAmount(supplyAmount)
+                    .taxAmount(taxAmount)
+                    .build();
+
+            if (customer != null) {
+                row.setCustomerName(customer.getCustomerName());
+                row.setCeo(firstNonBlank(customer.getCeo(), customer.getCustomerName()));
+                row.setRegistrationNumber(customer.getRegistrationNumber());
+                row.setAddress(firstNonBlank(customer.getBillAddress(), customer.getAddress()));
+                row.setBusinessType(customer.getBusinessType());
+                row.setBusinessItem(customer.getBusinessItem());
+                row.setEmail(firstNonBlank(customer.getBillEmail(), customer.getManagerEmail()));
+            }
+
+            result.add(row);
+        }
+        return result;
+    }
+
+    /** 세금계산서 수정: taxInvoiceDate, supplyAmount+taxAmount → rentAmount 역산 저장 */
+    @org.springframework.transaction.annotation.Transactional
+    public void update(Long scheduleId, TaxInvoiceUpdateRequest req) {
+        PaymentSchedules ps = schedulesRepo.findById(scheduleId)
+                .orElseThrow(() -> new IllegalArgumentException("스케줄을 찾을 수 없습니다: " + scheduleId));
+        if (req.getTaxInvoiceDate() != null) {
+            ps.setTaxInvoiceDate(req.getTaxInvoiceDate());
+        }
+        if (req.getSupplyAmount() != null && req.getTaxAmount() != null) {
+            ps.setRentAmount(req.getSupplyAmount() + req.getTaxAmount());
+        }
+        schedulesRepo.save(ps);
     }
 
     private List<PaymentSchedules> fetchSchedules(LocalDate taxStart, LocalDate taxEnd,

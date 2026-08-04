@@ -72,7 +72,19 @@ public class BillingService {
             .thenComparing(PaymentSchedules::getTaxInvoiceDate, Comparator.nullsLast(LocalDate::compareTo))
             .thenComparing(PaymentSchedules::getInstallmentNo, Comparator.nullsLast(Integer::compareTo))
         )
-        .toList();
+        .collect(Collectors.toList());
+
+    // 계약구분(장기/단기) 필터 적용
+    if (req.getContractCategory() != null && !req.getContractCategory().isBlank()) {
+      List<String> allowedCns = contractRepository.findContractNumbersByContractCategory(req.getContractCategory());
+      Set<String> allowedSet = new HashSet<>(allowedCns);
+      schedules = schedules.stream()
+          .filter(ps -> ps.getContractNumber() != null && allowedSet.contains(ps.getContractNumber()))
+          .collect(Collectors.toList());
+      if (schedules.isEmpty()) {
+        return new BillingCreateResponse("-", 0, 0, 0L);
+      }
+    }
 
     int created = 0;
     int skipped = 0;

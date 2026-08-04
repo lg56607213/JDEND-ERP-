@@ -121,6 +121,14 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
   """)
   List<String> findContractNumbersByCustomerNumber(@Param("customerNumber") String customerNumber);
 
+  // ✅ 청구생성 계약구분(장기/단기) 필터용
+  @Query("""
+    select c.contractNumber
+    from Contract c
+    where c.contractCategory = :category
+  """)
+  List<String> findContractNumbersByContractCategory(@Param("category") String category);
+
   // ✅ 연체현황: 종료/해지 상태가 아닌 모든 계약
   @Query("""
     select c
