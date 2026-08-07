@@ -3,8 +3,6 @@ package com.jdend.erp.payment.kiwoom.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jdend.erp.config.KiwoomPayProperties;
-import com.jdend.erp.payment.kiwoom.dto.KiwoomPayReadyRequest;
-import com.jdend.erp.payment.kiwoom.dto.KiwoomPayReadyResponse;
 import com.jdend.erp.payment.kiwoom.entity.KiwoomPayment;
 import com.jdend.erp.payment.kiwoom.repository.KiwoomPaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,68 +24,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KiwoomPayService {
 
-    private static final String RESULT_PAGE_URL =
-            "https://rentcarerp.com/pages/payment/kiwoom_result.html";
-
     private final KiwoomPaymentRepository repository;
     private final KiwoomPayProperties properties;
     private final ObjectMapper objectMapper;
-
-    // -------------------------------------------------------------------------
-    // 결제 준비 (1단계 해시 요청 + PENDING 레코드 저장)
-    // -------------------------------------------------------------------------
-
-    /**
-     * 프론트에서 카드결제 버튼 클릭 시 호출.
-     * 1) 주문번호 생성
-     * 2) 키움페이 해시 API 호출 → KIWOOM_ENC 수령
-     * 3) KiwoomPayment PENDING 레코드 저장
-     * 4) 결제창 진입 파라미터 반환
-     */
-    @Transactional
-    public KiwoomPayReadyResponse preparePayment(KiwoomPayReadyRequest req) {
-        String orderId = generateOrderId(req.getContractNumber());
-
-        // 1단계: 해시 요청
-        String kiwoomEnc = requestHash("CARD", "P", orderId, req.getAmount());
-
-        // PENDING 레코드 저장 (중복 orderId 방지: UNIQUE 제약)
-        KiwoomPayment payment = KiwoomPayment.builder()
-                .orderId(orderId)
-                .contractNumber(req.getContractNumber())
-                .amount(req.getAmount())
-                .paymethod("CARD")
-                .status("PENDING")
-                .build();
-        repository.save(payment);
-
-        // | 문자 제거 (키움페이 파이프라인 구분자 충돌 방지)
-        String productName = req.getProductName() != null
-                ? req.getProductName().replace("|", "") : "렌트료";
-
-        // 결제창 파라미터 맵 구성
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("PAYMETHOD",       "CARD");
-        params.put("TYPE",            "P");
-        params.put("CPID",            properties.getCpid());
-        params.put("ORDERNO",         orderId);
-        params.put("AMOUNT",          String.valueOf(req.getAmount()));
-        params.put("PRODUCTTYPE",     "1");
-        params.put("PRODUCTNAME",     productName);
-        params.put("PRODUCTCODE",     req.getContractNumber());
-        params.put("TAXFREECD",       "00");      // 과세
-        params.put("KIWOOM_ENC",      kiwoomEnc);
-        params.put("HOMEURL",         RESULT_PAGE_URL);
-        params.put("FAILURL",         RESULT_PAGE_URL);
-        params.put("CLOSEURL",        RESULT_PAGE_URL);
-        params.put("DIRECTRESULTFLAG","Y");
-        params.put("RESERVEDINDEX1",  orderId);   // 통지/결과 페이지에서 주문 추적용
-
-        return KiwoomPayReadyResponse.builder()
-                .payUrl(properties.getPayUrl())
-                .params(params)
-                .build();
-    }
 
     // -------------------------------------------------------------------------
     // 통지 처리 (키움페이 → 서버)
