@@ -13,4 +13,6 @@ public class PayableBulkPayRequest {
     private LocalDate payDate;
     private String bankAccount;
     private String memo;
+    private String payeeName;      // 지급처 이름
+    private String paymentAccount; // 지급계좌 정보
 }

@@ -496,27 +496,36 @@
     }
 
     async function loadReceivablesTop(base) {
-      const rows = await getJson(`${base}/api/dashboard/receivables-top?limit=5`);
       const tbody = document.getElementById('receivableTopTbody');
       tbody.innerHTML = '';
+      try {
+        const all = await getJson(`${base}/api/overdue`);
+        if (!all || all.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
+          return;
+        }
+        // 연체일수 내림차순 정렬 후 상위 5건
+        const rows = all
+          .slice()
+          .sort((a, b) => Number(b.overdueDays || 0) - Number(a.overdueDays || 0))
+          .slice(0, 5);
 
-      if (!rows || rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">데이터 없음</td></tr>`;
-        return;
-      }
+        for (const r of rows) {
+          const overdue = Number(r.overdueDays || 0);
+          const badge = overdue >= 30 ? 'badge-danger' : (overdue >= 10 ? 'badge-warning' : 'badge-info');
 
-      for (const r of rows) {
-        const overdue = Number(r.overdueDays || 0);
-        const badge = overdue >= 30 ? 'badge-danger' : (overdue >= 10 ? 'badge-warning' : 'badge-info');
-
-        tbody.insertAdjacentHTML('beforeend', `
-          <tr>
-            <td>${esc(r.contractNumber)}</td>
-            <td>${esc(r.customerName)}</td>
-            <td class="amount-cell">${fmtNumber(r.receivableAmount)}</td>
-            <td><span class="badge ${badge}">${overdue}일</span></td>
-          </tr>
-        `);
+          tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${esc(r.contractNumber)}</td>
+              <td>${esc(r.customerName)}</td>
+              <td class="amount-cell">${fmtNumber(r.unpaidAmount)}</td>
+              <td><span class="badge ${badge}">${overdue}일</span></td>
+            </tr>
+          `);
+        }
+      } catch (e) {
+        console.warn('연체현황 로드 실패:', e);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#e74c3c;">로드 오류</td></tr>`;
       }
     }
 

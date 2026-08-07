@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>선수금관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .content-wrapper { margin-left: 220px; padding: 32px; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1b253a; margin-bottom: 4px; }
+    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 24px; }
+
+    /* 검색 */
+    .search-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 18px 24px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fg label { font-size: 0.82rem; font-weight: 700; color: #374151; }
+    .fg input, .fg select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.9rem; }
+    .date-row { display: flex; align-items: center; gap: 6px; }
+    .date-row input { width: 130px; }
+
+    /* 버튼 */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+    .btn-search { background: #23304e; color: #fff; }
+    .btn-search:hover { background: #1b253a; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-info { background: #6366f1; color: #fff; }
+    .btn-info:hover { background: #4f46e5; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+
+    /* 카드 */
+    .list-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 20px 24px; margin-bottom: 20px; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .list-header h2 { font-size: 1.05rem; font-weight: 700; color: #1b253a; margin: 0; }
+    .list-info { font-size: 0.88rem; color: #6b7280; }
+    .list-info strong { color: #1b253a; }
+
+    /* 테이블 */
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 10px 12px; font-size: 0.85rem; font-weight: 700; color: #374151; background: #f8fafc; text-align: center; }
+    th.left { text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; color: #374151; }
+    td.center { text-align: center; }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:hover td { background: #f9fafb; }
+    .empty { text-align: center; color: #9ca3af; padding: 40px 0; }
+
+    /* 잔액 강조 */
+    .balance-cell { text-align: right; font-weight: 700; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+
+    /* 이력 섹션 */
+    .history-card { background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; }
+    .history-card h2 { font-size: 1rem; font-weight: 700; color: #0369a1; margin: 0 0 12px; }
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+    .type-badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 700; }
+    .type-deposit  { background: #dcfce7; color: #166534; }
+    .type-apply    { background: #dbeafe; color: #1d4ed8; }
+    .type-other    { background: #f3f4f6; color: #374151; }
+    .voucher-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 4px; }
+
+    /* 모달 */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; width: 480px; max-width: 95%; }
+    .modal h3 { margin: 0 0 20px; font-size: 1.1rem; color: #1b253a; }
+    .mfg { margin-bottom: 14px; }
+    .mfg label { display: block; font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+    .mfg input, .mfg select, .mfg textarea { width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.93rem; box-sizing: border-box; }
+    .mfg textarea { resize: vertical; min-height: 56px; }
+    .modal-info { background: #eff6ff; border-radius: 6px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.9rem; }
+    .modal-info .label { color: #6b7280; font-size: 0.82rem; }
+    .modal-info .val { font-weight: 700; color: #1d4ed8; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    .hint { font-size: 0.78rem; color: #9ca3af; margin-top: 3px; }
+    .check-row { display: flex; align-items: center; gap: 8px; }
+    .check-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <h1>선수금관리</h1>
+  <p class="page-sub">계약별 선수금(임대료 선납) 잔액 조회 및 입금 등록·수익 인식 처리를 합니다.</p>
+
+  <!-- 검색 필터 -->
+  <div class="search-card">
+    <div class="fg">
+      <label>최근입금일 기간</label>
+      <div class="date-row">
+        <input type="date" id="startDate">
+        <span style="color:#9ca3af;">~</span>
+        <input type="date" id="endDate">
+      </div>
+    </div>
+    <div class="fg">
+      <label>고객명</label>
+      <input type="text" id="customerName" placeholder="고객명 검색" style="min-width:160px;">
+    </div>
+    <button class="btn btn-search" onclick="loadList()">조회</button>
+  </div>
+
+  <!-- 선수금 잔액 목록 -->
+  <div class="list-card">
+    <div class="list-header">
+      <div>
+        <h2>선수금 잔액 계약 목록</h2>
+        <div class="list-info" style="margin-top:4px;">잔액 있는 계약 <strong id="totalCount">0</strong>건 &nbsp;|&nbsp; 선수금 합계 <strong id="totalBalance">0</strong> 원</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>계약번호</th>
+          <th class="left">고객명</th>
+          <th>차량번호</th>
+          <th>월렌트료</th>
+          <th>선수금 잔액</th>
+          <th>최근입금일</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="listBody">
+        <tr><td colspan="7" class="empty">조회 버튼을 눌러 선수금 잔액 계약을 불러오세요.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 거래 이력 섹션 -->
+  <div class="history-card" id="historySection" style="display:none;">
+    <div class="history-header">
+      <h2 id="historyTitle">거래 이력</h2>
+      <button class="btn btn-secondary btn-sm" onclick="closeHistory()">닫기</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>거래일자</th>
+          <th>구분</th>
+          <th>금액</th>
+          <th>누적잔액</th>
+          <th>메모</th>
+          <th>전표</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="6" class="empty">이력 없음</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 선수금 입금등록 모달 -->
+<div class="modal-overlay" id="depositModal">
+  <div class="modal">
+    <h3>선수금 입금 등록</h3>
+    <div class="modal-info">
+      <div class="label">계약</div>
+      <div class="val" id="depositContractLabel"></div>
+    </div>
+    <input type="hidden" id="depositContractId">
+    <div class="mfg">
+      <label>입금일자 <span style="color:#ef4444;">*</span></label>
+      <input type="date" id="depositDate">
+    </div>
+    <div class="mfg">
+      <label>입금금액 <span style="color:#ef4444;">*</span></label>
+      <input type="number" id="depositAmount" placeholder="금액 입력" min="1">
+    </div>
+    <div class="mfg">
+      <label>메모</label>
+      <input type="text" id="depositMemo" placeholder="예: 3개월 선납">
+    </div>
+    <div class="mfg">
+      <div class="check-row">
+        <input type="checkbox" id="depositCreateVoucher" checked>
+        <label for="depositCreateVoucher" style="display:inline;font-size:0.9rem;font-weight:400;">전표 자동 생성 (차변: 보통예금 / 대변: 선수금)</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDepositModal()">취소</button>
+      <button class="btn btn-success" onclick="submitDeposit()">입금 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 선수금 적용(수익인식) 모달 -->
+<div class="modal-overlay" id="applyModal">
+  <div class="modal">
+    <h3>선수금 적용 (수익 인식)</h3>
+    <div class="modal-info">
+      <div class="label">계약</div>
+      <div class="val" id="applyContractLabel"></div>
+      <div style="margin-top:6px;" class="label">현재 잔액</div>
+      <div class="val" id="applyBalanceLabel" style="color:#1d4ed8;"></div>
+    </div>
+    <input type="hidden" id="applyContractId">
+    <input type="hidden" id="applyMaxBalance">
+    <div class="mfg">
+      <label>수익인식일자 <span style="color:#ef4444;">*</span></label>
+      <input type="date" id="applyDate">
+    </div>
+    <div class="mfg">
+      <label>적용금액 <span style="color:#ef4444;">*</span></label>
+      <input type="number" id="applyAmount" placeholder="잔액 이내로 입력" min="1" oninput="validateApplyAmount()">
+      <div class="hint" id="applyAmountHint"></div>
+    </div>
+    <div class="mfg">
+      <label>메모</label>
+      <input type="text" id="applyMemo" placeholder="예: 2025년 3월 렌트료 인식">
+    </div>
+    <div class="mfg">
+      <div class="check-row">
+        <input type="checkbox" id="applyCreateVoucher" checked>
+        <label for="applyCreateVoucher" style="display:inline;font-size:0.9rem;font-weight:400;">전표 자동 생성 (차변: 선수금 / 대변: 임대료수입)</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeApplyModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitApply()">수익 인식</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script>
+  const API = '/api/prepaid-rents';
+  let allItems = [];
+
+  function fmt(n) { return Number(n || 0).toLocaleString(); }
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── 목록 조회 ───────────────────────────────────────────────
+  async function loadList() {
+    document.getElementById('listBody').innerHTML =
+      '<tr><td colspan="7" class="empty">조회 중...</td></tr>';
+
+    try {
+      const res = await fetch(API, { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      allItems = await res.json();
+    } catch (e) {
+      document.getElementById('listBody').innerHTML =
+        '<tr><td colspan="7" class="empty" style="color:#e74c3c;">데이터 로드 실패: ' + e.message + '</td></tr>';
+      return;
+    }
+
+    // 클라이언트 필터
+    const startDate = document.getElementById('startDate').value;
+    const endDate   = document.getElementById('endDate').value;
+    const nameFilt  = document.getElementById('customerName').value.trim().toLowerCase();
+
+    let filtered = allItems.filter(item => {
+      if (nameFilt && !String(item.customerName || '').toLowerCase().includes(nameFilt)) return false;
+      if (startDate && item.lastDepositDate && item.lastDepositDate < startDate) return false;
+      if (endDate   && item.lastDepositDate && item.lastDepositDate > endDate)   return false;
+      return true;
+    });
+
+    renderList(filtered);
+  }
+
+  function renderList(items) {
+    const tbody = document.getElementById('listBody');
+    document.getElementById('totalCount').textContent = items.length;
+    const totalBal = items.reduce((s, i) => s + Number(i.balance || 0), 0);
+    document.getElementById('totalBalance').textContent = fmt(totalBal);
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">선수금 잔액이 있는 계약이 없습니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(item => `
+      <tr>
+        <td class="center">${escHtml(item.contractNumber ?? '-')}</td>
+        <td>${escHtml(item.customerName ?? '-')}</td>
+        <td class="center">${escHtml(item.vehicleNo ?? '-')}</td>
+        <td class="amount">${fmt(item.monthlyRent)}</td>
+        <td class="balance-cell">${fmt(item.balance)}</td>
+        <td class="center">${item.lastDepositDate ? String(item.lastDepositDate).substring(0,10) : '-'}</td>
+        <td class="center" style="white-space:nowrap;">
+          <button class="btn btn-info btn-sm" onclick="showHistory(${item.contractId}, '${escHtml(item.contractNumber)} ${escHtml(item.customerName)}')">이력보기</button>
+          <button class="btn btn-success btn-sm" style="margin-left:4px;" onclick="openDepositModal(${item.contractId}, '${escHtml(item.contractNumber)}', '${escHtml(item.customerName)}')">입금등록</button>
+          <button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="openApplyModal(${item.contractId}, '${escHtml(item.contractNumber)}', '${escHtml(item.customerName)}', ${Number(item.balance)})">수익인식</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ─── 거래이력 ────────────────────────────────────────────────
+  async function showHistory(contractId, label) {
+    const section = document.getElementById('historySection');
+    const tbody   = document.getElementById('historyBody');
+    document.getElementById('historyTitle').textContent = `거래 이력 — ${label}`;
+    section.style.display = '';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">로딩 중...</td></tr>';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch(`${API}/${contractId}/history`, { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const list = await res.json();
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">거래 이력이 없습니다.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(h => {
+        const typeCls = h.transactionType === '입금' ? 'type-deposit'
+                      : h.transactionType === '적용' ? 'type-apply' : 'type-other';
+        const voucherMark = h.voucherCreated
+          ? '<span class="voucher-dot" title="전표 생성됨"></span>생성'
+          : '<span style="color:#9ca3af;">-</span>';
+        return `
+          <tr>
+            <td class="center">${h.transactionDate ? String(h.transactionDate).substring(0,10) : '-'}</td>
+            <td class="center"><span class="type-badge ${typeCls}">${escHtml(h.transactionType ?? '-')}</span></td>
+            <td class="amount">${fmt(h.amount)}</td>
+            <td class="balance-cell">${fmt(h.cumulativeBalance)}</td>
+            <td>${escHtml(h.memo ?? '')}</td>
+            <td class="center">${voucherMark}</td>
+          </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty" style="color:#e74c3c;">로드 실패: ${e.message}</td></tr>`;
+    }
+  }
+
+  function closeHistory() {
+    document.getElementById('historySection').style.display = 'none';
+  }
+
+  // ─── 입금등록 모달 ────────────────────────────────────────────
+  function openDepositModal(contractId, contractNumber, customerName) {
+    document.getElementById('depositContractId').value = contractId;
+    document.getElementById('depositContractLabel').textContent = `${contractNumber} · ${customerName}`;
+    document.getElementById('depositDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('depositAmount').value = '';
+    document.getElementById('depositMemo').value = '';
+    document.getElementById('depositCreateVoucher').checked = true;
+    document.getElementById('depositModal').classList.add('open');
+  }
+
+  function closeDepositModal() {
+    document.getElementById('depositModal').classList.remove('open');
+  }
+
+  async function submitDeposit() {
+    const contractId = Number(document.getElementById('depositContractId').value);
+    const amount     = Number(document.getElementById('depositAmount').value);
+    const transactionDate = document.getElementById('depositDate').value;
+    const memo       = document.getElementById('depositMemo').value.trim();
+    const createVoucher = document.getElementById('depositCreateVoucher').checked;
+
+    if (!transactionDate) { alert('입금일자를 입력해주세요.'); return; }
+    if (!amount || amount <= 0) { alert('입금금액을 올바르게 입력해주세요.'); return; }
+
+    try {
+      const res = await fetch(`${API}/deposit`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId, amount, transactionDate, memo, createVoucher })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('오류: ' + (data.message || res.status)); return; }
+      closeDepositModal();
+      alert('선수금 입금이 등록되었습니다.');
+      await loadList();
+    } catch (e) {
+      alert('오류가 발생했습니다: ' + e.message);
+    }
+  }
+
+  // ─── 수익인식 모달 ────────────────────────────────────────────
+  function openApplyModal(contractId, contractNumber, customerName, balance) {
+    document.getElementById('applyContractId').value = contractId;
+    document.getElementById('applyMaxBalance').value = balance;
+    document.getElementById('applyContractLabel').textContent = `${contractNumber} · ${customerName}`;
+    document.getElementById('applyBalanceLabel').textContent = fmt(balance) + ' 원';
+    document.getElementById('applyDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('applyAmount').value = '';
+    document.getElementById('applyMemo').value = '';
+    document.getElementById('applyCreateVoucher').checked = true;
+    document.getElementById('applyAmountHint').textContent = '';
+    document.getElementById('applyModal').classList.add('open');
+  }
+
+  function closeApplyModal() {
+    document.getElementById('applyModal').classList.remove('open');
+  }
+
+  function validateApplyAmount() {
+    const amount  = Number(document.getElementById('applyAmount').value);
+    const maxBal  = Number(document.getElementById('applyMaxBalance').value);
+    const hint    = document.getElementById('applyAmountHint');
+    if (amount > maxBal) {
+      hint.textContent = `잔액(${fmt(maxBal)} 원)을 초과할 수 없습니다.`;
+      hint.style.color = '#ef4444';
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  async function submitApply() {
+    const contractId = Number(document.getElementById('applyContractId').value);
+    const amount     = Number(document.getElementById('applyAmount').value);
+    const maxBal     = Number(document.getElementById('applyMaxBalance').value);
+    const transactionDate = document.getElementById('applyDate').value;
+    const memo       = document.getElementById('applyMemo').value.trim();
+    const createVoucher = document.getElementById('applyCreateVoucher').checked;
+
+    if (!transactionDate) { alert('수익인식일자를 입력해주세요.'); return; }
+    if (!amount || amount <= 0) { alert('적용금액을 올바르게 입력해주세요.'); return; }
+    if (amount > maxBal) { alert(`잔액(${fmt(maxBal)} 원)을 초과할 수 없습니다.`); return; }
+
+    try {
+      const res = await fetch(`${API}/apply`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId, amount, transactionDate, memo, createVoucher })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('오류: ' + (data.message || res.status)); return; }
+      closeApplyModal();
+      alert('선수금이 수익으로 인식되었습니다.');
+      await loadList();
+    } catch (e) {
+      alert('오류가 발생했습니다: ' + e.message);
+    }
+  }
+
+  // 모달 바깥 클릭 닫기
+  document.getElementById('depositModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDepositModal();
+  });
+  document.getElementById('applyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeApplyModal();
+  });
+
+  // 초기화
+  (function init() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('endDate').value   = today.toISOString().split('T')[0];
+    loadList();
+  })();
+
+  loadSidebar();
+</script>
+</body>
+</html>

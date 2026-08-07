@@ -62,6 +62,18 @@ public class PayableService {
         String bankAccount = (req.getBankAccount() == null || req.getBankAccount().isBlank())
                 ? "보통예금" : req.getBankAccount().trim();
 
+        // 지급처/지급계좌 정보를 메모 앞에 붙임: "[지급처 / 지급계좌] 메모"
+        String rawMemo = req.getMemo() != null ? req.getMemo().trim() : "";
+        String payeeName = req.getPayeeName() != null ? req.getPayeeName().trim() : "";
+        String paymentAccount = req.getPaymentAccount() != null ? req.getPaymentAccount().trim() : "";
+        final String fullMemo;
+        if (!payeeName.isBlank() || !paymentAccount.isBlank()) {
+            String prefix = "[" + payeeName + " / " + paymentAccount + "]";
+            fullMemo = rawMemo.isBlank() ? prefix : prefix + " " + rawMemo;
+        } else {
+            fullMemo = rawMemo;
+        }
+
         long totalAmount = lines.stream().mapToLong(VoucherLine::getAmount).sum();
 
         // 차변: 각 미지급 계정 (미지급금 → 감소)
@@ -78,14 +90,14 @@ public class PayableService {
                 VoucherCreateRequest.VoucherLineRequest.builder()
                         .account(bankAccount)
                         .amount(totalAmount)
-                        .description(req.getMemo())
+                        .description(fullMemo)
                         .build()
         );
 
         VoucherCreateResponse response = voucherService.create(
                 VoucherCreateRequest.builder()
                         .voucherDate(payDate)
-                        .memo(req.getMemo())
+                        .memo(fullMemo)
                         .debitEntries(debits)
                         .creditEntries(credits)
                         .build()
