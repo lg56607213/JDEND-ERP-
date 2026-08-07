@@ -134,35 +134,29 @@ public class DashboardService {
     LocalDate today = LocalDate.now();
     LocalDate yesterday = today.minusDays(1);
 
+    // 전표 accountCode='100101'(보통예금) 기준으로 합산 — 계좌명 매칭 불필요
+    long prevBal  = nz(voucherRepo.sumNetUpToByAccountCode(yesterday));
+    long todayDep = nz(voucherRepo.sumDebitOnByAccountCode(today));
+    long todayWit = nz(voucherRepo.sumCreditOnByAccountCode(today));
+    long curBal   = prevBal + todayDep - todayWit;
+
+    // 등록된 계좌 목록으로 표시명 구성 (잔액은 전표 합산값 사용)
     List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
-    List<DashboardBankSummaryRow> result = new ArrayList<>();
+    String bankLabel = accounts.isEmpty() ? "보통예금"
+        : accounts.stream()
+            .map(a -> a.getAccountAlias() != null && !a.getAccountAlias().isBlank()
+                ? a.getAccountAlias() : a.getBankName())
+            .reduce((a, b) -> a + "/" + b).orElse("보통예금");
 
-    for (BankAccount acct : accounts) {
-      // 전표 계정명 매핑: accountAlias 우선, 없으면 bankName 사용
-      String matchName = (acct.getAccountAlias() != null && !acct.getAccountAlias().isBlank())
-          ? acct.getAccountAlias()
-          : acct.getBankName();
-
-      // 전일잔액: 어제까지 voucher_lines 누적 (차변 - 대변)
-      long prevBal  = nz(voucherRepo.sumNetUpToByAccountName(matchName, yesterday));
-      // 금일수입: 오늘 차변(DEBIT) 합계
-      long todayDep = nz(voucherRepo.sumDebitOnByAccountName(matchName, today));
-      // 금일지출: 오늘 대변(CREDIT) 합계
-      long todayWit = nz(voucherRepo.sumCreditOnByAccountName(matchName, today));
-      // 금일잔액
-      long curBal   = prevBal + todayDep - todayWit;
-
-      result.add(DashboardBankSummaryRow.builder()
-          .bankName(acct.getBankName())
-          .accountNumber(acct.getAccountNumber())
-          .accountAlias(acct.getAccountAlias())
-          .balance2DaysAgo(prevBal)    // 전일잔액 (어제까지 전표 누적)
-          .yesterdayDeposit(todayDep)  // 금일수입 (오늘 차변)
-          .yesterdayWithdrawal(todayWit) // 금일지출 (오늘 대변)
-          .currentBalance(curBal)       // 금일잔액
-          .build());
-    }
-    return result;
+    return List.of(DashboardBankSummaryRow.builder()
+        .bankName(bankLabel)
+        .accountNumber("")
+        .accountAlias("전표합산")
+        .balance2DaysAgo(prevBal)
+        .yesterdayDeposit(todayDep)
+        .yesterdayWithdrawal(todayWit)
+        .currentBalance(curBal)
+        .build());
   }
 
   public List<DashboardBankDiffRow> bankVoucherDiff() {

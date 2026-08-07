@@ -137,10 +137,35 @@ public class DailyCashService {
           .build());
     }
 
-    // 전표(현금성 계정만, 계정별 합계) — 기존 호환 유지
+    // 전표(현금성 계정만, 계정별 합계) — banks 비어있을 때 fallback보다 먼저 조회
     List<VoucherCashAggRepository.AccountCashSumRow> vRows =
         voucherCashRepo.sumCashByAccountOn(date,
             CASH_KEYS[0], CASH_KEYS[1], CASH_KEYS[2], CASH_KEYS[3], CASH_KEYS[4], CASH_KEYS[5], CASH_KEYS[6]);
+
+    // 은행 CSV 없을 때: 전표 기준 보통예금(100101) 잔액으로 Section I 대체
+    if (banks.isEmpty()) {
+      long prevBal = nz(voucherCashRepo.sumNetBefore100101(date));
+      long todayIn = 0, todayOut = 0;
+      for (var r : vRows) {
+        if ("보통예금".equals(r.getAccountName())) {
+          long amt = nz(r.getAmt());
+          if ("DEBIT".equalsIgnoreCase(r.getLineType())) todayIn  += amt;
+          else                                            todayOut += amt;
+        }
+      }
+      long balance = prevBal + todayIn - todayOut;
+      bankIn       = todayIn;
+      bankOut      = todayOut;
+      totalPrev    = prevBal;
+      totalBalance = balance;
+      banks.add(DailyFundReportResponse.BankRow.builder()
+          .bankName("보통예금 (전표합산)")
+          .prevBalance(prevBal)
+          .income(todayIn)
+          .expense(todayOut)
+          .balance(balance)
+          .build());
+    }
 
     List<DailyFundReportResponse.VoucherRow> vIn = new ArrayList<>();
     List<DailyFundReportResponse.VoucherRow> vOut = new ArrayList<>();

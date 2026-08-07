@@ -135,4 +135,15 @@ public interface VoucherCashAggRepository extends JpaRepository<VoucherLine, Lon
      order by l.lineType, l.accountName
   """)
   List<AccountCashSumRow> sumAllByAccountBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+  /** 보통예금(accountCode=100101) 특정일 이전 누적 순잔액 — 일일자금일보 fallback용 */
+  @Query("""
+    select coalesce(sum(case when l.lineType = 'DEBIT' then l.amount else -l.amount end), 0)
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and l.accountCode = '100101'
+       and v.voucherDate < :date
+  """)
+  Long sumNetBefore100101(@Param("date") LocalDate date);
 }
