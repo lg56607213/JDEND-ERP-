@@ -326,19 +326,31 @@
         }
       }
 
+      const metaItems = [
+        { label: '전표번호', value: first.voucherNo || '' },
+        { label: '전표일자', value: first.voucherDate || '' },
+        { label: '상태',     value: null, html: statusHtml },
+      ];
+      if (first.vehicleNo)      metaItems.push({ label: '차량번호',  value: first.vehicleNo });
+      if (first.contractNumber) metaItems.push({ label: '계약번호',  value: first.contractNumber });
+
+      const metaHtml = metaItems.map(m => `
+        <div style="min-width:120px;">
+          <span style="font-size:11px; color:#888; display:block; margin-bottom:2px;">${m.label}</span>
+          ${m.html ? m.html : `<strong style="font-size:14px;">${esc(m.value)}</strong>`}
+        </div>`).join('');
+
       const detailBodyHtml = `
-        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:16px;">
-          <div><span style="font-size:12px; color:#888;">전표번호</span><br><strong>${esc(first.voucherNo || "")}</strong></div>
-          <div><span style="font-size:12px; color:#888;">전표일자</span><br><strong>${esc(first.voucherDate || "")}</strong></div>
-          <div><span style="font-size:12px; color:#888;">상태</span><br>${statusHtml}</div>
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #eee;">
+          ${metaHtml}
         </div>
         <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;">
           <thead>
             <tr style="background:#f8f9fa;">
               <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:center; width:60px;">구분</th>
-              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">계정</th>
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">계정과목</th>
               <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:right; width:120px;">금액</th>
-              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">적요</th>
+              <th style="padding:8px 10px; border-bottom:2px solid #dee2e6; text-align:left;">적요 (계좌·카드 포함)</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>

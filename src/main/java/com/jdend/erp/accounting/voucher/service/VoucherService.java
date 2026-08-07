@@ -180,6 +180,8 @@ public class VoucherService {
                                         .creditDescription(credit != null ? nvl(credit.getDescription()) : "")
 
                                         .status(v.getStatus())
+                                        .vehicleNo(v.getVehicleNo())
+                                        .contractNumber(v.getContractNumber())
                                         .showMain(i == 0)
                                         .build();
                             });

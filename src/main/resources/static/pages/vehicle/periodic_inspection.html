@@ -359,9 +359,25 @@
       }
     }
 
-    function openRegisterModal(){
+    async function openRegisterModal(){
       document.getElementById("registerBackdrop").style.display = "block";
       document.getElementById("registerModal").style.display = "block";
+
+      // 상단 조회 필터에서 선택된 차량관리번호가 있으면 등록 모달에 자동 세팅
+      const mgmtNo = document.getElementById("vehicleMgmtNo").value.trim();
+      if(mgmtNo){
+        document.getElementById("regVehicleMgmtNo").value = mgmtNo;
+        try{
+          const res = await fetch(`${BASE}/api/vehicle-orders/${encodeURIComponent(mgmtNo)}`);
+          await mustOk(res);
+          const v = await res.json();
+          document.getElementById("regVehicleNo").value = v.vehicleNo || "";
+          document.getElementById("regCarModel").value = v.carModel || "";
+        }catch(e){
+          document.getElementById("regVehicleNo").value = "";
+          document.getElementById("regCarModel").value = "";
+        }
+      }
     }
 
     function closeRegisterModal(){

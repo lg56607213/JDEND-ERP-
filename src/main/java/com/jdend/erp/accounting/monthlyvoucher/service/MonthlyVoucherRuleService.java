@@ -2,6 +2,7 @@ package com.jdend.erp.accounting.monthlyvoucher.service;
 
 import com.jdend.erp.accounting.monthlyvoucher.dto.MonthlyVoucherRuleCreateRequest;
 import com.jdend.erp.accounting.monthlyvoucher.dto.MonthlyVoucherRuleCreateResponse;
+import com.jdend.erp.accounting.monthlyvoucher.dto.MonthlyVoucherRuleListResponse;
 import com.jdend.erp.accounting.monthlyvoucher.entity.VehicleOrderMini;
 import com.jdend.erp.accounting.monthlyvoucher.repository.MonthlyVoucherRuleRepository;
 import com.jdend.erp.accounting.monthlyvoucher.repository.VehicleOrderMiniRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -108,6 +110,30 @@ public class MonthlyVoucherRuleService {
   private LocalDate clampDay(LocalDate monthFirst, int day) {
     int last = monthFirst.lengthOfMonth();
     return monthFirst.withDayOfMonth(Math.min(day, last));
+  }
+
+  public List<MonthlyVoucherRuleListResponse> list(Boolean activeOnly, String contractNumber, String vehicleNo) {
+    String cn = (contractNumber == null || contractNumber.isBlank()) ? null : contractNumber.trim();
+    String vn = (vehicleNo == null || vehicleNo.isBlank()) ? null : vehicleNo.trim();
+    return ruleRepo.search(activeOnly, cn, vn)
+        .stream()
+        .map(MonthlyVoucherRuleListResponse::from)
+        .toList();
+  }
+
+  @Transactional
+  public void delete(Long id) {
+    MonthlyVoucherRule rule = ruleRepo.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("월전표 규칙을 찾을 수 없습니다: " + id));
+    ruleRepo.delete(rule);
+  }
+
+  @Transactional
+  public MonthlyVoucherRuleListResponse toggleActive(Long id) {
+    MonthlyVoucherRule rule = ruleRepo.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("월전표 규칙을 찾을 수 없습니다: " + id));
+    rule.setActive(!rule.isActive());
+    return MonthlyVoucherRuleListResponse.from(ruleRepo.save(rule));
   }
 
   private String blankToNull(String s) {

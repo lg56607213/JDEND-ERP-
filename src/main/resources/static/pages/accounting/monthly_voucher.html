@@ -7,6 +7,49 @@
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <link rel="stylesheet" href="../../assets/css/pages.css">
   <link rel="stylesheet" href="../../assets/css/accounting/monthly_voucher.css">
+  <style>
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .search-bar .sg { margin-bottom: 0; min-width: 150px; }
+    .search-bar label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #555; }
+    .search-bar input, .search-bar select {
+      height: 36px; padding: 0 10px;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: 13px; width: 100%;
+    }
+    .search-bar .btn { height: 36px; padding: 0 18px; white-space: nowrap; }
+    .rule-table-wrap { overflow-x: auto; }
+    .rule-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rule-table th {
+      background: #f3f4f6; border: 1px solid #e5e7eb;
+      padding: 8px 10px; text-align: center;
+      white-space: nowrap; font-weight: 600; color: #374151;
+    }
+    .rule-table td {
+      border: 1px solid #e5e7eb; padding: 7px 10px;
+      text-align: center; vertical-align: middle;
+    }
+    .rule-table tr:hover td { background: #f9fafb; }
+    .badge-active {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .badge-active.on  { background: #dcfce7; color: #16a34a; }
+    .badge-active.off { background: #f3f4f6; color: #9ca3af; }
+    .btn-del {
+      background: none; border: 1px solid #ef4444;
+      color: #ef4444; border-radius: 4px;
+      padding: 2px 8px; font-size: 12px; cursor: pointer;
+    }
+    .btn-del:hover { background: #fef2f2; }
+    .empty-row td { color: #9ca3af; }
+    .amount-cell { text-align: right !important; font-variant-numeric: tabular-nums; }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -16,6 +59,7 @@
       <p>회계관리 &gt; 전표등록 &gt; 월전표등록</p>
     </div>
 
+    <!-- 등록 폼 -->
     <div class="erp-card">
       <div class="card-body">
         <form id="voucherForm">
@@ -78,7 +122,7 @@
             </div>
 
             <div class="info-box">
-              <span class="info-box-icon">ℹ️</span>
+              <span class="info-box-icon">&#x2139;&#xFE0F;</span>
               <span class="info-box-text">
                 매월 해당일에 자동으로 전표가 발생됩니다. (스케줄러 적용 시)<br>
                 차량관리번호를 입력하면 서버에서 vehicle_orders를 조회해 차량번호(vehicle_no)로 저장합니다.
@@ -138,6 +182,58 @@
         </form>
       </div>
     </div>
+
+    <!-- 조회 섹션 -->
+    <div class="erp-card" style="margin-top: 24px;">
+      <div class="card-body">
+        <h3 class="section-title" style="margin-bottom: 16px;">등록된 월전표 규칙 조회</h3>
+
+        <div class="search-bar">
+          <div class="sg">
+            <label for="filterActive">활성여부</label>
+            <select id="filterActive">
+              <option value="">전체</option>
+              <option value="true">활성</option>
+              <option value="false">비활성</option>
+            </select>
+          </div>
+          <div class="sg">
+            <label for="filterContract">계약번호</label>
+            <input type="text" id="filterContract" placeholder="계약번호 검색">
+          </div>
+          <div class="sg">
+            <label for="filterVehicle">차량번호</label>
+            <input type="text" id="filterVehicle" placeholder="차량번호 검색">
+          </div>
+          <button type="button" class="btn btn-primary" id="searchBtn">조회</button>
+        </div>
+
+        <div class="rule-table-wrap">
+          <table class="rule-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>활성</th>
+                <th>계약번호</th>
+                <th>차량번호</th>
+                <th>발생일</th>
+                <th>차변계정</th>
+                <th>대변계정</th>
+                <th>금액</th>
+                <th>메모</th>
+                <th>다음실행일</th>
+                <th>마지막실행일</th>
+                <th>삭제</th>
+              </tr>
+            </thead>
+            <tbody id="ruleTableBody">
+              <tr class="empty-row"><td colspan="12">조회 버튼을 눌러 목록을 불러오세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="../../assets/js/sidebar.js"></script>
@@ -145,10 +241,7 @@
 
   <script>
     const API_BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/+$/, "");
-
-    function apiBase() {
-      return API_BASE;
-    }
+    function apiBase() { return API_BASE; }
 
     async function mustOk(res) {
       if (res.ok) return res;
@@ -163,10 +256,14 @@
         .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
     }
 
-    // 재무제표관리(financial-statement-accounts)에 등록한 계정을 동적으로 불러온다.
+    function fmtAmount(n) {
+      return Number(n || 0).toLocaleString() + '원';
+    }
+
+    // ── 계정 목록 ────────────────────────────────────────────
     function buildAccountOptionsHtml(accounts) {
       if (!accounts || accounts.length === 0) {
-        return `<option value="">계정 선택</option><option value="" disabled>등록된 계정이 없습니다 (재무제표관리에서 추가)</option>`;
+        return '<option value="">계정 선택</option><option value="" disabled>등록된 계정이 없습니다 (재무제표관리에서 추가)</option>';
       }
       const groups = new Map();
       for (const a of accounts) {
@@ -174,19 +271,19 @@
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(a);
       }
-      let html = `<option value="">계정 선택</option>`;
+      let html = '<option value="">계정 선택</option>';
       for (const [key, list] of groups) {
-        html += `<optgroup label="${escapeHtml(key)}">`;
+        html += '<optgroup label="' + escapeHtml(key) + '">';
         for (const a of list) {
-          html += `<option value="${escapeHtml(a.accountCode)}" data-name="${escapeHtml(a.accountName)}">[${escapeHtml(a.accountCode)}] ${escapeHtml(a.accountName)}</option>`;
+          html += '<option value="' + escapeHtml(a.accountCode) + '" data-name="' + escapeHtml(a.accountName) + '">[' + escapeHtml(a.accountCode) + '] ' + escapeHtml(a.accountName) + '</option>';
         }
-        html += `</optgroup>`;
+        html += '</optgroup>';
       }
       return html;
     }
 
     async function loadAccountOptions() {
-      let html = `<option value="">계정 선택</option><option value="" disabled>계정 목록 조회 실패</option>`;
+      let html = '<option value="">계정 선택</option><option value="" disabled>계정 목록 조회 실패</option>';
       try {
         const res = await mustOk(await fetch(apiBase() + '/api/financial-statement-accounts/leaves'));
         const accounts = await res.json();
@@ -200,18 +297,15 @@
 
     loadAccountOptions();
 
-    function resetForm() {
+    // ── 등록 폼 ──────────────────────────────────────────────
+    document.getElementById('resetBtn').addEventListener('click', function() {
       if (confirm('입력한 내용을 모두 초기화하시겠습니까?')) {
         document.getElementById('voucherForm').reset();
       }
-    }
-
-    document.getElementById('resetBtn').addEventListener('click', resetForm);
+    });
 
     document.getElementById('voucherForm').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-      }
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
     });
 
     document.getElementById('voucherForm').addEventListener('submit', async function(e) {
@@ -221,38 +315,31 @@
       const creditAmount = parseFloat(document.getElementById('creditAmount').value) || 0;
 
       if (debitAmount !== creditAmount) {
-        alert(
-          '차변과 대변의 금액이 일치하지 않습니다.\n\n' +
-          '차변: ' + debitAmount.toLocaleString() + '원\n' +
-          '대변: ' + creditAmount.toLocaleString() + '원'
-        );
+        alert('차변과 대변의 금액이 일치하지 않습니다.\n\n차변: ' + debitAmount.toLocaleString() + '원\n대변: ' + creditAmount.toLocaleString() + '원');
         return;
       }
 
       const monthlyDate = parseInt(document.getElementById('monthlyDate').value || '0', 10);
-      if (!monthlyDate) {
-        alert('매월 전표발생일을 선택하세요.');
-        return;
-      }
+      if (!monthlyDate) { alert('매월 전표발생일을 선택하세요.'); return; }
 
       const rawMemo = (document.getElementById('memo').value || '').trim();
-      const finalMemo = rawMemo ? `[월전표] ${rawMemo}` : `[월전표]`;
+      const finalMemo = rawMemo ? '[월전표] ' + rawMemo : '[월전표]';
+
+      const debitSel = document.getElementById('debitAccount');
+      const creditSel = document.getElementById('creditAccount');
 
       const payload = {
         contractNumber: (document.getElementById('contractNumber').value || '').trim(),
         vehicleManagementId: (document.getElementById('vehicleManagementId').value || '').trim(),
         monthlyDate: monthlyDate,
-
-        debitAccountCode: document.getElementById('debitAccount').value,
-        debitAccount: (() => { const s = document.getElementById('debitAccount'); return s.options[s.selectedIndex]?.getAttribute('data-name') || s.value; })(),
+        debitAccountCode: debitSel.value,
+        debitAccount: debitSel.options[debitSel.selectedIndex]?.getAttribute('data-name') || debitSel.value,
         debitAmount: Math.round(debitAmount),
         debitDescription: (document.getElementById('debitDescription').value || '').trim(),
-
-        creditAccountCode: document.getElementById('creditAccount').value,
-        creditAccount: (() => { const s = document.getElementById('creditAccount'); return s.options[s.selectedIndex]?.getAttribute('data-name') || s.value; })(),
+        creditAccountCode: creditSel.value,
+        creditAccount: creditSel.options[creditSel.selectedIndex]?.getAttribute('data-name') || creditSel.value,
         creditAmount: Math.round(creditAmount),
         creditDescription: (document.getElementById('creditDescription').value || '').trim(),
-
         memo: finalMemo
       };
 
@@ -261,25 +348,17 @@
       btn.textContent = '저장 중...';
 
       try {
-        const url = apiBase() + '/api/accounting/monthly-voucher-rules';
-        const res = await mustOk(await fetch(url, {
+        const res = await mustOk(await fetch(apiBase() + '/api/accounting/monthly-voucher-rules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }));
         const saved = await res.json();
 
-        alert(
-          '월전표 규칙이 등록되었습니다.\n\n' +
-          '- ID: ' + saved.id + '\n' +
-          '- 다음 실행일: ' + (saved.nextRunDate || '') + '\n' +
-          '- 매월: ' + saved.monthlyDay + '일\n' +
-          '- 차변: ' + saved.debitAccount + ' ' + Number(saved.debitAmount).toLocaleString() + '원\n' +
-          '- 대변: ' + saved.creditAccount + ' ' + Number(saved.creditAmount).toLocaleString() + '원\n' +
-          (saved.vehicleNo ? ('- 차량번호: ' + saved.vehicleNo + '\n') : '')
-        );
+        alert('월전표 규칙이 등록되었습니다.\n\n- ID: ' + saved.id + '\n- 다음 실행일: ' + (saved.nextRunDate || '') + '\n- 매월: ' + saved.monthlyDay + '일\n- 차변: ' + saved.debitAccount + ' ' + Number(saved.debitAmount).toLocaleString() + '원\n- 대변: ' + saved.creditAccount + ' ' + Number(saved.creditAmount).toLocaleString() + '원' + (saved.vehicleNo ? '\n- 차량번호: ' + saved.vehicleNo : ''));
 
         document.getElementById('voucherForm').reset();
+        loadRules();
       } catch (err) {
         console.error(err);
         alert('저장 실패\n\n' + (err && err.message ? err.message : String(err)));
@@ -288,6 +367,85 @@
         btn.textContent = '월전표 등록';
       }
     });
+
+    // ── 조회 기능 ────────────────────────────────────────────
+
+    async function loadRules() {
+      const activeVal = document.getElementById('filterActive').value;
+      const contractVal = document.getElementById('filterContract').value.trim();
+      const vehicleVal = document.getElementById('filterVehicle').value.trim();
+
+      const params = new URLSearchParams();
+      if (activeVal !== '') params.set('activeOnly', activeVal);
+      if (contractVal) params.set('contractNumber', contractVal);
+      if (vehicleVal) params.set('vehicleNo', vehicleVal);
+
+      const tbody = document.getElementById('ruleTableBody');
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="12">조회 중...</td></tr>';
+
+      try {
+        const res = await mustOk(await fetch(apiBase() + '/api/accounting/monthly-voucher-rules?' + params.toString()));
+        const list = await res.json();
+        renderRules(list);
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="12">조회 실패: ' + escapeHtml(err.message) + '</td></tr>';
+      }
+    }
+
+    function renderRules(list) {
+      const tbody = document.getElementById('ruleTableBody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="12">등록된 월전표 규칙이 없습니다.</td></tr>';
+        return;
+      }
+
+      const rows = list.map(function(r, idx) {
+        const activeCls = r.active ? 'on' : 'off';
+        const activeLabel = r.active ? '활성' : '비활성';
+        return '<tr>' +
+          '<td>' + (idx + 1) + '</td>' +
+          '<td><span class="badge-active ' + activeCls + '" onclick="toggleActive(' + r.id + ')" title="클릭하여 활성/비활성 전환">' + escapeHtml(activeLabel) + '</span></td>' +
+          '<td>' + escapeHtml(r.contractNumber || '-') + '</td>' +
+          '<td>' + escapeHtml(r.vehicleNo || '-') + '</td>' +
+          '<td>매월 ' + escapeHtml(String(r.monthlyDay)) + '일</td>' +
+          '<td>' + escapeHtml(r.debitAccount) + '</td>' +
+          '<td>' + escapeHtml(r.creditAccount) + '</td>' +
+          '<td class="amount-cell">' + fmtAmount(r.debitAmount) + '</td>' +
+          '<td>' + escapeHtml(r.memo || '-') + '</td>' +
+          '<td>' + escapeHtml(r.nextRunDate || '-') + '</td>' +
+          '<td>' + escapeHtml(r.lastRunDate || '-') + '</td>' +
+          '<td><button class="btn-del" onclick="deleteRule(' + r.id + ')">삭제</button></td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = rows.join('');
+    }
+
+    async function toggleActive(id) {
+      try {
+        await mustOk(await fetch(apiBase() + '/api/accounting/monthly-voucher-rules/' + id + '/toggle', { method: 'PATCH' }));
+        loadRules();
+      } catch (err) {
+        alert('상태 변경 실패\n' + (err.message || String(err)));
+      }
+    }
+
+    async function deleteRule(id) {
+      if (!confirm('이 월전표 규칙을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.')) return;
+      try {
+        await mustOk(await fetch(apiBase() + '/api/accounting/monthly-voucher-rules/' + id, { method: 'DELETE' }));
+        loadRules();
+      } catch (err) {
+        alert('삭제 실패\n' + (err.message || String(err)));
+      }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', loadRules);
+    document.getElementById('filterContract').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadRules(); });
+    document.getElementById('filterVehicle').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadRules(); });
+
+    // 페이지 진입 시 전체 목록 자동 조회
+    loadRules();
   </script>
 </body>
 </html>

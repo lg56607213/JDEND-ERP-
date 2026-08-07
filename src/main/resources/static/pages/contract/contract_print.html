@@ -131,11 +131,9 @@ td{
 
 <tr>
   <td class="label">고객명</td>
-  <td id="customerName"></td>
-  <td class="label">고객명</td>
-  <td id="customerName2"></td>
+  <td colspan="2" id="customerName"></td>
   <td class="label">연락처</td>
-  <td id="customerPhone"></td>
+  <td colspan="2" id="customerPhone"></td>
   <td class="label xsmall">주민등록번호<br>사업자번호</td>
   <td colspan="2" id="regNo"></td>
 </tr>
@@ -304,7 +302,6 @@ async function load(){
     '출력일: ' + new Date().toISOString().slice(0,10);
 
   document.getElementById('customerName').innerText = d.customerName || '';
-  document.getElementById('customerName2').innerText = d.customerName || '';
   document.getElementById('customerPhone').innerText = d.customerPhone || '';
   document.getElementById('regNo').innerText = d.customerRegistrationNumber || '';
   document.getElementById('address').innerText = d.customerAddress || '';

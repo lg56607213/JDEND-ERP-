@@ -190,7 +190,6 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/accounting/sales_voucher.html">매출전표등록</a></li>
                   <li><a href="${basePath}pages/accounting/monthly_voucher.html">월 전표등록</a></li>
                   <li><a href="${basePath}pages/accounting/depreciation_register.html">감가상각등록</a></li>
-                  <li><a href="${basePath}pages/accounting/depreciation_schedule_change.html">감가상각스케줄변경</a></li>
                   <li><a href="${basePath}pages/accounting/voucher_approval.html">전표승인</a></li>
                 </ul>
               </li>

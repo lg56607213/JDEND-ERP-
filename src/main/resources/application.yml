@@ -32,6 +32,13 @@ spring:
             enable: true
             required: true
 
+codef:
+  client-id: a872e297-5b27-459d-9896-5e02f2cb1d41
+  client-secret: 6e341ebb-de76-4af6-9093-be61e5dfc242
+  public-key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAye8Hl1Aym+MY4RfkB0tgnovLJmRQYCDUo4qAyHvsaQ1cw0N4Uxr5r/NMlG2A188GdGcGdvJ4G3G/05hZ0acTbwDGCLGWQT3jxyS9g8ZXBiRsWW2nwJEj2WewLBqH1hUd1eAieit8JsSOfshHSzbaynBlU+ZYcORHQhsSU9Jek7rbhWjymM8FaDuQmMAxp6PkAx0X+3D6ccVVgNsniKSXM2Qncahjs0FVlxylZ/vm/VUtylUDUwGDD2LhUVaUrwBw3OA5mUnSODs0NUsbe/kYA6bmpwgN8fKPDXBxgMAHhnMAXxxrMeRne3nK6Waq9mbsTq9SkJ02iboVQwLGLllnmwIDAQAB
+  base-url: https://api.codef.io
+  oauth-url: https://oauth.codef.io
+
 app:
   contact:
     recipient-email: ${MAIL_USERNAME}

@@ -76,7 +76,7 @@ public class SubscriptionPayService {
         params.put("CPID",             properties.getCpid());
         params.put("ORDERNO",          orderId);
         params.put("AMOUNT",           String.valueOf(req.getAmount()));
-        params.put("PRODUCTTYPE",      "2");
+        params.put("PRODUCTTYPE",      "1");
         params.put("PRODUCTNAME",      productName);
         params.put("PRODUCTCODE",      "ERP001");
         params.put("TAXFREECD",        "00");

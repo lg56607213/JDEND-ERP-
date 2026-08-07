@@ -72,7 +72,7 @@ public class KiwoomPayService {
         params.put("CPID",            properties.getCpid());
         params.put("ORDERNO",         orderId);
         params.put("AMOUNT",          String.valueOf(req.getAmount()));
-        params.put("PRODUCTTYPE",     "2");       // 실물
+        params.put("PRODUCTTYPE",     "1");
         params.put("PRODUCTNAME",     productName);
         params.put("PRODUCTCODE",     req.getContractNumber());
         params.put("TAXFREECD",       "00");      // 과세

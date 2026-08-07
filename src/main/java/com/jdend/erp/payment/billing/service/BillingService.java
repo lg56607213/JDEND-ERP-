@@ -329,10 +329,9 @@ public class BillingService {
 
             <tr>
               <td class="label">사업자번호</td>
-              <td colspan="2" class="value">%s</td>
+              <td colspan="4" class="value">%s</td>
               <td class="label">고객연락처</td>
-              <td colspan="2" class="value">%s</td>
-              <td colspan="3" class="value"></td>
+              <td colspan="3" class="value">%s</td>
             </tr>
 
             <tr>

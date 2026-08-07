@@ -195,12 +195,83 @@
     </div>
   </div>
 
+  <!-- 기타거래처 검색 모달 -->
+  <div class="modal-backdrop" id="vendorModalBackdrop"></div>
+  <div class="modal" id="vendorModal">
+    <div class="modal-header">
+      <div style="font-weight:700;">기타거래처 조회</div>
+      <button class="btn btn-ghost" type="button" onclick="closeVendorModal()">닫기</button>
+    </div>
+    <div class="modal-body">
+      <div class="search-row">
+        <input type="text" id="vendorSearchKw" placeholder="거래처명 / 거래처번호로 검색" />
+        <button class="btn btn-primary" type="button" onclick="doVendorSearch()">검색</button>
+      </div>
+      <div class="list">
+        <table>
+          <thead>
+            <tr>
+              <th>거래처번호</th><th>거래처명</th><th>종류</th><th>연락처</th><th style="width:70px;">선택</th>
+            </tr>
+          </thead>
+          <tbody id="vendorSearchTbody">
+            <tr><td colspan="5" style="color:#888;">🔍 버튼을 누르면 자동 조회됩니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeVendorModal()">닫기</button>
+    </div>
+  </div>
+
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
 
   <script>
     const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/$/, "");
     let rowCount = 0;
+    let myBankAccounts = [];
+    let myCorporateCards = [];
+
+    async function loadMyInfoAccounts() {
+      try {
+        const [banks, cards] = await Promise.all([
+          fetch(`${BASE}/api/my-info/bank-accounts?activeOnly=true`).then(r => r.ok ? r.json() : []),
+          fetch(`${BASE}/api/my-info/corporate-cards?activeOnly=true`).then(r => r.ok ? r.json() : [])
+        ]);
+        myBankAccounts = banks || [];
+        myCorporateCards = cards || [];
+      } catch(e) { console.warn('계좌/카드 로드 실패:', e); }
+    }
+
+    function onPaymentMethodChange(idx) {
+      const method = document.getElementById(`paymentMethod_${idx}`)?.value;
+      const sel = document.getElementById(`accountRef_${idx}`);
+      if (!sel) return;
+      if (method === '보통예금') {
+        let opts = '<option value="">계좌 선택</option>';
+        myBankAccounts.forEach(acc => {
+          const label = [acc.accountAlias, acc.bankName, acc.accountNumber].filter(Boolean).join(' ');
+          opts += `<option value="${escHtml(label)}">${escHtml(label)}</option>`;
+        });
+        if (!myBankAccounts.length) opts += '<option value="" disabled>내정보관리에 등록된 계좌 없음</option>';
+        sel.innerHTML = opts;
+        sel.style.display = '';
+      } else if (method === '법인카드') {
+        let opts = '<option value="">카드 선택</option>';
+        myCorporateCards.forEach(card => {
+          const label = [card.cardAlias, card.cardCompany, card.cardNumberLast4 ? `****${card.cardNumberLast4}` : ''].filter(Boolean).join(' ');
+          opts += `<option value="${escHtml(label)}">${escHtml(label)}</option>`;
+        });
+        if (!myCorporateCards.length) opts += '<option value="" disabled>내정보관리에 등록된 카드 없음</option>';
+        sel.innerHTML = opts;
+        sel.style.display = '';
+      } else {
+        sel.style.display = 'none';
+        sel.value = '';
+      }
+    }
 
     /* ── 공통 유틸 ──────────────────────────────── */
     async function mustOk(res) {
@@ -227,12 +298,20 @@
           <td><input type="number" placeholder="0" id="amount_${idx}" oninput="calculateVAT(${idx})"></td>
           <td><input type="number" placeholder="0" id="supply_${idx}" oninput="calculateTaxFromSupply(${idx})"></td>
           <td><input type="number" placeholder="0" id="tax_${idx}"></td>
-          <td><input type="text" placeholder="예: 에이스공업사" id="vendor_${idx}"></td>
           <td>
-            <select id="paymentMethod_${idx}">
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" placeholder="거래처 선택" id="vendor_${idx}" readonly style="flex:1; min-width:0; cursor:pointer; background:#f9fafb;" onclick="openVendorModal(${idx})">
+              <button type="button" style="min-width:32px; width:32px; height:34px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center;" onclick="openVendorModal(${idx})" title="거래처 검색">🔍</button>
+            </div>
+          </td>
+          <td>
+            <select id="paymentMethod_${idx}" onchange="onPaymentMethodChange(${idx})">
               <option value="미지급금">미지급금</option>
               <option value="법인카드">법인카드</option>
               <option value="보통예금">보통예금</option>
+            </select>
+            <select id="accountRef_${idx}" style="display:none; margin-top:4px; font-size:12px; width:100%;">
+              <option value="">선택</option>
             </select>
           </td>
           <td><input type="date" id="payDate_${idx}"></td>
@@ -243,10 +322,8 @@
 
     function addRow() {
       rowCount++;
-      const tbody = document.getElementById('maintenanceTableBody');
-      const div = document.createElement('div');
-      div.innerHTML = buildRowHtml(rowCount);
-      tbody.appendChild(div.firstElementChild);
+      document.getElementById('maintenanceTableBody')
+        .insertAdjacentHTML('beforeend', buildRowHtml(rowCount));
     }
 
     function deleteRow(idx) {
@@ -269,6 +346,60 @@
       const supply = parseFloat(document.getElementById(`supply_${idx}`)?.value) || 0;
       const vat    = Math.max(0, Math.round(amount - supply));
       document.getElementById(`tax_${idx}`).value = vat;
+    }
+
+    /* ── 기타거래처 검색 모달 ── */
+    let currentVendorRowIdx = null;
+
+    function openVendorModal(idx) {
+      currentVendorRowIdx = idx;
+      document.getElementById("vendorModalBackdrop").style.display = "block";
+      document.getElementById("vendorModal").style.display = "block";
+      document.getElementById("vendorSearchKw").value = "";
+      document.getElementById("vendorSearchTbody").innerHTML =
+        `<tr><td colspan="5" style="color:#888;">조회중...</td></tr>`;
+      doVendorSearch();
+    }
+
+    function closeVendorModal() {
+      document.getElementById("vendorModalBackdrop").style.display = "none";
+      document.getElementById("vendorModal").style.display = "none";
+      currentVendorRowIdx = null;
+    }
+
+    async function doVendorSearch() {
+      const kw = document.getElementById("vendorSearchKw").value.trim();
+      const tbody = document.getElementById("vendorSearchTbody");
+      tbody.innerHTML = `<tr><td colspan="5" style="color:#888;">조회중...</td></tr>`;
+      try {
+        const res = await fetch(`${BASE}/api/partners/search?kw=${encodeURIComponent(kw)}`);
+        await mustOk(res);
+        const list = await res.json();
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="5" style="color:#888;">결과 없음</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = list.map(p => `
+          <tr>
+            <td>${escHtml(p.partnerNumber ?? '-')}</td>
+            <td>${escHtml(p.customerName ?? '-')}</td>
+            <td>${escHtml(p.partnerType ?? '-')}</td>
+            <td>${escHtml(p.phone ?? '-')}</td>
+            <td><button type="button" class="btn btn-primary"
+              onclick="selectVendor('${escAttr(p.customerName)}')">선택</button></td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:#d00;">오류: ${escHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    function selectVendor(name) {
+      if (currentVendorRowIdx !== null) {
+        const input = document.getElementById(`vendor_${currentVendorRowIdx}`);
+        if (input) input.value = name;
+      }
+      closeVendorModal();
     }
 
     /* ── 차량 검색 모달 ── */
@@ -364,7 +495,7 @@
             <td class="right">${fmtMoney(r.supplyAmount)}</td>
             <td class="right">${fmtMoney(r.vatAmount)}</td>
             <td>${escHtml(r.vendor || '-')}</td>
-            <td>${escHtml(r.paymentMethod || '-')}</td>
+            <td>${escHtml(r.paymentMethod || '-')}${r.paymentDetail ? `<br><small style="color:#6b7280;">${escHtml(r.paymentDetail)}</small>` : ''}</td>
           </tr>
         `).join('');
       } catch(e) {
@@ -391,10 +522,11 @@
         const vat     = Number(document.getElementById(`tax_${idx}`)?.value || 0);
         const vendor  = (document.getElementById(`vendor_${idx}`)?.value || "").trim() || null;
         const method  = document.getElementById(`paymentMethod_${idx}`)?.value || "미지급금";
+        const accountRef = (document.getElementById(`accountRef_${idx}`)?.value || "").trim() || null;
         const payDate = (document.getElementById(`payDate_${idx}`)?.value || "").trim() || null;
 
         items.push({ description, amount, supplyAmount: supply, vatAmount: vat,
-                     vendor, paymentMethod: method, payDate });
+                     vendor, paymentMethod: method, paymentDetail: accountRef, payDate });
       }
 
       try {
@@ -431,7 +563,8 @@
     }
 
     /* ── 이벤트 바인딩 ── */
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+      await loadMyInfoAccounts();
       addRow(); // 첫 행
 
       document.getElementById("vehicleMgmtNo").addEventListener("keydown", async (e) => {
@@ -454,8 +587,13 @@
         if (e.key === "Enter") { e.preventDefault(); doVehicleSearch(); }
       });
 
+      document.getElementById("vendorModalBackdrop").addEventListener("click", closeVendorModal);
+      document.getElementById("vendorSearchKw").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); doVendorSearch(); }
+      });
+
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeVehicleModal();
+        if (e.key === "Escape") { closeVehicleModal(); closeVendorModal(); }
       });
     });
   </script>

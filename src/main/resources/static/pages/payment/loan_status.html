@@ -220,7 +220,7 @@
 
   <!-- 차량 선택 모달 -->
   <div class="modal-overlay" id="vehiclePickerModal" style="display:none;">
-    <div class="modal-content" style="width:min(900px, 92vw);">
+    <div class="modal-content" style="width:min(900px, 92vw); max-width:min(900px, 92vw);">
       <div class="modal-header">
         <h3>차량 검색</h3>
         <button type="button" class="modal-close" onclick="closeVehiclePicker()">&times;</button>
@@ -255,7 +255,7 @@
 
   <!-- 차입금 전표 등록 모달 (넓은 2-컬럼 레이아웃: 좌=입력 / 우=상환현황) -->
   <div class="modal-overlay" id="voucherModal" style="display:none;">
-    <div class="modal-content" style="width:min(1200px, 98vw); max-height:95vh; overflow:auto;">
+    <div class="modal-content" style="width:min(1200px, 98vw); max-width:min(1200px, 98vw); max-height:95vh; overflow:auto;">
       <div class="modal-header">
         <h3>차입금 납부 등록</h3>
         <button type="button" class="modal-close" onclick="closeVoucherModal()">&times;</button>
@@ -347,7 +347,7 @@
 
   <!-- 차입금 상환 현황 모달 -->
   <div class="modal-overlay" id="repaymentStatusModal" style="display:none;">
-    <div class="modal-content" style="width:min(1150px, 94vw);">
+    <div class="modal-content" style="width:min(1150px, 94vw); max-width:min(1150px, 94vw);">
       <div class="modal-header">
         <h3>차입금 상환 현황</h3>
         <button type="button" class="modal-close" onclick="closeRepaymentStatus()">&times;</button>

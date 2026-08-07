@@ -21,8 +21,8 @@ public class VehicleOrder {
   @Column(name="vehicle_mgmt_no", nullable=false, length=20)
   private String vehicleMgmtNo;
 
-  // 발주번호(10자리, J+YYMMDD+발주순번3). 1발주=N대일 때 N개 행이 같은 값을 공유하는 그룹 헤더.
-  @Column(name="order_no", length=10)
+  // 발주번호(12자리, VFM+YYMMDD+발주순번3). 1발주=N대일 때 N개 행이 같은 값을 공유하는 그룹 헤더.
+  @Column(name="order_no", length=20)
   private String orderNo;
 
   @Column(name="order_status", nullable=false, length=20)

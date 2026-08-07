@@ -24,6 +24,9 @@ public class VoucherApprovalRowResponse {
 
     private String status;
 
+    private String vehicleNo;
+    private String contractNumber;
+
     // 첫 줄인지 여부 (첫 줄만 체크박스/일자/전표번호/상태 표시)
     private boolean showMain;
 }
