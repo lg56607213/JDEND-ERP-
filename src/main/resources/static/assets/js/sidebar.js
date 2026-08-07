@@ -218,6 +218,7 @@ function loadSidebar() {
                 <span class="menu-label">보증금/선수금관리</span>
                 <ul>
                   <li><a href="${basePath}pages/accounting/deposit_management.html">보증금/선수금관리</a></li>
+                  <li><a href="${basePath}pages/accounting/prepaid_rent_management.html">선수금(렌트)관리</a></li>
                 </ul>
               </li>
             </ul>
