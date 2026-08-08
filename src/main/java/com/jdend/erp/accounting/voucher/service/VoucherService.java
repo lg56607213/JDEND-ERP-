@@ -5,6 +5,10 @@ import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
 import com.jdend.erp.accounting.voucher.repository.VoucherRepository;
 import com.jdend.erp.management.financial.repository.FinancialStatementAccountRepository;
+import com.jdend.erp.payment.payment.entity.Payment;
+import com.jdend.erp.payment.payment.repository.PaymentRepository;
+import com.jdend.erp.payment.receivable.entity.Receivable;
+import com.jdend.erp.payment.receivable.repository.ReceivableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,8 @@ public class VoucherService {
     private final VoucherNumberService voucherNumberService;
     private final FinancialStatementAccountRepository financialAccountRepository;
     private final AccountResolver accountResolver;
+    private final PaymentRepository paymentRepository;
+    private final ReceivableRepository receivableRepository;
 
     @Transactional(readOnly = true)
     public String nextVoucherNo(LocalDate date) {
@@ -198,8 +204,36 @@ public class VoucherService {
     @Transactional
     public int deleteByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) return 0;
+
+        // 수납과 연결된 전표면 미수금 복구 후 수납 레코드 삭제 (B안)
+        List<Payment> linked = paymentRepository.findByVoucherIdIn(ids);
+        for (Payment p : linked) {
+            cancelPaymentReceivable(p.getContractNumber(), p.getPaymentAmount());
+            paymentRepository.delete(p);
+            log.info("전표 삭제로 수납 자동 취소·삭제: paymentId={}, contractNumber={}", p.getId(), p.getContractNumber());
+        }
+
         voucherRepository.deleteAllById(ids);
         return ids.size();
+    }
+
+    private void cancelPaymentReceivable(String contractNumber, Long paymentAmount) {
+        if (contractNumber == null || contractNumber.isBlank()) return;
+        if (paymentAmount == null || paymentAmount <= 0) return;
+
+        List<Receivable> paid = receivableRepository.findByContractNumberAndStatusInOrderByIdDesc(
+                contractNumber, java.util.List.of("완납", "완료"));
+        long toReverse = paymentAmount;
+        for (Receivable r : paid) {
+            long amt = r.getReceivableAmount() == null ? 0L : r.getReceivableAmount();
+            if (toReverse >= amt) {
+                r.setStatus("미납");
+                receivableRepository.save(r);
+                toReverse -= amt;
+            } else {
+                break;
+            }
+        }
     }
 
     // [0]=accountCode (null 가능), [1]=accountName

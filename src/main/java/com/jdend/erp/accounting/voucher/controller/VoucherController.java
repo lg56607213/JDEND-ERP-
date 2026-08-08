@@ -105,7 +105,6 @@ public class VoucherController {
         String[] headers = {"전표일자", "전표번호", "차변계정", "차변금액", "차변적요",
                 "대변계정", "대변금액", "대변적요", "상태"};
         java.util.List<Object[]> rows = voucherService.listForApproval(startDate, endDate, status).stream()
-                .filter(VoucherApprovalRowResponse::isShowMain)
                 .map(v -> new Object[]{
                         v.getVoucherDate(), v.getVoucherNo(),
                         v.getDebitAccount(), v.getDebitAmount(), v.getDebitDescription(),

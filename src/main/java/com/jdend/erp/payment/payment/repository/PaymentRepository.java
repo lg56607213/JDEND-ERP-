@@ -39,4 +39,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     order by p.contractNumber asc, p.paymentDate asc, p.id asc
   """)
   List<Payment> findByContractNumberIn(@Param("contractNumbers") List<String> contractNumbers);
+
+  /** 전표 삭제 시 연결된 수납 일괄 조회 */
+  List<Payment> findByVoucherIdIn(List<Long> voucherIds);
 }

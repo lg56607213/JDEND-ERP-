@@ -238,38 +238,74 @@
 
         <div class="bottom-panel" id="paymentListSection">
           <h3 class="panel-title">수납 현황</h3>
-          <div class="panel-content">
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>회차</th>
-                    <th>청구시작일</th>
-                    <th>청구종료일</th>
-                    <th>세금계산서발행일</th>
-                    <th>납부일자</th>
-                    <th>렌트료</th>
-                    <th>수납금액</th>
-                    <th>미납금액</th>
-                    <th>미수금액</th>
-                    <th>상태</th>
-                    <th>원금</th>
-                    <th>이자</th>
-                    <th>미회수원금</th>
-                  </tr>
-                </thead>
-                <tbody id="scheduleStatusTableBody">
-                  <tr>
-                    <td colspan="13" style="text-align:center;padding:18px;color:#64748b;">
-                      계약을 조회하면 수납 현황이 표시됩니다.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div class="panel-content" style="display:flex;flex-direction:column;gap:20px;">
+
+            <!-- 수납 내역 (실제 Payment 레코드) -->
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <h4 style="margin:0;font-size:14px;font-weight:700;color:#374151;">수납 내역</h4>
+                <span class="muted" style="font-size:12px;">* 수납 취소 시 전표 및 미납 상태가 복구됩니다.</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>수납일자</th>
+                      <th>수납금액</th>
+                      <th>입금방법</th>
+                      <th>당사계좌</th>
+                      <th>전표번호</th>
+                      <th>비고</th>
+                      <th style="width:80px;">취소</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentHistoryTableBody">
+                    <tr>
+                      <td colspan="7" style="text-align:center;padding:14px;color:#64748b;">
+                        계약을 조회하면 수납 내역이 표시됩니다.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="muted" style="margin-top:10px;">
-              * 스케줄 기준으로 완납 / 부분수납 / 미납 상태가 표시됩니다.
+
+            <!-- 스케줄 현황 -->
+            <div>
+              <h4 style="margin:0 0 8px;font-size:14px;font-weight:700;color:#374151;">스케줄 현황</h4>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>회차</th>
+                      <th>청구시작일</th>
+                      <th>청구종료일</th>
+                      <th>세금계산서발행일</th>
+                      <th>납부일자</th>
+                      <th>렌트료</th>
+                      <th>수납금액</th>
+                      <th>미납금액</th>
+                      <th>미수금액</th>
+                      <th>상태</th>
+                      <th>원금</th>
+                      <th>이자</th>
+                      <th>미회수원금</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scheduleStatusTableBody">
+                    <tr>
+                      <td colspan="13" style="text-align:center;padding:18px;color:#64748b;">
+                        계약을 조회하면 수납 현황이 표시됩니다.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="muted" style="margin-top:10px;">
+                * 스케줄 기준으로 완납 / 부분수납 / 미납 상태가 표시됩니다.
+              </div>
             </div>
+
           </div>
         </div>
 
@@ -316,6 +352,7 @@
 
   <script src="../../assets/js/sidebar.js"></script>
   <script src="../../assets/js/config.js"></script>
+  <script src="../../assets/js/role.js"></script>
 
   <script>
     const resizer = document.getElementById('resizer');
@@ -426,7 +463,10 @@
         document.getElementById('displayContractStatus').textContent = d.contractStatus || '-';
         document.getElementById('customerInfo').classList.add('active');
 
-        await loadScheduleStatusByVehicleNo(currentVehicleNo);
+        await Promise.all([
+          loadPaymentHistory(cn),
+          loadScheduleStatusByVehicleNo(currentVehicleNo)
+        ]);
 
       } catch (e) {
         console.error(e);
@@ -435,6 +475,76 @@
         clearScheduleStatus('계약 조회 실패로 수납 현황을 불러올 수 없습니다.');
         alert('계약 조회 실패: ' + e.message);
       }
+    }
+
+    async function loadPaymentHistory(contractNumber) {
+      const tbody = document.getElementById('paymentHistoryTableBody');
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;color:#64748b;">불러오는 중...</td></tr>`;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/payments/by-contract/${encodeURIComponent(contractNumber)}`);
+        await mustOk(res);
+        const list = await res.json();
+        renderPaymentHistory(list);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;color:#b42318;">수납 내역 조회 실패: ${esc(e.message)}</td></tr>`;
+      }
+    }
+
+    function renderPaymentHistory(list) {
+      const tbody = document.getElementById('paymentHistoryTableBody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;color:#64748b;">수납 내역이 없습니다.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = '';
+      list.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+
+          <td>${esc(p.paymentDate ?? '')}</td>
+          <td class="amount-cell">${p.paymentAmount != null ? p.paymentAmount.toLocaleString() + '원' : '-'}</td>
+          <td>${esc(p.paymentMethod ?? '-')}</td>
+          <td>${esc(p.companyAccount ?? '-')}</td>
+          <td>${p.voucherId ? esc(String(p.voucherId)) : '<span style="color:#94a3b8;">없음</span>'}</td>
+          <td>${esc(p.memo ?? '')}</td>
+          <td style="text-align:center;">
+            <button class="btn-small cancel-payment-btn" style="color:#b42318;border-color:#fecdca;"
+              onclick="cancelPayment(${p.id})">취소</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      applyRoleToPaymentHistory();
+    }
+
+    async function cancelPayment(id) {
+      if (!(await window.isManager())) {
+        alert('수납 취소는 책임자 권한이 필요합니다.');
+        return;
+      }
+      if (!confirm('이 수납 건을 취소하시겠습니까?\n\n취소 시 연결 전표가 삭제되고, 미납 상태가 복구됩니다.')) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/payments/${id}`, { method: 'DELETE' });
+        await mustOk(res);
+        alert('수납이 취소되었습니다.');
+        const cn = document.getElementById('contractNumber').value.trim();
+        await Promise.all([
+          loadPaymentHistory(cn),
+          loadScheduleStatusByVehicleNo(currentVehicleNo)
+        ]);
+      } catch (e) {
+        alert('수납 취소 실패: ' + e.message);
+      }
+    }
+
+    async function applyRoleToPaymentHistory() {
+      if (await window.isManager()) return;
+      document.querySelectorAll('.cancel-payment-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.title = '책임자 권한이 필요합니다.';
+        btn.style.opacity = '0.4';
+        btn.style.cursor = 'not-allowed';
+      });
     }
 
     async function loadScheduleStatusByVehicleNo(vehicleNo) {
@@ -628,12 +738,16 @@
 
         await mustOk(res);
 
+        const cn = document.getElementById('contractNumber').value.trim();
         alert(isEdit ? '수납 수정 완료' : (createVoucher ? '수납 등록 완료' : '수납 등록 완료 (전표 미생성)'));
 
         resetForm(true);
 
         if (currentVehicleNo) {
-          await loadScheduleStatusByVehicleNo(currentVehicleNo);
+          await Promise.all([
+            loadPaymentHistory(cn),
+            loadScheduleStatusByVehicleNo(currentVehicleNo)
+          ]);
         }
 
       } catch (err) {
@@ -657,6 +771,8 @@
       onPayVoucherFlagChange();
 
       clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
+      document.getElementById('paymentHistoryTableBody').innerHTML =
+        `<tr><td colspan="7" style="text-align:center;padding:14px;color:#64748b;">계약을 조회하면 수납 내역이 표시됩니다.</td></tr>`;
     }
 
     document.getElementById('btnReset').addEventListener('click', () => resetForm(false));

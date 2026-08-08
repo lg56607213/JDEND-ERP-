@@ -296,7 +296,7 @@ public class SubscriptionPayService {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json;charset=EUC-KR");
+            conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
             if (authorization != null && !authorization.isBlank()) {
                 conn.setRequestProperty("Authorization", authorization);
             }

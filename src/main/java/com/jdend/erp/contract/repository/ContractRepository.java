@@ -36,6 +36,9 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
     from Contract c
     where replace(replace(trim(c.vehicleNo), ' ', ''), '-', '') =
           replace(replace(trim(:vehicleNo), ' ', ''), '-', '')
+      and c.status not in (
+        '종료','만기종료','해지','중도해지','중도상환','만기상환','완료','종결','해지대기'
+      )
   """)
   boolean existsByVehicleNoNormalized(@Param("vehicleNo") String vehicleNo);
 

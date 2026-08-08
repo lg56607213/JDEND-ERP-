@@ -110,11 +110,16 @@ public class EarlyTerminationService {
 
     EarlyTermination saved = earlyTerminationRepository.save(et);
 
-    // ✅ 중도상환 > 반납 > 처리완료 인 경우 전표 발생
-    if (isReturnCompleted(saved)) {
-      createReturnVoucher(saved);
-      // NEW-07: 연관 계약 상태를 "해지"로 갱신
+    if ("처리완료".equals(saved.getStatus())) {
+      // 반납+처리완료: 전표 생성 + 계약 해지
+      if (isReturnCompleted(saved)) {
+        createReturnVoucher(saved);
+      }
+      // 인수+처리완료도 계약 해지 처리
       updateContractStatus(saved.getContractNumber(), "해지");
+    } else {
+      // 처리대기: 계약을 "해지대기"로 변경 → 차량 재계약 등록 가능
+      updateContractStatus(saved.getContractNumber(), "해지대기");
     }
 
     return saved.getId();
@@ -148,6 +153,8 @@ public class EarlyTerminationService {
 
     boolean wasReturnCompleted = "반납".equals(prevMethod) && "처리완료".equals(prevStatus);
     boolean isNowReturnCompleted = isReturnCompleted(et);
+    boolean wasCompleted = "처리완료".equals(prevStatus);
+    boolean isNowCompleted = "처리완료".equals(et.getStatus());
 
     if (wasReturnCompleted && isNowReturnCompleted) {
       // BUG-F03: 이미 처리완료 상태에서 금액 수정 → 기존 전표 삭제 후 재생성
@@ -160,7 +167,6 @@ public class EarlyTerminationService {
     } else if (!wasReturnCompleted && isNowReturnCompleted) {
       // 처음으로 반납+처리완료 상태가 된 경우
       createReturnVoucher(et);
-      updateContractStatus(et.getContractNumber(), "해지");
     } else if (wasReturnCompleted && !isNowReturnCompleted) {
       // NEW-BUG-05: 처리완료 → 처리대기 등 취소 시 기존 전표 삭제
       if (et.getContractNumber() != null) {
@@ -168,6 +174,15 @@ public class EarlyTerminationService {
             et.getContractNumber(), "중도상환 반납");
         voucherRepository.deleteAll(oldVouchers);
       }
+    }
+
+    // 계약 상태 동기화
+    if (isNowCompleted) {
+      // 처리완료(반납·인수 모두) → 계약 "해지"
+      updateContractStatus(et.getContractNumber(), "해지");
+    } else if (wasCompleted) {
+      // 처리완료 → 처리대기로 복귀 → "해지대기"로 되돌림
+      updateContractStatus(et.getContractNumber(), "해지대기");
     }
   }
 
@@ -182,6 +197,17 @@ public class EarlyTerminationService {
       if (!vouchers.isEmpty()) {
         voucherRepository.deleteAll(vouchers);
       }
+    }
+
+    // 해지대기 상태였던 계약은 진행중으로 복구 (처리완료로 완전히 해지된 경우는 복구 안 함)
+    if (et.getContractNumber() != null) {
+      contractRepository.findByContractNumber(et.getContractNumber()).ifPresent(contract -> {
+        if ("해지대기".equals(contract.getStatus())) {
+          contract.setStatus("진행중");
+          contractRepository.save(contract);
+          log.info("중도상환 삭제로 계약 상태 복구: {} 해지대기→진행중", et.getContractNumber());
+        }
+      });
     }
 
     earlyTerminationRepository.deleteById(id);

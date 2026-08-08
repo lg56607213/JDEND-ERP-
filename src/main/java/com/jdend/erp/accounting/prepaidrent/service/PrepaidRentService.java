@@ -11,12 +11,14 @@ import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PrepaidRentService {
@@ -235,6 +237,45 @@ public class PrepaidRentService {
                         .description(memoText)
                         .build()))
                 .build());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 수납 초과금액 자동 등록 / 정리 (PaymentService에서 호출)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * 수납 초과금액을 선수금으로 자동 등록.
+     * 전표는 수납 전표에 이미 포함되어 있으므로 별도 생성하지 않는다.
+     */
+    @Transactional
+    public void registerFromPaymentExcess(Long contractId, Long amount,
+                                          LocalDate transactionDate, String originalMemo, Long paymentId) {
+        if (contractId == null || amount == null || amount <= 0) return;
+        String tag  = "[자동수납:" + paymentId + "]";
+        String memo = (originalMemo != null && !originalMemo.isBlank()) ? tag + " " + originalMemo : tag;
+        PrepaidRent p = PrepaidRent.builder()
+                .contractId(contractId)
+                .transactionType("입금")
+                .amount(amount)
+                .transactionDate(transactionDate)
+                .memo(memo)
+                .voucherCreated(true)
+                .build();
+        prepaidRepo.save(p);
+        log.info("[선수금자동] paymentId={} contractId={} 초과금액={} 선수금 등록", paymentId, contractId, amount);
+    }
+
+    /** 수납 취소 시 연결된 자동 선수금 레코드 삭제 */
+    @Transactional
+    public void deleteByPaymentReference(Long contractId, Long paymentId) {
+        if (contractId == null || paymentId == null) return;
+        String tag = "[자동수납:" + paymentId + "]";
+        prepaidRepo.findByContractIdOrderByTransactionDateAscIdAsc(contractId).stream()
+                .filter(p -> p.getMemo() != null && p.getMemo().startsWith(tag))
+                .forEach(p -> {
+                    prepaidRepo.delete(p);
+                    log.info("[선수금자동] paymentId={} 취소로 선수금 레코드 삭제 id={}", paymentId, p.getId());
+                });
     }
 
     // ─────────────────────────────────────────────────────────────────────

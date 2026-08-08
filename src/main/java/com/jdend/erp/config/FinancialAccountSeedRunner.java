@@ -54,8 +54,17 @@ public class FinancialAccountSeedRunner {
      * 임대보증금 계정(200202)이 없으면 비유동부채(2002) 하위에 추가한다.
      */
     private void seedRentalDeposit(String db) {
-        if (fsAccountRepo.existsByAccountCode("200202")) {
-            log.debug("[FinancialSeed] db={} 200202(임대보증금) 이미 존재, 스킵", db);
+        Optional<FinancialStatementAccount> existing = fsAccountRepo.findByAccountCode("200202");
+        if (existing.isPresent()) {
+            FinancialStatementAccount acc = existing.get();
+            if (!"임대보증금".equals(acc.getAccountName())) {
+                String oldName = acc.getAccountName();
+                acc.setAccountName("임대보증금");
+                fsAccountRepo.save(acc);
+                log.info("[FinancialSeed] db={} 200202 계정명 '{}' → '임대보증금' 업데이트", db, oldName);
+            } else {
+                log.debug("[FinancialSeed] db={} 200202(임대보증금) 정상, 스킵", db);
+            }
             return;
         }
 

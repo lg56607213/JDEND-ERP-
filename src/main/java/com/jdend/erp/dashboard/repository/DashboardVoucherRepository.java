@@ -18,6 +18,7 @@ public interface DashboardVoucherRepository extends JpaRepository<VoucherLine, L
         from voucher_lines vl
         join vouchers v on v.id = vl.voucher_id
         where vl.account_name like '보통예금%'
+          and v.status = '승인'
           and v.voucher_date >= :from
           and v.voucher_date <= :to
         group by v.voucher_date
@@ -62,34 +63,37 @@ public interface DashboardVoucherRepository extends JpaRepository<VoucherLine, L
 
     // ── accountCode='100101'(보통예금) 기준 집계 ──────────────────────────────
 
-    /** 보통예금(100101) 특정일까지 누적 순잔액 (차변합 - 대변합) */
+    /** 보통예금(100101) 특정일까지 누적 순잔액 (차변합 - 대변합) — 승인 전표만 */
     @Query("""
         select coalesce(
             sum(case when vl.lineType = 'DEBIT' then vl.amount else -vl.amount end), 0)
         from VoucherLine vl
         join vl.voucher v
         where vl.accountCode = '100101'
+          and v.status = '승인'
           and v.voucherDate <= :d
     """)
     Long sumNetUpToByAccountCode(@Param("d") LocalDate d);
 
-    /** 보통예금(100101) 특정일 차변(수입) 합계 */
+    /** 보통예금(100101) 특정일 차변(수입) 합계 — 승인 전표만 */
     @Query("""
         select coalesce(sum(vl.amount), 0)
         from VoucherLine vl
         join vl.voucher v
         where vl.accountCode = '100101'
+          and v.status = '승인'
           and vl.lineType = 'DEBIT'
           and v.voucherDate = :d
     """)
     Long sumDebitOnByAccountCode(@Param("d") LocalDate d);
 
-    /** 보통예금(100101) 특정일 대변(지출) 합계 */
+    /** 보통예금(100101) 특정일 대변(지출) 합계 — 승인 전표만 */
     @Query("""
         select coalesce(sum(vl.amount), 0)
         from VoucherLine vl
         join vl.voucher v
         where vl.accountCode = '100101'
+          and v.status = '승인'
           and vl.lineType = 'CREDIT'
           and v.voucherDate = :d
     """)

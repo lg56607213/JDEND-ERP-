@@ -1,5 +1,6 @@
 package com.jdend.erp.payment.payment.service;
 
+import com.jdend.erp.accounting.prepaidrent.service.PrepaidRentService;
 import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.entity.Voucher;
 import com.jdend.erp.accounting.voucher.entity.VoucherLine;
@@ -38,6 +39,7 @@ public class PaymentService {
   private final VehicleOrderRepository vehicleOrderRepo;
   private final ReceivableRepository receivableRepo;  // BUG-10
   private final VoucherNumberService voucherNumberService;
+  private final PrepaidRentService prepaidRentService;
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -50,6 +52,12 @@ public class PaymentService {
     Payment p = paymentRepo.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id));
     return toResponse(p);
+  }
+
+  @Transactional(readOnly = true)
+  public List<PaymentResponse> listByContractNumber(String contractNumber) {
+    return paymentRepo.findByContractNumberOrderByPaymentDateAscIdAsc(contractNumber)
+        .stream().map(this::toResponse).toList();
   }
 
   @Transactional
@@ -75,18 +83,29 @@ public class PaymentService {
         .memo(req.getMemo())
         .build());
 
+    // 납기일 이전(포함) 미납 합계 기준으로 초과금액 계산
+    LocalDate paymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+    long totalDue = calcTotalDue(c.getContractNumber(), paymentDate);
+    long excess   = Math.max(0L, req.getPaymentAmount() - totalDue);
+
     boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
     if (shouldCreateVoucher) {
       // BUG-03: createVoucherIfNeeded가 생성된 전표 ID를 반환하고 Payment에 저장
-      Long voucherId = createVoucherIfNeeded(saved);
+      Long voucherId = createVoucherIfNeeded(saved, totalDue, excess);
       if (voucherId != null) {
         saved.setVoucherId(voucherId);
         paymentRepo.save(saved);
       }
     }
 
-    // BUG-10: 수납 등록 후 동일 계약의 미납 미수금 상태 업데이트
-    updateReceivableStatus(saved.getContractNumber(), saved.getPaymentAmount());
+    // BUG-10: 수납 등록 후 납기일 이전(포함) 미납 미수금 상태 업데이트
+    updateReceivableStatus(saved.getContractNumber(), saved.getPaymentAmount(), paymentDate);
+
+    // 초과금액 → 선수금 자동 등록
+    if (excess > 0 && saved.getContractId() != null) {
+      prepaidRentService.registerFromPaymentExcess(
+          saved.getContractId(), excess, saved.getPaymentDate(), saved.getMemo(), saved.getId());
+    }
 
     return toResponse(saved);
   }
@@ -130,10 +149,10 @@ public class PaymentService {
     p.setCompanyAccount(req.getCompanyAccount());
     p.setMemo(req.getMemo());
 
-    // BUG-03: 수정 후 전표 재생성
+    // BUG-03: 수정 후 전표 재생성 (수정 시는 초과금액 분리 없이 전액 렌트수익 처리)
     boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
     if (shouldCreateVoucher) {
-      Long newVoucherId = createVoucherIfNeeded(p);
+      Long newVoucherId = createVoucherIfNeeded(p, req.getPaymentAmount(), 0L);
       if (newVoucherId != null) {
         p.setVoucherId(newVoucherId);
       }
@@ -141,8 +160,9 @@ public class PaymentService {
 
     paymentRepo.save(p);
 
-    // BUG-03: 수정 후 새 금액으로 미수금 상태 재적용
-    updateReceivableStatus(p.getContractNumber(), req.getPaymentAmount());
+    // BUG-03: 수정 후 새 금액으로 납기일 이전(포함) 미수금 상태 재적용
+    LocalDate updatedPaymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+    updateReceivableStatus(p.getContractNumber(), req.getPaymentAmount(), updatedPaymentDate);
 
     return toResponse(p);
   }
@@ -163,18 +183,22 @@ public class PaymentService {
     // BUG-03: 삭제 시 미수금 상태 복구
     restoreReceivableStatus(p.getContractNumber(), p.getPaymentAmount());
 
+    // 자동 등록된 선수금 레코드 삭제
+    prepaidRentService.deleteByPaymentReference(p.getContractId(), id);
+
     paymentRepo.deleteById(id);
   }
 
   /**
    * BUG-03: 전표 생성 후 생성된 전표 ID를 반환한다.
+   * @param totalDue  미납 미수금 합계 (excess > 0 일 때 렌트수익 대변 금액)
+   * @param excess    초과 수납액 → 선수금 대변
    * @return 생성된 Voucher ID, 생성 조건 미충족 시 null
    */
-  private Long createVoucherIfNeeded(Payment payment) {
+  private Long createVoucherIfNeeded(Payment payment, long totalDue, long excess) {
     if (payment == null) return null;
     if (payment.getPaymentAmount() == null || payment.getPaymentAmount() <= 0) return null;
 
-    // 현금주의: 수납은 현금 실수령이므로 수단과 무관하게 수익 전표를 생성한다.
     // 기타계정관리에서 설정한 계정명 사용. 미설정이면 전표를 생성하지 않는다.
     String debitAccount  = accountSettings.getPaymentDebitAccount();
     String creditAccount = accountSettings.getPaymentCreditAccount();
@@ -185,7 +209,6 @@ public class PaymentService {
 
     LocalDate voucherDate = payment.getPaymentDate() != null ? payment.getPaymentDate() : LocalDate.now();
     String voucherNo = nextVoucherNo(voucherDate);
-
     String memo = buildPaymentVoucherMemo(payment);
 
     String vehicleMgmtNo = null;
@@ -207,6 +230,7 @@ public class PaymentService {
         .memo(memo)
         .build();
 
+    // 차변: 보통예금 (전액)
     voucher.addLine(VoucherLine.builder()
         .lineType("DEBIT")
         .accountCode(accountResolver.codeOf(debitAccount))
@@ -216,28 +240,76 @@ public class PaymentService {
         .sortOrder(1)
         .build());
 
-    voucher.addLine(VoucherLine.builder()
-        .lineType("CREDIT")
-        .accountCode(accountResolver.codeOf(creditAccount))
-        .accountName(creditAccount)
-        .amount(payment.getPaymentAmount())
-        .description("수납등록 입금")
-        .sortOrder(2)
-        .build());
+    if (excess > 0 && totalDue > 0) {
+      // 초과 수납: 대변 ① 렌트수익 (미수금 해당분), 대변 ② 선수금 (초과분)
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(accountResolver.codeOf(creditAccount))
+          .accountName(creditAccount)
+          .amount(totalDue)
+          .description("수납등록 입금")
+          .sortOrder(2)
+          .build());
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(prepaidAccountCode())
+          .accountName("선수금")
+          .amount(excess)
+          .description("초과수납 선수금")
+          .sortOrder(3)
+          .build());
+    } else if (excess > 0) {
+      // 미수금 0인데 전액 초과: 대변 선수금 전액
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(prepaidAccountCode())
+          .accountName("선수금")
+          .amount(payment.getPaymentAmount())
+          .description("선수금 입금")
+          .sortOrder(2)
+          .build());
+    } else {
+      // 일반 수납: 대변 렌트수익 전액
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(accountResolver.codeOf(creditAccount))
+          .accountName(creditAccount)
+          .amount(payment.getPaymentAmount())
+          .description("수납등록 입금")
+          .sortOrder(2)
+          .build());
+    }
 
     Voucher saved = voucherRepository.save(voucher);
     return saved.getId();
   }
 
+  /** 선수금 계정코드: 기타계정관리 설정 우선, 없으면 계정명으로 조회 */
+  private String prepaidAccountCode() {
+    String code = accountSettings.getPrepaidDebitAccountCode();
+    if (code != null && !code.isBlank()) return code;
+    return accountResolver.codeOf("선수금");
+  }
+
+  /** 납기일 이전(포함) 미납 미수금 합계 — 초과수납 판별용 */
+  private long calcTotalDue(String contractNumber, LocalDate asOfDate) {
+    if (contractNumber == null || contractNumber.isBlank()) return 0L;
+    return receivableRepo.findByContractNumberAndStatusAndReceivableDateLTE(
+            contractNumber, "미납", asOfDate).stream()
+        .mapToLong(r -> r.getReceivableAmount() == null ? 0L : r.getReceivableAmount())
+        .sum();
+  }
+
   /**
-   * BUG-10: 수납 등록 시 동일 계약번호의 미납 미수금 상태를 업데이트한다.
-   * 수납액 >= 미수금액이면 '완납'으로 처리한다.
+   * BUG-10: 수납 등록 시 납기일 이전(포함) 미납 미수금 상태를 완납으로 업데이트한다.
+   * 미래 납기 미수금은 건드리지 않으며, 초과분은 선수금으로 별도 처리된다.
    */
-  private void updateReceivableStatus(String contractNumber, Long paymentAmount) {
+  private void updateReceivableStatus(String contractNumber, Long paymentAmount, LocalDate asOfDate) {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<Receivable> unpaid = receivableRepo.findByContractNumberAndStatus(contractNumber, "미납");
+    List<Receivable> unpaid = receivableRepo.findByContractNumberAndStatusAndReceivableDateLTE(
+        contractNumber, "미납", asOfDate);
     if (unpaid.isEmpty()) return;
 
     long remaining = paymentAmount;
@@ -248,17 +320,18 @@ public class PaymentService {
         receivableRepo.save(r);
         remaining -= amt;
       } else {
-        break;  // 잔여 수납액이 미수금보다 적으면 중단
+        break;
       }
     }
   }
 
-  /** BUG-03: 수납 삭제/수정 시 완납으로 처리된 미수금을 역순으로 미납으로 되돌린다. */
+  /** BUG-03: 수납 삭제/수정 시 완납·완료 처리된 미수금을 역순으로 미납으로 되돌린다. */
   private void restoreReceivableStatus(String contractNumber, Long paymentAmount) {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<Receivable> paid = receivableRepo.findByContractNumberAndStatusOrderByIdDesc(contractNumber, "완납");
+    List<Receivable> paid = receivableRepo.findByContractNumberAndStatusInOrderByIdDesc(
+        contractNumber, List.of("완납", "완료"));
     if (paid.isEmpty()) return;
 
     long toReverse = paymentAmount;

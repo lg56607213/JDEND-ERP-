@@ -14,9 +14,21 @@ public interface ReceivableRepository extends JpaRepository<Receivable, Long> {
   @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status order by r.receivableDate asc, r.id asc")
   List<Receivable> findByContractNumberAndStatus(@Param("contractNumber") String contractNumber, @Param("status") String status);
 
+  /** 납기일 이전(포함) 미납 미수금 조회 — 초과수납 판별 및 완납 처리에 사용 */
+  @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status and r.receivableDate <= :asOfDate order by r.receivableDate asc, r.id asc")
+  List<Receivable> findByContractNumberAndStatusAndReceivableDateLTE(
+      @Param("contractNumber") String contractNumber,
+      @Param("status") String status,
+      @Param("asOfDate") LocalDate asOfDate
+  );
+
   /** BUG-03: 수납 삭제/수정 시 완납 상태 역순 복구용 (가장 최근 완납 순) */
   @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status = :status order by r.receivableDate desc, r.id desc")
   List<Receivable> findByContractNumberAndStatusOrderByIdDesc(@Param("contractNumber") String contractNumber, @Param("status") String status);
+
+  /** 수납 취소 시 완납·완료 모두 복구 대상으로 조회 */
+  @Query("select r from Receivable r where r.contractNumber = :contractNumber and r.status in :statuses order by r.receivableDate desc, r.id desc")
+  List<Receivable> findByContractNumberAndStatusInOrderByIdDesc(@Param("contractNumber") String contractNumber, @Param("statuses") List<String> statuses);
 
   @Query("""
     select r

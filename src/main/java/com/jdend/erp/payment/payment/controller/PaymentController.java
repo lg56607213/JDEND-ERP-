@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/payments")
@@ -29,6 +31,11 @@ public class PaymentController {
   @GetMapping("/{id}")
   public PaymentResponse get(@PathVariable Long id) {
     return service.get(id);
+  }
+
+  @GetMapping("/by-contract/{contractNumber}")
+  public List<PaymentResponse> listByContract(@PathVariable String contractNumber) {
+    return service.listByContractNumber(contractNumber);
   }
 
   @PostMapping
