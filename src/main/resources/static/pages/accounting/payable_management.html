@@ -155,6 +155,7 @@
       <select id="payeeSelect" onchange="onPayeeChange()">
         <option value="">-- 미선택 --</option>
       </select>
+      <input type="text" id="payeeDirectInput" style="display:none;margin-top:6px;" placeholder="지급처명 직접 입력">
     </div>
     <div class="mfg">
       <label>지급계좌 <span style="color:#9ca3af;font-weight:400;">(선택)</span></label>
@@ -162,7 +163,7 @@
         <option value="">-- 거래처 선택 후 계좌 표시 --</option>
       </select>
       <input type="text" id="paymentAccountDirect" style="display:none;margin-top:6px;" placeholder="계좌번호 직접 입력">
-      <button type="button" id="btnDirectInput" class="btn-direct" style="display:none;" onclick="toggleDirectInput()">직접입력</button>
+      <button type="button" id="btnDirectInput" class="btn-direct" onclick="toggleDirectInput()">직접입력</button>
     </div>
     <div class="mfg">
       <label>메모</label>
@@ -295,11 +296,13 @@
     onBankAccountInput();
 
     // 지급처/지급계좌 초기화
+    document.getElementById('payeeDirectInput').style.display = 'none';
+    document.getElementById('payeeDirectInput').value = '';
     document.getElementById('paymentAccountSelect').innerHTML = '<option value="">-- 거래처 선택 후 계좌 표시 --</option>';
     document.getElementById('paymentAccountSelect').style.display = '';
     document.getElementById('paymentAccountDirect').style.display = 'none';
     document.getElementById('paymentAccountDirect').value = '';
-    document.getElementById('btnDirectInput').style.display = 'none';
+    document.getElementById('btnDirectInput').textContent = '직접입력';
     await loadPartners();
 
     document.getElementById('payModal').classList.add('open');
@@ -309,38 +312,59 @@
     document.getElementById('payModal').classList.remove('open');
   }
 
-  // 지급처 목록 로드
+  // 지급처 목록 로드 (기타거래처 + 직접입력)
   async function loadPartners() {
     const sel = document.getElementById('payeeSelect');
     sel.innerHTML = '<option value="">-- 미선택 --</option>';
     try {
       const res = await fetch('/api/partners/search?kw=', { credentials: 'include' });
-      if (!res.ok) return;
-      const list = await res.json();
-      list.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.dataset.partnerName = p.partnerName;
-        opt.textContent = p.partnerName;
-        sel.appendChild(opt);
-      });
+      if (res.ok) {
+        const list = await res.json();
+        list.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.dataset.partnerName = p.partnerName;
+          opt.textContent = p.partnerName;
+          sel.appendChild(opt);
+        });
+      }
     } catch (e) { /* 무시 */ }
+    // 항상 직접입력 옵션 추가
+    const directOpt = document.createElement('option');
+    directOpt.value = 'DIRECT';
+    directOpt.textContent = '── 직접입력 ──';
+    sel.appendChild(directOpt);
   }
 
   // 지급처 변경 시 계좌 목록 갱신
   async function onPayeeChange() {
     const sel = document.getElementById('payeeSelect');
     const partnerId = sel.value;
+    const payeeDirect = document.getElementById('payeeDirectInput');
     const acctSel = document.getElementById('paymentAccountSelect');
     const directInput = document.getElementById('paymentAccountDirect');
     const btnDirect = document.getElementById('btnDirectInput');
 
-    // 초기화
+    // 지급처 직접입력 토글
+    if (partnerId === 'DIRECT') {
+      payeeDirect.style.display = '';
+      payeeDirect.focus();
+      // 지급계좌도 직접입력 모드로 자동 전환
+      acctSel.innerHTML = '<option value="">직접 입력</option>';
+      acctSel.style.display = 'none';
+      directInput.style.display = '';
+      directInput.value = '';
+      btnDirect.textContent = '목록으로';
+      return;
+    }
+    payeeDirect.style.display = 'none';
+    payeeDirect.value = '';
+
+    // 지급계좌 초기화
     acctSel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
     acctSel.style.display = '';
     directInput.style.display = 'none';
     directInput.value = '';
-    btnDirect.style.display = 'none';
     btnDirect.textContent = '직접입력';
 
     if (!partnerId) return;
@@ -351,7 +375,6 @@
       const accounts = await res.json();
       if (!accounts || accounts.length === 0) {
         acctSel.innerHTML = '<option value="">등록된 계좌 없음</option>';
-        btnDirect.style.display = 'inline-block';
       } else {
         accounts.forEach(a => {
           const opt = document.createElement('option');
@@ -359,11 +382,9 @@
           opt.textContent = `${a.bankName} ${a.accountNumber}` + (a.accountHolder ? ` (${a.accountHolder})` : '');
           acctSel.appendChild(opt);
         });
-        btnDirect.style.display = 'inline-block';
       }
     } catch (e) {
       acctSel.innerHTML = '<option value="">로드 실패</option>';
-      btnDirect.style.display = 'inline-block';
     }
   }
 
@@ -390,10 +411,15 @@
     const checked = document.querySelectorAll('.row-check:checked');
     const lineIds = Array.from(checked).map(c => Number(c.value));
 
-    // 지급처 이름 (선택한 option의 dataset)
+    // 지급처 이름
     const payeeSelect = document.getElementById('payeeSelect');
-    const selectedOpt = payeeSelect.options[payeeSelect.selectedIndex];
-    const payeeName = (selectedOpt && selectedOpt.value) ? (selectedOpt.dataset.partnerName || '') : '';
+    let payeeName = '';
+    if (payeeSelect.value === 'DIRECT') {
+      payeeName = document.getElementById('payeeDirectInput').value.trim();
+    } else {
+      const selectedOpt = payeeSelect.options[payeeSelect.selectedIndex];
+      payeeName = (selectedOpt && selectedOpt.value) ? (selectedOpt.dataset.partnerName || selectedOpt.textContent || '') : '';
+    }
 
     // 지급계좌: 직접입력 vs 드롭다운
     const directInput = document.getElementById('paymentAccountDirect');
