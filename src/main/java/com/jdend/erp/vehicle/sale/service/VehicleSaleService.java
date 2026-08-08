@@ -66,7 +66,7 @@ public class VehicleSaleService {
     VehicleSale saved = saleRepo.save(s);
 
     // BUG-04: 전표 생성 후 ID를 VehicleSale에 저장
-    Long voucherId = createSaleVoucher(saved);
+    Long voucherId = createSaleVoucher(saved, req.companyAccount);
     if (voucherId != null) {
       saved.setVoucherId(voucherId);
       saleRepo.save(saved);
@@ -79,7 +79,7 @@ public class VehicleSaleService {
    * BUG-04: 전표 생성 후 Voucher ID 반환
    * BUG-13: findByVehicleNo → findFirstByVehicleNoOrderByIdDesc (NonUniqueResultException 방지)
    */
-  private Long createSaleVoucher(VehicleSale s) {
+  private Long createSaleVoucher(VehicleSale s, String companyAccount) {
     long acquisitionCost = 0L;
     long accumulated = 0L;
     long remaining = 0L;
@@ -119,8 +119,13 @@ public class VehicleSaleService {
     String vatCreditAccount     = accountSettings.getSaleVatCreditAccount();
     String vehicleAssetAccount  = accountSettings.getSaleVehicleAssetAccount();
 
+    String debitDesc = memo;
+    if (companyAccount != null && !companyAccount.isBlank()) {
+      debitDesc += " [계좌: " + companyAccount + "]";
+    }
+
     List<VoucherCreateRequest.VoucherLineRequest> debits = new ArrayList<>();
-    debits.add(line(saleDebitAccount, s.getSaleAmount(), memo));
+    debits.add(line(saleDebitAccount, s.getSaleAmount(), debitDesc));
 
     List<VoucherCreateRequest.VoucherLineRequest> credits = new ArrayList<>();
     long revenueAmount = (vatCreditAccount != null) ? s.getSupplyAmount() : s.getSaleAmount();
@@ -207,7 +212,7 @@ public class VehicleSaleService {
     saleRepo.save(s);
 
     // BUG-04: 새 금액/날짜로 전표 재생성
-    Long newVoucherId = createSaleVoucher(s);
+    Long newVoucherId = createSaleVoucher(s, req.companyAccount);
     if (newVoucherId != null) {
       s.setVoucherId(newVoucherId);
       saleRepo.save(s);

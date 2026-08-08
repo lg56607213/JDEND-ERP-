@@ -14,6 +14,7 @@ public class VehicleSaleDtos {
     public LocalDate saleDate;     // 필수
     public String buyer;           // 필수
     public Long saleAmount;        // 필수
+    public String companyAccount;  // 당사 계좌번호 (보통예금 전표 적요에 포함)
   }
 
   @Getter @Setter
@@ -22,6 +23,7 @@ public class VehicleSaleDtos {
     public String buyer;           // 필수
     public Long saleAmount;        // 필수
     public String status;          // 선택(기본 '완료')
+    public String companyAccount;  // 당사 계좌번호 (보통예금 전표 적요에 포함)
   }
 
   @Builder

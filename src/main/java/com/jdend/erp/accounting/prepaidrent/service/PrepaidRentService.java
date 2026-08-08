@@ -10,6 +10,8 @@ import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
+import com.jdend.erp.payment.billing.entity.PaymentSchedules;
+import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class PrepaidRentService {
     private final ContractRepository contractRepo;
     private final VoucherService voucherService;
     private final OtherAccountSettingsService settingsService;
+    private final PaymentSchedulesRepository paymentSchedulesRepo;
 
     // ─────────────────────────────────────────────────────────────────────
     // 목록 조회
@@ -143,6 +146,16 @@ public class PrepaidRentService {
     public void apply(PrepaidRentCreateRequest req) {
         validateRequest(req);
 
+        Contract contract = findContract(req.getContractId());
+
+        // 연체된 스케줄이 있을 때만 수납 허용 (납기일이 어제 이전이고 미납인 것)
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        List<PaymentSchedules> overdueSchedules = paymentSchedulesRepo
+                .findUnpaidByContractNumberAndDateLTE(contract.getContractNumber(), yesterday);
+        if (overdueSchedules.isEmpty()) {
+            throw new IllegalArgumentException("연체된 렌트료가 없어 선수금 수납이 불가능합니다.");
+        }
+
         // 잔액 초과 적용 방지
         List<Long> ids = List.of(req.getContractId());
         Map<String, Long> sumMap = new HashMap<>();
@@ -190,6 +203,11 @@ public class PrepaidRentService {
         Contract contract = findContract(req.getContractId());
         String memoText = "선수금 입금" + appendMemo(req.getMemo());
 
+        String debitDesc = memoText;
+        if (req.getCompanyAccount() != null && !req.getCompanyAccount().isBlank()) {
+            debitDesc += " [계좌: " + req.getCompanyAccount() + "]";
+        }
+
         voucherService.create(VoucherCreateRequest.builder()
                 .voucherDate(req.getTransactionDate())
                 .contractNumber(contract.getContractNumber())
@@ -198,7 +216,7 @@ public class PrepaidRentService {
                 .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .accountCode(bankCode)
                         .amount(req.getAmount())
-                        .description(memoText)
+                        .description(debitDesc)
                         .build()))
                 .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .accountCode(prepaidCode)
@@ -237,6 +255,35 @@ public class PrepaidRentService {
                         .description(memoText)
                         .build()))
                 .build());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 납부 스케줄 조회 — 선수금 수납 화면용
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getSchedules(Long contractId) {
+        Contract contract = findContract(contractId);
+        List<PaymentSchedules> schedules = paymentSchedulesRepo
+                .findAllByContractNumberOrdered(contract.getContractNumber());
+
+        LocalDate today = LocalDate.now();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (PaymentSchedules ps : schedules) {
+            boolean isPaid    = ps.getPaymentDate() != null;
+            boolean isOverdue = !isPaid && ps.getTaxInvoiceDate() != null
+                                && ps.getTaxInvoiceDate().isBefore(today);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id",             ps.getId());
+            row.put("installmentNo",  ps.getInstallmentNo());
+            row.put("taxInvoiceDate", ps.getTaxInvoiceDate());
+            row.put("rentAmount",     ps.getRentAmount());
+            row.put("paymentDate",    ps.getPaymentDate());
+            row.put("isPaid",         isPaid);
+            row.put("isOverdue",      isOverdue);
+            result.add(row);
+        }
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────

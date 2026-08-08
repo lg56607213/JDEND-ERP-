@@ -259,6 +259,15 @@
               </div>
             </div>
 
+            <div class="form-grid" style="margin-top:0;">
+              <div class="form-group">
+                <label for="etCompanyAccount">당사 계좌번호 <span class="muted" style="font-size:12px;">(반납 처리완료 전표 적요)</span></label>
+                <select id="etCompanyAccount" name="etCompanyAccount">
+                  <option value="">-- 계좌 선택 --</option>
+                </select>
+              </div>
+            </div>
+
             <div class="total-amount">
               <div class="total-label">합계 금액 (미수금)</div>
               <div class="total-value" id="totalAmount">0 원</div>
@@ -635,7 +644,8 @@
         status: document.getElementById('status').value,
         terminationAmount: Number(document.getElementById('terminationAmount').value || 0),
         uncollectedRent: Number(document.getElementById('uncollectedRent').value || 0),
-        terminationFee: Number(document.getElementById('terminationFee').value || 0)
+        terminationFee: Number(document.getElementById('terminationFee').value || 0),
+        companyAccount: document.getElementById('etCompanyAccount').value || null
       };
 
       try{
@@ -674,8 +684,29 @@
       setToday();
     }
 
+    async function loadBankAccountsForEt(){
+      try{
+        const res = await fetch(`${BASE}/api/my-info/bank-accounts?activeOnly=true`, { headers:{'Accept':'application/json'} });
+        if(!res.ok) return;
+        const accounts = await res.json();
+        const sel = document.getElementById('etCompanyAccount');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+        accounts.forEach(a => {
+          const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.textContent = label;
+          sel.appendChild(opt);
+        });
+      }catch(e){
+        console.warn('계좌 목록 로드 실패', e);
+      }
+    }
+
     (async function init(){
       await loadList();
+      await loadBankAccountsForEt();
     })();
   </script>
   <script src="../../assets/js/excel-export.js"></script>

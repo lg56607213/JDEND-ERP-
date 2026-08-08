@@ -221,6 +221,11 @@ public class DepositTransactionService {
         Contract contract = findContract(req.getContractId());
         String memoText = depositType + " 수납" + appendMemo(req.getMemo());
 
+        String collectDebitDesc = memoText;
+        if (req.getCompanyAccount() != null && !req.getCompanyAccount().isBlank()) {
+            collectDebitDesc += " [계좌: " + req.getCompanyAccount() + "]";
+        }
+
         voucherService.create(VoucherCreateRequest.builder()
                 .voucherDate(req.getTransactionDate())
                 .contractNumber(contract.getContractNumber())
@@ -229,7 +234,7 @@ public class DepositTransactionService {
                 .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .account(debitAcct)
                         .amount(req.getAmount())
-                        .description(memoText)
+                        .description(collectDebitDesc)
                         .build()))
                 .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .account(creditAcct)
@@ -251,6 +256,11 @@ public class DepositTransactionService {
         Contract contract = findContract(req.getContractId());
         String memoText = depositType + " 반환" + appendMemo(req.getMemo());
 
+        String refundCreditDesc = memoText;
+        if (req.getCompanyAccount() != null && !req.getCompanyAccount().isBlank()) {
+            refundCreditDesc += " [계좌: " + req.getCompanyAccount() + "]";
+        }
+
         voucherService.create(VoucherCreateRequest.builder()
                 .voucherDate(req.getTransactionDate())
                 .contractNumber(contract.getContractNumber())
@@ -264,7 +274,7 @@ public class DepositTransactionService {
                 .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .account(creditAcct)
                         .amount(req.getAmount())
-                        .description(memoText)
+                        .description(refundCreditDesc)
                         .build()))
                 .build());
     }

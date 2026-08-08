@@ -17,4 +17,7 @@ public class EarlyTerminationUpdateRequest {
   private Long terminationAmount;
   private Long uncollectedRent;   // ✅ 직접 입력
   private Long terminationFee;    // 없으면 0 처리
+
+  /** 당사 계좌번호 (보통예금 전표 적요에 포함) */
+  private String companyAccount;
 }

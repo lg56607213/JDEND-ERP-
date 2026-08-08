@@ -387,6 +387,11 @@ public class VehicleLoanService {
                 );
             }
 
+            String loanRepayDesc = "차입금 상환";
+            if (loan.getRepaymentAccount() != null && !loan.getRepaymentAccount().isBlank()) {
+                loanRepayDesc += " [계좌: " + loan.getRepaymentAccount() + "]";
+            }
+
             voucherService.create(
                     VoucherCreateRequest.builder()
                             .voucherDate(req.voucherDate)
@@ -398,7 +403,7 @@ public class VehicleLoanService {
                                     VoucherCreateRequest.VoucherLineRequest.builder()
                                             .account(loanCreditAccount)
                                             .amount(req.amount)
-                                            .description("차입금 상환")
+                                            .description(loanRepayDesc)
                                             .build()
                             ))
                             .build()
@@ -427,6 +432,11 @@ public class VehicleLoanService {
                 ? "차입금 등록"
                 : vehicleNo + " 차입금 등록";
 
+        String loanOpenDebitDesc = "대출원금";
+        if (loan.getRepaymentAccount() != null && !loan.getRepaymentAccount().isBlank()) {
+            loanOpenDebitDesc += " [계좌: " + loan.getRepaymentAccount() + "]";
+        }
+
         voucherService.create(
                 VoucherCreateRequest.builder()
                         .voucherDate(loan.getStartDate() != null ? loan.getStartDate() : LocalDate.now())
@@ -437,7 +447,7 @@ public class VehicleLoanService {
                                 VoucherCreateRequest.VoucherLineRequest.builder()
                                         .account(debitAccount)
                                         .amount(loan.getLoanPrincipal())
-                                        .description("대출원금")
+                                        .description(loanOpenDebitDesc)
                                         .build()
                         ))
                         .creditEntries(List.of(

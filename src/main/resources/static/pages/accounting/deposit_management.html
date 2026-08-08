@@ -272,6 +272,12 @@
       <input type="number" id="t1CollectAmount" placeholder="0" min="1">
     </div>
     <div class="mfg">
+      <label>당사 계좌번호</label>
+      <select id="t1CollectAccount">
+        <option value="">-- 계좌 선택 --</option>
+      </select>
+    </div>
+    <div class="mfg">
       <label>메모</label>
       <textarea id="t1CollectMemo" placeholder="메모 입력 (선택)"></textarea>
     </div>
@@ -306,6 +312,12 @@
     <div class="mfg">
       <label>금액 <span style="color:#dc2626">*</span></label>
       <input type="number" id="t1RefundAmount" placeholder="0" min="1">
+    </div>
+    <div class="mfg">
+      <label>당사 계좌번호</label>
+      <select id="t1RefundAccount">
+        <option value="">-- 계좌 선택 --</option>
+      </select>
     </div>
     <div class="mfg">
       <label>메모</label>
@@ -369,6 +381,12 @@
       <input type="number" id="t2DepositAmount" placeholder="0" min="1">
     </div>
     <div class="mfg">
+      <label>당사 계좌번호</label>
+      <select id="t2DepositAccount">
+        <option value="">-- 계좌 선택 --</option>
+      </select>
+    </div>
+    <div class="mfg">
       <label>메모</label>
       <textarea id="t2DepositMemo" placeholder="메모 입력 (선택)"></textarea>
     </div>
@@ -427,6 +445,38 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script>
+  // ─────────────────────────────────────────────────────────────
+  // 당사 계좌 로드
+  // ─────────────────────────────────────────────────────────────
+  let _bankAccounts = [];
+
+  async function loadBankAccounts() {
+    try {
+      const res = await fetch('/api/my-info/bank-accounts?activeOnly=true', { credentials: 'include' });
+      if (!res.ok) return;
+      _bankAccounts = await res.json();
+    } catch (e) {
+      console.warn('계좌 목록 로드 실패', e);
+    }
+    const selects = ['t1CollectAccount', 't1RefundAccount', 't2DepositAccount'];
+    selects.forEach(id => fillBankSelect(id));
+  }
+
+  function fillBankSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+    _bankAccounts.forEach(a => {
+      const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+      const opt = document.createElement('option');
+      opt.value = label;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+    sel.value = prev;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // 탭 전환
   // ─────────────────────────────────────────────────────────────
@@ -550,6 +600,7 @@
     const amount        = parseInt(document.getElementById('t1CollectAmount').value);
     const memo          = document.getElementById('t1CollectMemo').value.trim();
     const createVoucher = document.querySelector('input[name="t1CollectVoucher"]:checked').value === 'true';
+    const companyAccount = document.getElementById('t1CollectAccount').value || null;
 
     if (!date)              { showErr('t1CollectErr', '거래일자를 입력하세요.'); return; }
     if (!amount || amount <= 0) { showErr('t1CollectErr', '금액을 올바르게 입력하세요.'); return; }
@@ -557,7 +608,7 @@
     fetch('/api/deposit-transactions/collect', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher })
+      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher, companyAccount })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
@@ -593,6 +644,7 @@
     const amount        = parseInt(document.getElementById('t1RefundAmount').value);
     const memo          = document.getElementById('t1RefundMemo').value.trim();
     const createVoucher = document.querySelector('input[name="t1RefundVoucher"]:checked').value === 'true';
+    const companyAccount = document.getElementById('t1RefundAccount').value || null;
 
     if (!date)              { showErr('t1RefundErr', '거래일자를 입력하세요.'); return; }
     if (!amount || amount <= 0) { showErr('t1RefundErr', '금액을 올바르게 입력하세요.'); return; }
@@ -600,7 +652,7 @@
     fetch('/api/deposit-transactions/refund', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher })
+      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher, companyAccount })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
@@ -714,6 +766,7 @@
     const amount        = parseInt(document.getElementById('t2DepositAmount').value);
     const memo          = document.getElementById('t2DepositMemo').value.trim();
     const createVoucher = document.querySelector('input[name="t2DepositVoucher"]:checked').value === 'true';
+    const companyAccount = document.getElementById('t2DepositAccount').value || null;
 
     if (!date)              { showErr('t2DepositErr', '거래일자를 입력하세요.'); return; }
     if (!amount || amount <= 0) { showErr('t2DepositErr', '금액을 올바르게 입력하세요.'); return; }
@@ -721,7 +774,7 @@
     fetch('/api/prepaid-rents/deposit', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId, amount, transactionDate: date, memo, createVoucher })
+      body: JSON.stringify({ contractId, amount, transactionDate: date, memo, createVoucher, companyAccount })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
@@ -845,8 +898,11 @@
     });
   });
 
-  // 초기 탭1 조회
-  document.addEventListener('DOMContentLoaded', loadTab1);
+  // 초기 탭1 조회 + 계좌 목록 로드
+  document.addEventListener('DOMContentLoaded', () => {
+    loadTab1();
+    loadBankAccounts();
+  });
 </script>
 </body>
 </html>

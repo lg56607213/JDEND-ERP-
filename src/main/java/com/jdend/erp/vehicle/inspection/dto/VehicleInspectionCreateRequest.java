@@ -15,4 +15,5 @@ public class VehicleInspectionCreateRequest {
   public String inspectionPlace;
   public Long inspectionCost;
   public String memo;
+  public String companyAccount;
 }

@@ -21,4 +21,7 @@ public class DepositCreateRequest {
 
     /** true이면 전표 자동 생성 */
     private Boolean createVoucher;
+
+    /** 당사 계좌번호 (보통예금 전표 적요에 포함) */
+    private String companyAccount;
 }

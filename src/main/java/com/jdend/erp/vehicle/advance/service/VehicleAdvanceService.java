@@ -158,6 +158,10 @@ public class VehicleAdvanceService {
 
     String itemName = nvlStr(advance.getItemName());
     String paymentMethod = nvlStr(advance.getPaymentMethod());
+    String remark = advance.getRemark();
+    // 보통예금으로 지급 시 remark(계좌 정보)가 있으면 CREDIT description에 사용
+    String creditDesc = ("보통예금".equals(paymentMethod) && remark != null && !remark.isBlank())
+        ? remark : paymentMethod;
     String vehicleNo = emptyToNull(order.getVehicleNo());
     String memo = autoVoucherMemoPrefix(order) + " / " + itemName;
 
@@ -227,7 +231,7 @@ public class VehicleAdvanceService {
       .accountCode(accountResolver.codeOf(creditAccount))
       .accountName(creditAccount)
       .amount(totalAmt)
-      .description(paymentMethod)
+      .description(creditDesc)
       .sortOrder(sortOrder)
       .build());
 

@@ -66,6 +66,9 @@ public class EarlyTermination {
   @Column(name = "termination_fee")
   private Long terminationFee;
 
+  @Column(name = "company_account")
+  private String companyAccount;
+
   @Column(name = "total_amount")
   private Long totalAmount;
 

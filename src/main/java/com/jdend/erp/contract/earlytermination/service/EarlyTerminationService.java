@@ -106,6 +106,7 @@ public class EarlyTerminationService {
         .uncollectedRent(uncollectedRent)   // ✅ 직접 입력값 저장
         .terminationFee(terminationFee)
         .totalAmount(totalAmount)
+        .companyAccount(req.getCompanyAccount())
         .build();
 
     EarlyTermination saved = earlyTerminationRepository.save(et);
@@ -150,6 +151,7 @@ public class EarlyTerminationService {
     et.setUncollectedRent(uncollectedRent);
     et.setTerminationFee(terminationFee);
     et.setTotalAmount(totalAmount);
+    et.setCompanyAccount(req.getCompanyAccount());
 
     boolean wasReturnCompleted = "반납".equals(prevMethod) && "처리완료".equals(prevStatus);
     boolean isNowReturnCompleted = isReturnCompleted(et);
@@ -340,6 +342,10 @@ public class EarlyTerminationService {
       }
     }
 
+    // 계좌 정보 suffix 공통
+    String acctSuffix = (et.getCompanyAccount() != null && !et.getCompanyAccount().isBlank())
+        ? " [계좌: " + et.getCompanyAccount() + "]" : "";
+
     // 중도상환금액 분개
     // BUG-06 수정: 미수금(amtCredit) 크레딧이 미수금 데빗(uncollectedRent)을 초과하면 순액이
     // 음수가 됨. → 미수금 크레딧은 uncollectedRent 이내로 제한하고, 초과분은
@@ -349,7 +355,7 @@ public class EarlyTerminationService {
         log.warn("중도해지 상환금액 분개 생략: 기타계정관리 > 중도해지 > 중도상환금액 차변을 설정해주세요. etId={}", et.getId());
       } else {
         debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account(amtDebit).amount(terminationAmount).description("중도상환금액").build());
+            .account(amtDebit).amount(terminationAmount).description("중도상환금액" + acctSuffix).build());
 
         // 미수금으로 상계 가능한 금액은 실제 미수금(uncollectedRent) 이내
         long creditToReceivable = (uncollectedRent > 0) ? Math.min(terminationAmount, uncollectedRent) : 0L;
@@ -383,7 +389,7 @@ public class EarlyTerminationService {
         log.warn("중도해지 수수료 분개 생략: 기타계정관리 > 중도해지 > 중도상환수수료 차변/대변을 설정해주세요. etId={}", et.getId());
       } else {
         debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account(feeDebit).amount(terminationFee).description("중도상환수수료").build());
+            .account(feeDebit).amount(terminationFee).description("중도상환수수료" + acctSuffix).build());
         creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
             .account(feeCredit).amount(terminationFee).description("중도상환수수료").build());
       }

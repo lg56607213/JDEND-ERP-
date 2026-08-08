@@ -70,6 +70,11 @@ public class VehicleInspectionService {
       String vehicleNoForMemo = vo.getVehicleNo() != null ? vo.getVehicleNo() : mgmtNo;
       String memo = vehicleNoForMemo + " 정기검사비용";
 
+      String creditDesc = "정기검사비용";
+      if (req.companyAccount != null && !req.companyAccount.isBlank()) {
+        creditDesc += " [계좌: " + req.companyAccount + "]";
+      }
+
       voucherService.create(
           VoucherCreateRequest.builder()
               .voucherDate(voucherDate)
@@ -86,7 +91,7 @@ public class VehicleInspectionService {
                   VoucherCreateRequest.VoucherLineRequest.builder()
                       .account(creditAccount)
                       .amount(cost)
-                      .description("정기검사비용")
+                      .description(creditDesc)
                       .build()
               ))
               .build()

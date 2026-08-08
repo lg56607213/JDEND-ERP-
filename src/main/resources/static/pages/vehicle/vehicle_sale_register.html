@@ -208,6 +208,13 @@
                 <label for="saleAmount" class="required">매각금액</label>
                 <input type="number" id="saleAmount" name="saleAmount" placeholder="매각금액을 입력하세요" required>
               </div>
+
+              <div class="form-group">
+                <label for="saleCompanyAccount">당사 계좌번호 <span class="muted">(보통예금 전표 적요)</span></label>
+                <select id="saleCompanyAccount">
+                  <option value="">-- 계좌 선택 --</option>
+                </select>
+              </div>
             </div>
 
             <div class="calculation-box">
@@ -454,7 +461,8 @@
         vehicleNo: $("searchVehicleNo").value.trim(),
         saleDate: $("saleDate").value,
         buyer: $("buyer").value.trim(),
-        saleAmount: Number($("saleAmount").value || 0)
+        saleAmount: Number($("saleAmount").value || 0),
+        companyAccount: $("saleCompanyAccount").value || null
       };
 
       try {
@@ -481,15 +489,37 @@
       $("searchVehicleNo").value = "";
       $("supplyAmount").textContent = "0 원";
       $("taxAmount").textContent = "0 원";
+      $("saleCompanyAccount").value = "";
 
       const today = new Date().toISOString().split("T")[0];
       $("saleDate").value = today;
     });
 
+    async function loadBankAccountsForSale() {
+      try {
+        const res = await fetch(`${BASE}/api/my-info/bank-accounts?activeOnly=true`);
+        if (!res.ok) return;
+        const accounts = await res.json();
+        const sel = $("saleCompanyAccount");
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+        accounts.forEach(a => {
+          const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+          const opt = document.createElement('option');
+          opt.value = label;
+          opt.textContent = label;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('계좌 목록 로드 실패', e);
+      }
+    }
+
     window.addEventListener("load", () => {
       const today = new Date().toISOString().split("T")[0];
       $("saleDate").value = today;
       calcAndRender();
+      loadBankAccountsForSale();
     });
   </script>
 </body>
