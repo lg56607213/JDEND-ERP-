@@ -123,6 +123,9 @@ public class PaymentService {
     Payment p = paymentRepo.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("수납 ID를 찾을 수 없습니다: " + id));
 
+    // 수정 전 자동 등록된 선수금 레코드 삭제 (누적 방지)
+    prepaidRentService.deleteByPaymentReference(p.getContractId(), id);
+
     // BUG-03: 수정 전 미수금 상태 복구
     restoreReceivableStatus(p.getContractNumber(), p.getPaymentAmount());
 

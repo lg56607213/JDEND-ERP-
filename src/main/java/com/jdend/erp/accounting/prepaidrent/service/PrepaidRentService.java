@@ -70,6 +70,10 @@ public class PrepaidRentService {
             String custName = c.getCustomer() != null ? c.getCustomer().getCustomerName() : "";
             long deposited = Optional.ofNullable(sumMap.get(c.getId() + "|입금")).orElse(0L);
             long applied   = Optional.ofNullable(sumMap.get(c.getId() + "|적용")).orElse(0L);
+            long balance = deposited - applied;
+
+            // 잔액이 없는 계약은 목록에서 제외
+            if (balance <= 0) continue;
 
             result.add(PrepaidRentListItemResponse.builder()
                     .contractId(c.getId())
@@ -77,7 +81,7 @@ public class PrepaidRentService {
                     .customerName(custName)
                     .vehicleNo(c.getVehicleNo())
                     .monthlyRent(c.getMonthlyRent())
-                    .balance(deposited - applied)
+                    .balance(balance)
                     .lastDepositDate(lastDepositMap.get(c.getId()))
                     .build());
         }

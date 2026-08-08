@@ -75,14 +75,15 @@ public class ScheduleManagementService {
       long receivable = (dueDate != null && dueDate.isBefore(today)) ? unpaid : 0L;
 
       String status;
-      if (unpaid == 0L) {
+      if (dueDate == null || !dueDate.isBefore(today)) {
+        // 납기일이 오늘이거나 미래: 선수금으로 커버됐어도 예정 유지
+        status = "예정";
+      } else if (unpaid == 0L) {
         status = "완납";
       } else if (paidForThisRow > 0L) {
         status = "부분수납";
-      } else if (dueDate != null && dueDate.isBefore(today)) {
-        status = "미납";
       } else {
-        status = "예정";
+        status = "미납";
       }
 
       out.add(ScheduleRowDto.builder()
