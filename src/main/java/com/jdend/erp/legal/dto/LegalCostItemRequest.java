@@ -12,4 +12,5 @@ public class LegalCostItemRequest {
     private Long amount;
     private LocalDate costDate;
     private String memo;
+    private String companyAccount; // 환입 시 당사 입금 계좌
 }

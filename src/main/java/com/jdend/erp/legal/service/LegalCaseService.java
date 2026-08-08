@@ -144,7 +144,7 @@ public class LegalCaseService {
                 .build();
 
         LegalCostItem saved = costItemRepo.save(item);
-        Long voucherId = createCostItemVoucher(saved, findCase(caseId));
+        Long voucherId = createCostItemVoucher(saved, findCase(caseId), req.getCompanyAccount());
         if (voucherId != null) {
             saved.setVoucherId(voucherId);
             costItemRepo.save(saved);
@@ -198,7 +198,7 @@ public class LegalCaseService {
         return caseRepo.findById(id).orElseThrow(() -> new RuntimeException("사건 없음: " + id));
     }
 
-    private Long createCostItemVoucher(LegalCostItem item, LegalCase lc) {
+    private Long createCostItemVoucher(LegalCostItem item, LegalCase lc, String companyAccount) {
         boolean isRefund = "환입".equals(item.getCostType());
 
         String debitAccount;
@@ -210,7 +210,8 @@ public class LegalCaseService {
             // 환입: DR 보통예금, CR 법무비용
             debitAccount  = accountSettings.getLegalCostCreditAccount(); // 보통예금/미지급금 계정
             creditAccount = accountSettings.getLegalCostDebitAccount();  // 법무비용 계정
-            debitDesc  = "법적비용 환입 수취";
+            String acct = companyAccount != null && !companyAccount.isBlank() ? companyAccount.trim() : null;
+            debitDesc  = acct != null ? "법적비용 환입 수취 [계좌: " + acct + "]" : "법적비용 환입 수취";
             creditDesc = "법적비용 환입 (" + item.getCostType() + ")";
         } else {
             // 신청비용/추가비용/확인비용: DR 법무비용, CR 미지급금

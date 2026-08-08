@@ -71,7 +71,7 @@ public class ScheduleManagementService {
 
       long unpaid = Math.max(rent - paidForThisRow, 0L);
 
-      LocalDate dueDate = ps.getPaymentDate();
+      LocalDate dueDate = ps.getTaxInvoiceDate();
       long receivable = (dueDate != null && dueDate.isBefore(today)) ? unpaid : 0L;
 
       String status;

@@ -42,6 +42,15 @@ public class PrepaidRentController {
     }
 
     /**
+     * GET /api/prepaid-rents/{contractId}/schedules
+     * 선수금 수납 화면용 납부 스케줄 조회 (연체/납부/미납 상태 포함)
+     */
+    @GetMapping("/{contractId}/schedules")
+    public ResponseEntity<List<Map<String, Object>>> schedules(@PathVariable Long contractId) {
+        return ResponseEntity.ok(service.getSchedules(contractId));
+    }
+
+    /**
      * POST /api/prepaid-rents/deposit
      * 선수금 입금 등록 (고객이 미래 렌트료 미리 납입)
      * 전표: 차변 보통예금 / 대변 선수금

@@ -31,4 +31,8 @@ public interface PaymentScheduleRepository extends JpaRepository<PaymentSchedule
   // BUG-07: 연체 조회 N+1 개선 - 계약번호 목록으로 일괄 조회
   @Query("select ps from PaymentSchedule ps where ps.contractNumber in :contractNumbers order by ps.contractNumber asc, ps.installmentNo asc")
   List<PaymentSchedule> findByContractNumberIn(@Param("contractNumbers") List<String> contractNumbers);
+
+  // 수납 전표 분기용: 납기일(taxInvoiceDate)이 기준일 이전인 스케줄 조회
+  @Query("SELECT ps FROM PaymentSchedule ps WHERE ps.contractNumber = :cn AND ps.taxInvoiceDate <= :asOf ORDER BY ps.taxInvoiceDate ASC")
+  List<PaymentSchedule> findDueByContractNumberAndTaxInvoiceDateLTE(@Param("cn") String cn, @Param("asOf") LocalDate asOf);
 }

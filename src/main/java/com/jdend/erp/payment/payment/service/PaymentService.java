@@ -9,6 +9,10 @@ import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
+import com.jdend.erp.payment.billing.entity.PaymentSchedules;
+import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
+import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
+import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import com.jdend.erp.payment.payment.dto.PaymentResponse;
 import com.jdend.erp.payment.payment.dto.PaymentUpsertRequest;
 import com.jdend.erp.payment.payment.entity.Payment;
@@ -37,9 +41,11 @@ public class PaymentService {
   private final OtherAccountSettingsService accountSettings;
   private final AccountResolver accountResolver;
   private final VehicleOrderRepository vehicleOrderRepo;
-  private final ReceivableRepository receivableRepo;  // BUG-10
+  private final ReceivableRepository receivableRepo;  // 미수현황 별도 관리용 (분개 기준 아님)
   private final VoucherNumberService voucherNumberService;
   private final PrepaidRentService prepaidRentService;
+  private final PaymentSchedulesRepository paymentSchedulesRepo;
+  private final PaymentScheduleRepository paymentScheduleRepo;
 
   @Transactional(readOnly = true)
   public Page<PaymentResponse> list(String kw, int page, int size) {
@@ -231,12 +237,15 @@ public class PaymentService {
         .build();
 
     // 차변: 보통예금 (전액)
+    String debitDesc = "수납등록 입금";
+    String compAcct = blankToNull(payment.getCompanyAccount());
+    if (compAcct != null) debitDesc += " [" + compAcct + "]";
     voucher.addLine(VoucherLine.builder()
         .lineType("DEBIT")
         .accountCode(accountResolver.codeOf(debitAccount))
         .accountName(debitAccount)
         .amount(payment.getPaymentAmount())
-        .description("수납등록 입금")
+        .description(debitDesc)
         .sortOrder(1)
         .build());
 
@@ -291,33 +300,39 @@ public class PaymentService {
     return accountResolver.codeOf("선수금");
   }
 
-  /** 납기일 이전(포함) 미납 미수금 합계 — 초과수납 판별용 */
+  /**
+   * 납기일(taxInvoiceDate) 이전(포함) 스케줄 합계 - 기존 수납 합계를 차감한 잔여 미납액.
+   * 워터폴 방식으로 계산하므로 paymentDate IS NULL 조건에 의존하지 않는다.
+   */
   private long calcTotalDue(String contractNumber, LocalDate asOfDate) {
     if (contractNumber == null || contractNumber.isBlank()) return 0L;
-    return receivableRepo.findByContractNumberAndStatusAndReceivableDateLTE(
-            contractNumber, "미납", asOfDate).stream()
-        .mapToLong(r -> r.getReceivableAmount() == null ? 0L : r.getReceivableAmount())
-        .sum();
+    List<PaymentSchedule> due = paymentScheduleRepo.findDueByContractNumberAndTaxInvoiceDateLTE(contractNumber, asOfDate);
+    if (due.isEmpty()) return 0L;
+    long totalDue = due.stream().mapToLong(ps -> ps.getRentAmount() == null ? 0L : ps.getRentAmount()).sum();
+    long alreadyPaid = paymentRepo.findByContractNumberOrderByPaymentDateAscIdAsc(contractNumber)
+        .stream().mapToLong(p -> p.getPaymentAmount() == null ? 0L : p.getPaymentAmount()).sum();
+    return Math.max(0L, totalDue - alreadyPaid);
   }
 
   /**
-   * BUG-10: 수납 등록 시 납기일 이전(포함) 미납 미수금 상태를 완납으로 업데이트한다.
-   * 미래 납기 미수금은 건드리지 않으며, 초과분은 선수금으로 별도 처리된다.
+   * 수납 등록 시 납기일 이전(포함) 미납 스케줄을 납부 처리한다.
+   * PaymentSchedules.paymentDate = 수납일자 로 업데이트.
+   * 초과분은 선수금으로 별도 처리되므로 미래 스케줄은 건드리지 않는다.
    */
   private void updateReceivableStatus(String contractNumber, Long paymentAmount, LocalDate asOfDate) {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<Receivable> unpaid = receivableRepo.findByContractNumberAndStatusAndReceivableDateLTE(
-        contractNumber, "미납", asOfDate);
+    List<PaymentSchedules> unpaid =
+        paymentSchedulesRepo.findUnpaidByContractNumberAndDateLTE(contractNumber, asOfDate);
     if (unpaid.isEmpty()) return;
 
     long remaining = paymentAmount;
-    for (Receivable r : unpaid) {
-      long amt = r.getReceivableAmount() == null ? 0L : r.getReceivableAmount();
+    for (PaymentSchedules ps : unpaid) {
+      long amt = ps.getRentAmount() == null ? 0L : ps.getRentAmount();
       if (remaining >= amt) {
-        r.setStatus("완납");
-        receivableRepo.save(r);
+        ps.setPaymentDate(asOfDate);
+        paymentSchedulesRepo.save(ps);
         remaining -= amt;
       } else {
         break;
@@ -325,21 +340,21 @@ public class PaymentService {
     }
   }
 
-  /** BUG-03: 수납 삭제/수정 시 완납·완료 처리된 미수금을 역순으로 미납으로 되돌린다. */
+  /** 수납 삭제/수정 시 납부 처리된 스케줄을 역순으로 미납(paymentDate = null)으로 되돌린다. */
   private void restoreReceivableStatus(String contractNumber, Long paymentAmount) {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<Receivable> paid = receivableRepo.findByContractNumberAndStatusInOrderByIdDesc(
-        contractNumber, List.of("완납", "완료"));
+    List<PaymentSchedules> paid =
+        paymentSchedulesRepo.findPaidByContractNumberOrderByDateDesc(contractNumber);
     if (paid.isEmpty()) return;
 
     long toReverse = paymentAmount;
-    for (Receivable r : paid) {
-      long amt = r.getReceivableAmount() == null ? 0L : r.getReceivableAmount();
+    for (PaymentSchedules ps : paid) {
+      long amt = ps.getRentAmount() == null ? 0L : ps.getRentAmount();
       if (toReverse >= amt) {
-        r.setStatus("미납");
-        receivableRepo.save(r);
+        ps.setPaymentDate(null);
+        paymentSchedulesRepo.save(ps);
         toReverse -= amt;
       } else {
         break;

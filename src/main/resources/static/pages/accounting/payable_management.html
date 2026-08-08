@@ -142,7 +142,13 @@
     </div>
     <div class="mfg">
       <label>지급 계정 (대변)</label>
-      <input type="text" id="bankAccount" value="보통예금" placeholder="보통예금">
+      <input type="text" id="bankAccount" value="보통예금" placeholder="보통예금" oninput="onBankAccountInput()">
+    </div>
+    <div class="mfg" id="companyAccountRow" style="display:none;">
+      <label>당사 출금 계좌 <span style="color:#ef4444;">*</span></label>
+      <select id="companyAccount">
+        <option value="">-- 계좌 선택 --</option>
+      </select>
     </div>
     <div class="mfg">
       <label>지급처 <span style="color:#9ca3af;font-weight:400;">(선택)</span></label>
@@ -286,6 +292,7 @@
     document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('bankAccount').value = '보통예금';
     document.getElementById('payMemo').value = '';
+    onBankAccountInput();
 
     // 지급처/지급계좌 초기화
     document.getElementById('paymentAccountSelect').innerHTML = '<option value="">-- 거래처 선택 후 계좌 표시 --</option>';
@@ -399,10 +406,16 @@
       lineIds,
       payDate,
       bankAccount: document.getElementById('bankAccount').value.trim() || '보통예금',
+      companyAccount: document.getElementById('companyAccount').value.trim() || null,
       memo: document.getElementById('payMemo').value.trim(),
       payeeName,
       paymentAccount
     };
+
+    const baVal = (payload.bankAccount || '').trim();
+    if (baVal === '보통예금' && !payload.companyAccount) {
+      alert('당사 출금 계좌를 선택해주세요.'); return;
+    }
 
     const res = await fetch(BASE + '/pay', {
       method: 'POST',
@@ -427,13 +440,34 @@
     if (e.target === this) closePayModal();
   });
 
+  // 당사 계좌 로드
+  let myBankAccounts = [];
+  async function loadMyBankAccounts() {
+    try {
+      const res = await fetch('/api/my-info/bank-accounts?activeOnly=true', { credentials: 'include' });
+      if (!res.ok) return;
+      myBankAccounts = await res.json();
+      const sel = document.getElementById('companyAccount');
+      sel.innerHTML = '<option value="">-- 계좌 선택 --</option>' +
+        myBankAccounts.map(a => {
+          const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+          return `<option value="${escHtml(label)}">${escHtml(label)}</option>`;
+        }).join('');
+    } catch (e) { /* 무시 */ }
+  }
+
+  function onBankAccountInput() {
+    const val = (document.getElementById('bankAccount').value || '').trim();
+    document.getElementById('companyAccountRow').style.display = val === '보통예금' ? '' : 'none';
+  }
+
   // 초기화
   (async function init() {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
-    await loadAccountNames();
+    await Promise.all([loadAccountNames(), loadMyBankAccounts()]);
     await loadList();
   })();
 

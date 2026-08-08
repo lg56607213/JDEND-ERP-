@@ -81,8 +81,6 @@ public class PaymentScheduleAutoGeneratorService {
             (billingDay != null && billingDay > 0) ? billingDay :
             billStart.getDayOfMonth();
 
-        LocalDate paymentDate = withDaySafe(billStart, payDayFinal);
-
         PaymentSchedule ps = PaymentSchedule.builder()
             .contract(c)
             .contractNumber(c.getContractNumber())
@@ -90,7 +88,7 @@ public class PaymentScheduleAutoGeneratorService {
             .billStartDate(billStart)
             .billEndDate(billEnd)
             .taxInvoiceDate(taxDate)
-            .paymentDate(paymentDate)
+            .paymentDate(null)
             .rentAmount(c.getMonthlyRent())
             .principalAmount(null)
             .interestAmount(null)
@@ -142,8 +140,6 @@ public class PaymentScheduleAutoGeneratorService {
           (billingDay != null && billingDay > 0) ? billingDay :
           billStart.getDayOfMonth();
 
-      LocalDate paymentDate = withDaySafe(billStart, payDayFinal);
-
       PaymentSchedule ps = PaymentSchedule.builder()
           .contract(c)
           .contractNumber(c.getContractNumber())
@@ -151,7 +147,7 @@ public class PaymentScheduleAutoGeneratorService {
           .billStartDate(billStart)
           .billEndDate(billEnd)
           .taxInvoiceDate(taxDate)
-          .paymentDate(paymentDate)
+          .paymentDate(null)
           .rentAmount(c.getMonthlyRent())
           .principalAmount(null)
           .interestAmount(null)

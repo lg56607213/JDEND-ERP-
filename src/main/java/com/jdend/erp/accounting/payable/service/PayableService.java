@@ -86,11 +86,16 @@ public class PayableService {
                 .toList();
 
         // 대변: 보통예금 합계
+        String creditDesc = fullMemo;
+        if (req.getCompanyAccount() != null && !req.getCompanyAccount().isBlank()) {
+            String acct = req.getCompanyAccount().trim();
+            creditDesc = "[계좌: " + acct + "]" + (creditDesc.isBlank() ? "" : " " + creditDesc);
+        }
         List<VoucherCreateRequest.VoucherLineRequest> credits = List.of(
                 VoucherCreateRequest.VoucherLineRequest.builder()
                         .account(bankAccount)
                         .amount(totalAmount)
-                        .description(fullMemo)
+                        .description(creditDesc)
                         .build()
         );
 

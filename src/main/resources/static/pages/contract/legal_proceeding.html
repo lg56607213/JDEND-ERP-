@@ -504,6 +504,12 @@
               <label>메모</label>
               <input type="text" class="cost-memo-input" id="costMemo" placeholder="비고 (선택)">
             </div>
+            <div id="costCompanyAccountWrap" style="display:none;">
+              <label>입금 계좌 <span style="color:#e11d48;">*</span></label>
+              <select id="costCompanyAccount" style="min-width:160px;">
+                <option value="">-- 계좌 선택 --</option>
+              </select>
+            </div>
             <div style="padding-bottom:2px;">
               <label>&nbsp;</label>
               <button class="btn-add-cost" id="btnAddCost">추가</button>
@@ -695,12 +701,28 @@
       return sums;
     }
 
+    // ── 당사 계좌 로드 ──
+    async function loadMyBankAccounts() {
+      try {
+        const res = await fetch(`${BASE}/api/my-info/bank-accounts?activeOnly=true`);
+        if (!res.ok) return;
+        const list = await res.json();
+        const sel = $('costCompanyAccount');
+        sel.innerHTML = '<option value="">-- 계좌 선택 --</option>' +
+          list.map(a => {
+            const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+            return `<option value="${esc(label)}">${esc(label)}</option>`;
+          }).join('');
+      } catch(e) { /* 무시 */ }
+    }
+
     // ── 초기 로드 ──
     window.addEventListener('DOMContentLoaded', () => {
       $('mRegDate').value = today();
       $('progDate').value = today();
       $('costDate').value = today();
       loadList();
+      loadMyBankAccounts();
     });
 
     // ── 목록 조회 ──
@@ -879,6 +901,12 @@
       } catch(e) { alert('삭제 실패: ' + e.message); }
     }
 
+    // ── 환입 선택 시 입금 계좌 필드 표시 ──
+    $('costType').addEventListener('change', () => {
+      const isRefund = $('costType').value === '환입';
+      $('costCompanyAccountWrap').style.display = isRefund ? '' : 'none';
+    });
+
     // ── 비용항목 추가 ──
     $('btnAddCost').addEventListener('click', async () => {
       if (!selectedCaseId) { alert('먼저 사건을 선택하세요.'); return; }
@@ -888,14 +916,17 @@
       if (!type)       { alert('비용유형을 선택해주세요.'); return; }
       if (!amount || amount <= 0) { alert('금액을 올바르게 입력해주세요.'); $('costAmount').focus(); return; }
       if (!date)       { alert('일자를 입력해주세요.'); return; }
+      const companyAccount = $('costCompanyAccount').value.trim() || null;
+      if (type === '환입' && !companyAccount) { alert('환입 시 입금 계좌를 선택해주세요.'); return; }
       try {
         await mustOk(await fetch(`${BASE}/api/legal-cases/${selectedCaseId}/costs`, {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ costType:type, amount:amount, costDate:date, memo:$('costMemo').value.trim()||null })
+          body:JSON.stringify({ costType:type, amount:amount, costDate:date, memo:$('costMemo').value.trim()||null, companyAccount })
         }));
         $('costAmount').value = '';
         $('costMemo').value   = '';
+        $('costCompanyAccount').value = '';
         await openDetailPanel(selectedCaseId, 'cost');
         await loadList();
       } catch(e) { alert('비용 추가 실패: ' + e.message); }

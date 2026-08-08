@@ -184,20 +184,9 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="paymentMethod">입금방법</label>
-                    <select id="paymentMethod" name="paymentMethod">
-                      <option value="">선택하세요</option>
-                      <option value="계좌이체">계좌이체</option>
-                      <option value="카드">카드</option>
-                      <option value="현금">현금</option>
-                      <option value="기타">기타</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="companyAccount">당사 계좌번호</label>
-                    <select id="companyAccount" name="companyAccount">
-                      <option value="">선택하세요</option>
+                    <label for="companyAccount" class="required">당사 계좌번호</label>
+                    <select id="companyAccount" name="companyAccount" required>
+                      <option value="">계좌를 선택해주세요</option>
                     </select>
                   </div>
 
@@ -207,20 +196,8 @@
                   </div>
 
                   <div class="form-group" style="grid-column:1 / -1;">
-                    <label>전표발생여부</label>
-                    <div style="display:flex; gap:20px; align-items:center; padding-top:6px;">
-                      <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer;">
-                        <input type="radio" name="payCreateVoucher" id="payVoucherY" value="Y" checked onchange="onPayVoucherFlagChange()"> Y (전표 생성)
-                      </label>
-                      <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; color:#b45309;">
-                        <input type="radio" name="payCreateVoucher" id="payVoucherN" value="N" onchange="onPayVoucherFlagChange()"> N (상태만 변경)
-                      </label>
-                    </div>
-                    <div id="payVoucherNote" style="display:none; margin-top:8px; padding:9px 12px;
-                         background:#fff7ed; border:1px solid #fed7aa; border-radius:6px;
-                         font-size:12px; color:#92400e; line-height:1.6;">
-                      ⚠️ <strong>전표 미발생(N) 모드</strong>: 수납금액이 스케줄에 반영되어 납부상태가 변경되지만, 회계 전표는 생성되지 않습니다.<br>
-                      기존 전표가 이미 발생된 데이터를 ERP로 컨버전할 때 사용합니다.
+                    <div style="padding:8px 12px;background:#eff6ff;border-radius:6px;font-size:12px;color:#1e40af;">
+                      전표 자동 발생: 차변 보통예금 / 대변 렌트수익
                     </div>
                   </div>
                 </div>
@@ -252,7 +229,6 @@
                     <tr>
                       <th>수납일자</th>
                       <th>수납금액</th>
-                      <th>입금방법</th>
                       <th>당사계좌</th>
                       <th>전표번호</th>
                       <th>비고</th>
@@ -362,7 +338,7 @@
 
     resizer.addEventListener('mousedown', function() {
       isResizing = true;
-      document.body.style.cursor = 'row-resize';
+      document.body.style.cursor = 'col-resize';
     });
 
     document.addEventListener('mousemove', function(e) {
@@ -370,14 +346,15 @@
 
       const container = document.querySelector('.split-container');
       const rect = container.getBoundingClientRect();
-      const newTopHeight = e.clientY - rect.top;
-      const totalHeight = rect.height;
+      const newLeftWidth = e.clientX - rect.left;
+      const totalWidth = rect.width;
 
-      if (newTopHeight < totalHeight * 0.2 || newTopHeight > totalHeight * 0.8) return;
+      if (newLeftWidth < totalWidth * 0.2 || newLeftWidth > totalWidth * 0.8) return;
 
-      const topPercent = (newTopHeight / totalHeight) * 100;
-      topPanel.style.height = `${topPercent}%`;
-      bottomPanel.style.height = `${100 - topPercent}%`;
+      const leftPercent = (newLeftWidth / totalWidth) * 100;
+      topPanel.style.width = `${leftPercent}%`;
+      bottomPanel.style.flex = 'none';
+      bottomPanel.style.width = `${100 - leftPercent}%`;
     });
 
     document.addEventListener('mouseup', function() {
@@ -493,17 +470,15 @@
     function renderPaymentHistory(list) {
       const tbody = document.getElementById('paymentHistoryTableBody');
       if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:14px;color:#64748b;">수납 내역이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#64748b;">수납 내역이 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = '';
       list.forEach(p => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-
           <td>${esc(p.paymentDate ?? '')}</td>
           <td class="amount-cell">${p.paymentAmount != null ? p.paymentAmount.toLocaleString() + '원' : '-'}</td>
-          <td>${esc(p.paymentMethod ?? '-')}</td>
           <td>${esc(p.companyAccount ?? '-')}</td>
           <td>${p.voucherId ? esc(String(p.voucherId)) : '<span style="color:#94a3b8;">없음</span>'}</td>
           <td>${esc(p.memo ?? '')}</td>
@@ -699,31 +674,22 @@
       }
     });
 
-    function onPayVoucherFlagChange() {
-      const isN = document.getElementById('payVoucherN').checked;
-      document.getElementById('payVoucherNote').style.display = isN ? 'block' : 'none';
-      const btn = document.getElementById('btnSubmit');
-      btn.textContent = isN ? '수납 등록 (전표없음)' : '수납 등록';
-      btn.style.background = isN ? '#d97706' : '';
-    }
-
     document.getElementById('paymentForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const createVoucher = document.getElementById('payVoucherY').checked;
       const payload = {
         contractNumber: document.getElementById('contractNumber').value.trim(),
         paymentDate: document.getElementById('paymentDate').value,
         paymentAmount: Number(document.getElementById('paymentAmount').value || 0),
-        paymentMethod: document.getElementById('paymentMethod').value || null,
         companyAccount: document.getElementById('companyAccount').value || null,
         memo: document.getElementById('paymentNote').value || null,
-        createVoucher
+        createVoucher: true
       };
 
       if (!payload.contractNumber) return alert('계약번호를 입력하세요.');
       if (!payload.paymentDate) return alert('입금일자를 입력하세요.');
       if (!payload.paymentAmount) return alert('입금금액을 입력하세요.');
+      if (!payload.companyAccount) return alert('당사 계좌번호를 선택해주세요.');
 
       const isEdit = !!editId;
       const url = isEdit ? `${API_BASE_URL}/api/payments/${editId}` : `${API_BASE_URL}/api/payments`;
@@ -739,7 +705,7 @@
         await mustOk(res);
 
         const cn = document.getElementById('contractNumber').value.trim();
-        alert(isEdit ? '수납 수정 완료' : (createVoucher ? '수납 등록 완료' : '수납 등록 완료 (전표 미생성)'));
+        alert(isEdit ? '수납 수정 완료' : '수납 등록 완료');
 
         resetForm(true);
 
@@ -766,13 +732,10 @@
       document.getElementById('paymentForm').reset();
       document.getElementById('customerInfo').classList.remove('active');
       document.getElementById('paymentDate').value = todayISO();
-      document.getElementById('payVoucherY').checked = true;
-      document.getElementById('payVoucherN').checked = false;
-      onPayVoucherFlagChange();
 
       clearScheduleStatus('계약을 조회하면 수납 현황이 표시됩니다.');
       document.getElementById('paymentHistoryTableBody').innerHTML =
-        `<tr><td colspan="7" style="text-align:center;padding:14px;color:#64748b;">계약을 조회하면 수납 내역이 표시됩니다.</td></tr>`;
+        `<tr><td colspan="6" style="text-align:center;padding:14px;color:#64748b;">계약을 조회하면 수납 내역이 표시됩니다.</td></tr>`;
     }
 
     document.getElementById('btnReset').addEventListener('click', () => resetForm(false));

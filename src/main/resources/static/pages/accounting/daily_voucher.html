@@ -382,6 +382,56 @@
       }
     }
 
+    // ── 당사 계좌 목록 (보통예금 선택 시 드롭다운 삽입용) ──────────────────────
+    let bankAccountOptions = '';
+
+    async function loadBankAccountsForVoucher() {
+      try {
+        const res = await fetch(`${API_BASE}/api/my-info/bank-accounts?activeOnly=true`);
+        if (!res.ok) return;
+        const list = await res.json();
+        bankAccountOptions = list.map(a => {
+          const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+          return `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`;
+        }).join('');
+      } catch(e) { console.warn('계좌 로드 실패', e); }
+    }
+
+    function handleVoucherAccountChange(selectEl) {
+      const opt = selectEl.options[selectEl.selectedIndex];
+      const name = (opt && opt.dataset && opt.dataset.name) ? opt.dataset.name : '';
+      const row = selectEl.closest('tr');
+      if (!row) return;
+      const descCell = row.querySelector('td:nth-child(3)');
+      if (!descCell) return;
+      const descInput = descCell.querySelector('input[type=text]');
+      const existing = descCell.querySelector('.bank-acct-sel');
+
+      if (name.includes('보통예금') && bankAccountOptions) {
+        if (!existing) {
+          const sel = document.createElement('select');
+          sel.className = 'bank-acct-sel';
+          sel.style.cssText = 'width:100%;margin-bottom:4px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;color:#333;background:#fff;display:block;';
+          sel.innerHTML = `<option value="">-- 계좌 선택 --</option>${bankAccountOptions}`;
+          sel.addEventListener('change', () => {
+            if (sel.value && descInput) descInput.value = sel.value;
+          });
+          if (descInput) descCell.insertBefore(sel, descInput);
+          else descCell.appendChild(sel);
+        }
+      } else {
+        if (existing) existing.remove();
+      }
+    }
+
+    // 이벤트 위임 — 동적으로 추가된 행 포함
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      if (el.classList.contains('debit-account') || el.classList.contains('credit-account')) {
+        handleVoucherAccountChange(el);
+      }
+    });
+
     // 계정 옵션은 하드코딩하지 않고 재무제표관리(financial-statement-accounts)에서 등록한
     // 계정(전기가능=사용, leaf)을 그대로 불러와서 구성한다. 재무제표관리에 새 계정을 추가하면
     // 여기에도 바로 반영된다. /leaves는 이미 accountCode 오름차순(=트리 순서)으로 정렬되어 내려온다.
@@ -697,7 +747,7 @@
 
     window.addEventListener("load", async () => {
       qs("#voucherDate").value = todayStr();
-      await loadAccountOptions();
+      await Promise.all([loadAccountOptions(), loadBankAccountsForVoucher()]);
       applyAccountOptionsToExistingSelects();
       await refreshVoucherNo();
       calculateTotals();
