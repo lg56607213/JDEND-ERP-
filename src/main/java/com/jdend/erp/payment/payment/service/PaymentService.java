@@ -75,6 +75,11 @@ public class PaymentService {
 
     Customer cu = c.getCustomer();
 
+    // 저장 전에 먼저 계산 — 저장 후 조회하면 현재 수납액이 alreadyPaid에 포함되어 totalDue가 0이 됨
+    LocalDate paymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+    long totalDue = calcTotalDue(c.getContractNumber(), paymentDate);
+    long excess   = Math.max(0L, req.getPaymentAmount() - totalDue);
+
     Payment saved = paymentRepo.save(Payment.builder()
         .contractId(c.getId())
         .contractNumber(c.getContractNumber())
@@ -88,11 +93,6 @@ public class PaymentService {
         .companyAccount(req.getCompanyAccount())
         .memo(req.getMemo())
         .build());
-
-    // 납기일 이전(포함) 미납 합계 기준으로 초과금액 계산
-    LocalDate paymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
-    long totalDue = calcTotalDue(c.getContractNumber(), paymentDate);
-    long excess   = Math.max(0L, req.getPaymentAmount() - totalDue);
 
     boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
     if (shouldCreateVoucher) {
