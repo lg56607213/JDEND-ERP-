@@ -27,6 +27,10 @@ public class PaymentSchedule {
   @JoinColumn(name="contract_id")
   private Contract contract;
 
+  /** PaymentSchedules 호환용: contract_id 컬럼을 직접 읽어 Lazy 로딩 없이 ID 반환 */
+  @Column(name = "contract_id", insertable = false, updatable = false)
+  private Long contractId;
+
   @Column(name="contract_number", nullable=false, length=30)
   private String contractNumber;
 

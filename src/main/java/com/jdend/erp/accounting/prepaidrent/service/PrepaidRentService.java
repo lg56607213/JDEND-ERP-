@@ -10,8 +10,8 @@ import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
-import com.jdend.erp.payment.billing.entity.PaymentSchedules;
-import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
+import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
+import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ public class PrepaidRentService {
     private final ContractRepository contractRepo;
     private final VoucherService voucherService;
     private final OtherAccountSettingsService settingsService;
-    private final PaymentSchedulesRepository paymentSchedulesRepo;
+    private final PaymentScheduleRepository paymentSchedulesRepo;
 
     // ─────────────────────────────────────────────────────────────────────
     // 목록 조회
@@ -154,7 +154,7 @@ public class PrepaidRentService {
 
         // 연체된 스케줄이 있을 때만 수납 허용 (납기일이 어제 이전이고 미납인 것)
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        List<PaymentSchedules> overdueSchedules = paymentSchedulesRepo
+        List<PaymentSchedule> overdueSchedules = paymentSchedulesRepo
                 .findUnpaidByContractNumberAndDateLTE(contract.getContractNumber(), yesterday);
         if (overdueSchedules.isEmpty()) {
             throw new IllegalArgumentException("연체된 렌트료가 없어 선수금 수납이 불가능합니다.");
@@ -268,12 +268,12 @@ public class PrepaidRentService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getSchedules(Long contractId) {
         Contract contract = findContract(contractId);
-        List<PaymentSchedules> schedules = paymentSchedulesRepo
+        List<PaymentSchedule> schedules = paymentSchedulesRepo
                 .findAllByContractNumberOrdered(contract.getContractNumber());
 
         LocalDate today = LocalDate.now();
         List<Map<String, Object>> result = new ArrayList<>();
-        for (PaymentSchedules ps : schedules) {
+        for (PaymentSchedule ps : schedules) {
             boolean isPaid    = ps.getPaymentDate() != null;
             boolean isOverdue = !isPaid && ps.getTaxInvoiceDate() != null
                                 && ps.getTaxInvoiceDate().isBefore(today);

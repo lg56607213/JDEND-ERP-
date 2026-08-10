@@ -9,8 +9,6 @@ import com.jdend.erp.accounting.voucher.service.VoucherNumberService;
 import com.jdend.erp.contract.entity.Contract;
 import com.jdend.erp.contract.repository.ContractRepository;
 import com.jdend.erp.customer.Customer;
-import com.jdend.erp.payment.billing.entity.PaymentSchedules;
-import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
 import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
 import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import com.jdend.erp.payment.payment.dto.PaymentResponse;
@@ -44,7 +42,6 @@ public class PaymentService {
   private final ReceivableRepository receivableRepo;  // 미수현황 별도 관리용 (분개 기준 아님)
   private final VoucherNumberService voucherNumberService;
   private final PrepaidRentService prepaidRentService;
-  private final PaymentSchedulesRepository paymentSchedulesRepo;
   private final PaymentScheduleRepository paymentScheduleRepo;
 
   @Transactional(readOnly = true)
@@ -158,10 +155,14 @@ public class PaymentService {
     p.setCompanyAccount(req.getCompanyAccount());
     p.setMemo(req.getMemo());
 
-    // BUG-03: 수정 후 전표 재생성 (수정 시는 초과금액 분리 없이 전액 렌트수익 처리)
+    // 수정 후 전표 재생성 — create 와 동일하게 excess 계산(기존 수납 id 제외)
+    LocalDate updatedPaymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+    long totalDue = calcTotalDue(p.getContractNumber(), updatedPaymentDate, id);
+    long excess   = Math.max(0L, req.getPaymentAmount() - totalDue);
+
     boolean shouldCreateVoucher = req.getCreateVoucher() == null || req.getCreateVoucher();
     if (shouldCreateVoucher) {
-      Long newVoucherId = createVoucherIfNeeded(p, req.getPaymentAmount(), 0L);
+      Long newVoucherId = createVoucherIfNeeded(p, totalDue, excess);
       if (newVoucherId != null) {
         p.setVoucherId(newVoucherId);
       }
@@ -169,9 +170,14 @@ public class PaymentService {
 
     paymentRepo.save(p);
 
-    // BUG-03: 수정 후 새 금액으로 납기일 이전(포함) 미수금 상태 재적용
-    LocalDate updatedPaymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+    // 수정 후 새 금액으로 납기일 이전(포함) 미수금 상태 재적용
     updateReceivableStatus(p.getContractNumber(), req.getPaymentAmount(), updatedPaymentDate);
+
+    // 초과금액 → 선수금 자동 등록 (create 와 동일)
+    if (excess > 0 && p.getContractId() != null) {
+      prepaidRentService.registerFromPaymentExcess(
+          p.getContractId(), excess, p.getPaymentDate(), p.getMemo(), p.getId());
+    }
 
     return toResponse(p);
   }
@@ -308,12 +314,22 @@ public class PaymentService {
    * 워터폴 방식으로 계산하므로 paymentDate IS NULL 조건에 의존하지 않는다.
    */
   private long calcTotalDue(String contractNumber, LocalDate asOfDate) {
+    return calcTotalDue(contractNumber, asOfDate, null);
+  }
+
+  /**
+   * excludePaymentId 를 제외한 수납 합계로 미납액 계산.
+   * 수납 수정(update) 시 기존 수납을 이중으로 포함하지 않도록 사용한다.
+   */
+  private long calcTotalDue(String contractNumber, LocalDate asOfDate, Long excludePaymentId) {
     if (contractNumber == null || contractNumber.isBlank()) return 0L;
     List<PaymentSchedule> due = paymentScheduleRepo.findDueByContractNumberAndTaxInvoiceDateLTE(contractNumber, asOfDate);
     if (due.isEmpty()) return 0L;
     long totalDue = due.stream().mapToLong(ps -> ps.getRentAmount() == null ? 0L : ps.getRentAmount()).sum();
     long alreadyPaid = paymentRepo.findByContractNumberOrderByPaymentDateAscIdAsc(contractNumber)
-        .stream().mapToLong(p -> p.getPaymentAmount() == null ? 0L : p.getPaymentAmount()).sum();
+        .stream()
+        .filter(p -> excludePaymentId == null || !excludePaymentId.equals(p.getId()))
+        .mapToLong(p -> p.getPaymentAmount() == null ? 0L : p.getPaymentAmount()).sum();
     return Math.max(0L, totalDue - alreadyPaid);
   }
 
@@ -326,16 +342,16 @@ public class PaymentService {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<PaymentSchedules> unpaid =
-        paymentSchedulesRepo.findUnpaidByContractNumberAndDateLTE(contractNumber, asOfDate);
+    List<PaymentSchedule> unpaid =
+        paymentScheduleRepo.findUnpaidByContractNumberAndDateLTE(contractNumber, asOfDate);
     if (unpaid.isEmpty()) return;
 
     long remaining = paymentAmount;
-    for (PaymentSchedules ps : unpaid) {
+    for (PaymentSchedule ps : unpaid) {
       long amt = ps.getRentAmount() == null ? 0L : ps.getRentAmount();
       if (remaining >= amt) {
         ps.setPaymentDate(asOfDate);
-        paymentSchedulesRepo.save(ps);
+        paymentScheduleRepo.save(ps);
         remaining -= amt;
       } else {
         break;
@@ -348,16 +364,16 @@ public class PaymentService {
     if (contractNumber == null || contractNumber.isBlank()) return;
     if (paymentAmount == null || paymentAmount <= 0) return;
 
-    List<PaymentSchedules> paid =
-        paymentSchedulesRepo.findPaidByContractNumberOrderByDateDesc(contractNumber);
+    List<PaymentSchedule> paid =
+        paymentScheduleRepo.findPaidByContractNumberOrderByDateDesc(contractNumber);
     if (paid.isEmpty()) return;
 
     long toReverse = paymentAmount;
-    for (PaymentSchedules ps : paid) {
+    for (PaymentSchedule ps : paid) {
       long amt = ps.getRentAmount() == null ? 0L : ps.getRentAmount();
       if (toReverse >= amt) {
         ps.setPaymentDate(null);
-        paymentSchedulesRepo.save(ps);
+        paymentScheduleRepo.save(ps);
         toReverse -= amt;
       } else {
         break;

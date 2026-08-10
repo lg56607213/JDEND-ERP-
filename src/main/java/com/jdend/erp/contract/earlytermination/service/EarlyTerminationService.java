@@ -130,6 +130,15 @@ public class EarlyTerminationService {
     if (req.getTerminationFee() == null) req.setTerminationFee(0L);
     if (req.getUncollectedRent() == null) req.setUncollectedRent(0L);
 
+    // BUG-⑧ 수정: create()와 동일하게 terminationMethod 유효값 검증 추가
+    if (req.getTerminationMethod() == null || req.getTerminationMethod().isBlank()) {
+      throw new IllegalArgumentException("중도상환방법을 선택해주세요. 허용값: " + VALID_TERMINATION_METHODS);
+    }
+    if (!VALID_TERMINATION_METHODS.contains(req.getTerminationMethod())) {
+      throw new IllegalArgumentException(
+          "지원하지 않는 중도상환방법입니다: '" + req.getTerminationMethod() + "'. 허용값: " + VALID_TERMINATION_METHODS);
+    }
+
     EarlyTermination et = earlyTerminationRepository.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("중도상환 데이터를 찾을 수 없습니다. id=" + id));
 

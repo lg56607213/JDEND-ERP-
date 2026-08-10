@@ -29,7 +29,10 @@ public class MonthlyVoucherRuleProcessor {
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void processOneRule(MonthlyVoucherRule rule, LocalDate today) {
-        createVoucherFromRule(rule, today);
+        // BUG-⑥ 수정: 전표 날짜는 실행일(today)이 아닌 처리 대상 날짜(nextRunDate)를 사용한다.
+        // 서버 재시작·지연으로 오늘보다 이전 규칙이 일괄 처리될 때도 전표일자가 올바른 월로 기록된다.
+        LocalDate voucherDate = rule.getNextRunDate() != null ? rule.getNextRunDate() : today;
+        createVoucherFromRule(rule, voucherDate);
         rule.setLastRunDate(today);
         rule.setNextRunDate(calcNextRunDate(today.plusDays(1), rule.getMonthlyDay()));
         ruleRepo.save(rule);

@@ -5,6 +5,10 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/**
+ * @deprecated PaymentSchedule(payment/schedule/entity) 로 통합됨. 이 클래스는 삭제 예정.
+ */
+@Deprecated
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity

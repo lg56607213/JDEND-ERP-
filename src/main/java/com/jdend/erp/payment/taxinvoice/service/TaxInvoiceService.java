@@ -6,8 +6,8 @@ import com.jdend.erp.customer.Customer;
 import com.jdend.erp.customer.CustomerRepository;
 import com.jdend.erp.myinfo.entity.SupplierInfo;
 import com.jdend.erp.myinfo.repository.SupplierInfoRepository;
-import com.jdend.erp.payment.billing.entity.PaymentSchedules;
-import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
+import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
+import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import com.jdend.erp.payment.taxinvoice.dto.TaxInvoicePreviewRow;
 import com.jdend.erp.payment.taxinvoice.dto.TaxInvoiceUpdateRequest;
 import lombok.RequiredArgsConstructor;
@@ -29,17 +29,17 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class TaxInvoiceService {
 
-    private final PaymentSchedulesRepository schedulesRepo;
+    private final PaymentScheduleRepository schedulesRepo;
     private final ContractRepository contractRepo;
     private final CustomerRepository customerRepo;
     private final SupplierInfoRepository supplierRepo;
 
     public List<TaxInvoicePreviewRow> preview(LocalDate taxStart, LocalDate taxEnd,
                                               String type, String customerNumber) {
-        List<PaymentSchedules> schedules = fetchSchedules(taxStart, taxEnd, type, customerNumber);
+        List<PaymentSchedule> schedules = fetchSchedules(taxStart, taxEnd, type, customerNumber);
         List<TaxInvoicePreviewRow> result = new ArrayList<>();
 
-        for (PaymentSchedules ps : schedules) {
+        for (PaymentSchedule ps : schedules) {
             String cn = ps.getContractNumber();
             if (cn == null || cn.isBlank()) continue;
 
@@ -269,10 +269,10 @@ public class TaxInvoiceService {
     /** 선택된 스케줄 ID 목록으로 미리보기 행 생성 (선택 다운로드용) */
     public List<TaxInvoicePreviewRow> previewByIds(List<Long> scheduleIds) {
         if (scheduleIds == null || scheduleIds.isEmpty()) return List.of();
-        List<PaymentSchedules> schedules = schedulesRepo.findAllById(scheduleIds);
+        List<PaymentSchedule> schedules = schedulesRepo.findAllById(scheduleIds);
         List<TaxInvoicePreviewRow> result = new ArrayList<>();
 
-        for (PaymentSchedules ps : schedules) {
+        for (PaymentSchedule ps : schedules) {
             String cn = ps.getContractNumber();
             if (cn == null || cn.isBlank()) continue;
 
@@ -318,7 +318,7 @@ public class TaxInvoiceService {
     /** 세금계산서 수정: taxInvoiceDate, supplyAmount+taxAmount → rentAmount 역산 저장 */
     @org.springframework.transaction.annotation.Transactional
     public void update(Long scheduleId, TaxInvoiceUpdateRequest req) {
-        PaymentSchedules ps = schedulesRepo.findById(scheduleId)
+        PaymentSchedule ps = schedulesRepo.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("스케줄을 찾을 수 없습니다: " + scheduleId));
         if (req.getTaxInvoiceDate() != null) {
             ps.setTaxInvoiceDate(req.getTaxInvoiceDate());
@@ -329,8 +329,8 @@ public class TaxInvoiceService {
         schedulesRepo.save(ps);
     }
 
-    private List<PaymentSchedules> fetchSchedules(LocalDate taxStart, LocalDate taxEnd,
-                                                  String type, String customerNumber) {
+    private List<PaymentSchedule> fetchSchedules(LocalDate taxStart, LocalDate taxEnd,
+                                                 String type, String customerNumber) {
         if ("individual".equalsIgnoreCase(type)
                 && customerNumber != null && !customerNumber.isBlank()) {
             List<String> cns = contractRepo.findContractNumbersByCustomerNumber(customerNumber);

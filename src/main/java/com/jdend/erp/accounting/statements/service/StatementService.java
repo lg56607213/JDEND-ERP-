@@ -58,15 +58,18 @@ public class StatementService {
     StatementNodeResponse liability = buildRootNode(all, byParent, "LIABILITY", debit,   credit);
     StatementNodeResponse equity   = buildRootNode(all, byParent, "EQUITY",    debit,   credit);
 
+    // BUG-⑪ 수정: buildRootNode 중복 호출 제거 — 결과를 변수에 저장해 재사용한다.
     // 마감분개(전표) 없이 계산 시점에 수익-비용을 자본에 가산해 자산=부채+자본 균형을 맞춘다.
     // 전년도까지의 누적 순이익 → 이익잉여금(전기이월)
     // 당해연도 순이익                → 당기순이익
     // 두 항목의 합계가 전체 (수익-비용) 누적과 같으므로 균형은 유지된다.
-    long totalNetIncome = buildRootNode(all, byParent, "REVENUE", debit, credit).getAmount()
-        - buildRootNode(all, byParent, "EXPENSE", debit, credit).getAmount();
+    StatementNodeResponse revenueNode   = buildRootNode(all, byParent, "REVENUE", debit,   credit);
+    StatementNodeResponse expenseNode   = buildRootNode(all, byParent, "EXPENSE", debit,   credit);
+    StatementNodeResponse cyRevenueNode = buildRootNode(all, byParent, "REVENUE", cyDebit, cyCredit);
+    StatementNodeResponse cyExpenseNode = buildRootNode(all, byParent, "EXPENSE", cyDebit, cyCredit);
 
-    long currentNetIncome = buildRootNode(all, byParent, "REVENUE", cyDebit, cyCredit).getAmount()
-        - buildRootNode(all, byParent, "EXPENSE", cyDebit, cyCredit).getAmount();
+    long totalNetIncome   = revenueNode.getAmount()   - expenseNode.getAmount();
+    long currentNetIncome = cyRevenueNode.getAmount() - cyExpenseNode.getAmount();
 
     long retainedEarnings = totalNetIncome - currentNetIncome; // 전년도까지 누적 순이익
 

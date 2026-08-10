@@ -11,14 +11,16 @@ import com.jdend.erp.payment.billing.dto.BillingListRowResponse;
 import com.jdend.erp.payment.billing.dto.BillingUpdateRequest;
 import com.jdend.erp.payment.billing.entity.BillingLines;
 import com.jdend.erp.payment.billing.entity.Billings;
-import com.jdend.erp.payment.billing.entity.PaymentSchedules;
 import com.jdend.erp.payment.billing.repository.BillingLineRepository;
 import com.jdend.erp.payment.billing.repository.BillingRepository;
-import com.jdend.erp.payment.billing.repository.PaymentSchedulesRepository;
+import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
+import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -30,7 +32,7 @@ public class BillingService {
 
   private final BillingRepository billingRepository;
   private final BillingLineRepository billingLineRepository;
-  private final PaymentSchedulesRepository paymentSchedulesRepository;
+  private final PaymentScheduleRepository paymentSchedulesRepository;
   private final ContractRepository contractRepository;
   private final CustomerRepository customerRepository;
   private final OtherAccountSettingsService accountSettings;
@@ -47,7 +49,7 @@ public class BillingService {
     LocalDate start = req.getTaxStartDate();
     LocalDate end = req.getTaxEndDate();
 
-    List<PaymentSchedules> schedules;
+    List<PaymentSchedule> schedules;
 
     if ("individual".equalsIgnoreCase(req.getType())) {
       if (req.getCustomerNumber() == null || req.getCustomerNumber().isBlank()) {
@@ -68,9 +70,9 @@ public class BillingService {
 
     schedules = schedules.stream()
         .sorted(Comparator
-            .comparing((PaymentSchedules ps) -> nvl(ps.getContractNumber()))
-            .thenComparing(PaymentSchedules::getTaxInvoiceDate, Comparator.nullsLast(LocalDate::compareTo))
-            .thenComparing(PaymentSchedules::getInstallmentNo, Comparator.nullsLast(Integer::compareTo))
+            .comparing((PaymentSchedule ps) -> nvl(ps.getContractNumber()))
+            .thenComparing(PaymentSchedule::getTaxInvoiceDate, Comparator.nullsLast(LocalDate::compareTo))
+            .thenComparing(PaymentSchedule::getInstallmentNo, Comparator.nullsLast(Integer::compareTo))
         )
         .collect(Collectors.toList());
 
@@ -91,18 +93,18 @@ public class BillingService {
     long total = 0L;
     String firstBillingNo = null;
 
-    Map<String, List<PaymentSchedules>> grouped = schedules.stream()
+    Map<String, List<PaymentSchedule>> grouped = schedules.stream()
         .collect(Collectors.groupingBy(
             this::makeGroupingKey,
             LinkedHashMap::new,
             Collectors.toList()
         ));
 
-    for (Map.Entry<String, List<PaymentSchedules>> entry : grouped.entrySet()) {
-      List<PaymentSchedules> groupSchedules = entry.getValue();
+    for (Map.Entry<String, List<PaymentSchedule>> entry : grouped.entrySet()) {
+      List<PaymentSchedule> groupSchedules = entry.getValue();
 
-      List<PaymentSchedules> eligibleSchedules = new ArrayList<>();
-      for (PaymentSchedules ps : groupSchedules) {
+      List<PaymentSchedule> eligibleSchedules = new ArrayList<>();
+      for (PaymentSchedule ps : groupSchedules) {
         Long scheduleId = ps.getId();
         if (scheduleId == null || billingLineRepository.existsByScheduleId(scheduleId)) {
           skipped++;
@@ -115,7 +117,7 @@ public class BillingService {
         continue;
       }
 
-      PaymentSchedules first = eligibleSchedules.get(0);
+      PaymentSchedule first = eligibleSchedules.get(0);
       HeaderInfo header = resolveHeaderInfo(first, req);
 
       Billings billing = new Billings();
@@ -141,7 +143,7 @@ public class BillingService {
 
       long billingTotal = 0L;
 
-      for (PaymentSchedules ps : eligibleSchedules) {
+      for (PaymentSchedule ps : eligibleSchedules) {
         BillingLines line = new BillingLines();
         line.setBillingId(billing.getId());
         line.setContractId(ps.getContractId());
@@ -230,9 +232,13 @@ public class BillingService {
 
     Long rentAmount = b.getRentAmount() == null ? total : b.getRentAmount();
     Long extraAmount = 0L;
-    // BUG-06: 청구금액은 부가세 포함가이므로 역산으로 공급가액·세액 분리
-    Long supplyAmount = Math.round(total / 1.1);
-    Long taxAmount = total - supplyAmount;
+    // BUG-⑬ 수정: double 연산의 소수점 오차를 제거하기 위해 BigDecimal로 부가세 역산
+    // 세액 = total * 10/110 (HALF_UP 반올림), 공급가액 = total - 세액
+    Long taxAmount = BigDecimal.valueOf(total)
+        .multiply(BigDecimal.valueOf(10))
+        .divide(BigDecimal.valueOf(110), 0, RoundingMode.HALF_UP)
+        .longValue();
+    Long supplyAmount = total - taxAmount;
     String memo = safe(b.getMemo()).equals("-") ? "" : b.getMemo();
 
     String baseContractNumber = null;
@@ -440,7 +446,7 @@ public class BillingService {
     billingRepository.save(b);
   }
 
-  private HeaderInfo resolveHeaderInfo(PaymentSchedules ps, BillingCreateRequest req) {
+  private HeaderInfo resolveHeaderInfo(PaymentSchedule ps, BillingCreateRequest req) {
     HeaderInfo info = new HeaderInfo();
 
     info.contractNumber = ps.getContractNumber();
@@ -491,7 +497,7 @@ public class BillingService {
     return info;
   }
 
-  private String makeGroupingKey(PaymentSchedules ps) {
+  private String makeGroupingKey(PaymentSchedule ps) {
     if (ps.getContractNumber() != null && !ps.getContractNumber().isBlank()) {
       return "CONTRACT:" + ps.getContractNumber().trim();
     }
