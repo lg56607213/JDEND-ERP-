@@ -109,36 +109,76 @@ public class DepreciationService {
 
     List<DepreciationAssetRowResponse> rows = new ArrayList<>();
 
-    // BUG-08: 기준월 전표를 자산 전체에 대해 한 번에 조회 (N+1 → 1 쿼리)
     List<Long> assetIds = all.stream().map(DepreciationAsset::getId).toList();
+
+    // BUG-08: 기준월 전표 일괄 조회
     Map<Long, DepreciationPosting> postingByAssetId =
         assetIds.isEmpty() ? Map.of() :
         postingRepo.findByAssetIdInAndBaseMonth(assetIds, ym.toString()).stream()
             .collect(Collectors.toMap(p -> p.getAsset().getId(), p -> p, (a2, b2) -> a2));
 
-    for (DepreciationAsset a : all) {
-      int ver = lineRepo.findMaxVersion(a.getId());
-      if (ver == 0) ver = 1;
+    // BUG-12 수정: 자산별 최대 버전 일괄 조회 (N+1 → 1 쿼리)
+    Map<Long, Integer> versionMap = new HashMap<>();
+    if (!assetIds.isEmpty()) {
+      for (var row : lineRepo.findMaxVersionsByAssetIds(assetIds)) {
+        int v = row.getMaxVer() == null ? 0 : row.getMaxVer();
+        versionMap.put(row.getAssetId(), Math.max(v, 1));
+      }
+    }
 
-      DepreciationScheduleLine latest = lineRepo.findLatestLineUpTo(a.getId(), ver, asOf)
-          .stream().findFirst().orElse(null);
+    // BUG-12 수정: 자산별 전체 스케줄 라인 일괄 조회 (N+1 → 1 쿼리)
+    Map<Long, List<DepreciationScheduleLine>> linesByAsset = new HashMap<>();
+    if (!assetIds.isEmpty()) {
+      for (DepreciationScheduleLine l : lineRepo.findAllByAssetIdIn(assetIds)) {
+        linesByAsset.computeIfAbsent(l.getAsset().getId(), k -> new ArrayList<>()).add(l);
+      }
+    }
+
+    // BUG-12 수정: 자산별 전표 등록 건수 일괄 조회 (N+1 → 1 쿼리)
+    Map<Long, Long> postedCountMap = new HashMap<>();
+    if (!assetIds.isEmpty()) {
+      for (var row : postingRepo.countByAssetIdIn(assetIds)) {
+        postedCountMap.put(row.getAssetId(), row.getCnt() == null ? 0L : row.getCnt());
+      }
+    }
+
+    for (DepreciationAsset a : all) {
+      int ver = versionMap.getOrDefault(a.getId(), 1);
+
+      // 해당 자산+버전의 스케줄 라인만 필터
+      List<DepreciationScheduleLine> assetLines = linesByAsset.getOrDefault(a.getId(), List.of())
+          .stream()
+          .filter(l -> ver == (l.getVersionNo() == null ? 0 : l.getVersionNo()))
+          .toList();
+
+      DepreciationScheduleLine latest = assetLines.stream()
+          .filter(l -> l.getDepreciationDate() != null && !l.getDepreciationDate().isAfter(asOf))
+          .max(Comparator.comparing(DepreciationScheduleLine::getDepreciationDate)
+              .thenComparing(DepreciationScheduleLine::getPeriodNo))
+          .orElse(null);
 
       long remaining = (latest == null) ? a.getAcquisitionCost() : latest.getBalance();
       long accumulated = a.getAcquisitionCost() - remaining;
       String lastDepDate = (latest == null || latest.getDepreciationDate() == null) ? "" : latest.getDepreciationDate().toString();
 
-      // BUG-08: 중복 호출 제거 — Map에서 한 번만 조회
       DepreciationPosting currentPosting = postingByAssetId.get(a.getId());
       String voucherDate = (currentPosting != null && currentPosting.getVoucherDate() != null)
           ? currentPosting.getVoucherDate().toString()
           : "";
       boolean currentRoundPosted = (currentPosting != null);
 
-      int totalRounds = lineRepo.findMaxPeriodNo(a.getId(), ver);
-      int postedRounds = (int) postingRepo.countByAssetId(a.getId());
+      int totalRounds = assetLines.stream()
+          .filter(l -> l.getPeriodNo() != null && l.getPeriodNo() > 0)
+          .mapToInt(DepreciationScheduleLine::getPeriodNo)
+          .max().orElse(0);
 
-      Integer currentRound = lineRepo.findLinesInMonth(a.getId(), ver, monthStart, monthEnd)
-          .stream()
+      int postedRounds = postedCountMap.getOrDefault(a.getId(), 0L).intValue();
+
+      Integer currentRound = assetLines.stream()
+          .filter(l -> l.getPeriodNo() != null && l.getPeriodNo() > 0
+              && l.getDepreciationDate() != null
+              && !l.getDepreciationDate().isBefore(monthStart)
+              && !l.getDepreciationDate().isAfter(monthEnd))
           .findFirst()
           .map(DepreciationScheduleLine::getPeriodNo)
           .orElse(null);

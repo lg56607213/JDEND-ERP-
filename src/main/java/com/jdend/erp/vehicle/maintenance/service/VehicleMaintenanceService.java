@@ -2,6 +2,7 @@ package com.jdend.erp.vehicle.maintenance.service;
 
 import com.jdend.erp.accounting.settings.service.OtherAccountSettingsService;
 import com.jdend.erp.accounting.voucher.dto.VoucherCreateRequest;
+import com.jdend.erp.accounting.voucher.dto.VoucherCreateResponse;
 import com.jdend.erp.accounting.voucher.service.VoucherService;
 import com.jdend.erp.vehicle.entity.VehicleOrder;
 import com.jdend.erp.vehicle.maintenance.dto.VehicleMaintenanceCreateRequest;
@@ -141,7 +142,8 @@ public class VehicleMaintenanceService {
 
       long creditTotal = debits.stream().mapToLong(VoucherCreateRequest.VoucherLineRequest::getAmount).sum();
 
-      voucherService.create(
+      // BUG-01 수정: 반환된 전표 ID를 정비 항목에 저장 → 정비 삭제 시 전표도 함께 삭제 가능
+      VoucherCreateResponse vResponse = voucherService.create(
           VoucherCreateRequest.builder()
               .voucherDate(item.getPayDate() != null ? item.getPayDate() : LocalDate.now())
               .vehicleNo(saved.getVehicleNo())
@@ -158,6 +160,8 @@ public class VehicleMaintenanceService {
               ))
               .build()
       );
+      item.setVoucherId(vResponse.getId());
+      itemRepository.save(item);
     }
 
     return new VehicleMaintenanceResponse(saved.getId());
@@ -173,6 +177,28 @@ public class VehicleMaintenanceService {
     String mgmt = vehicleMgmtNo == null ? "" : vehicleMgmtNo.trim();
     String vno = vehicleNo == null ? "" : vehicleNo.trim();
     return itemRepository.searchStatus(mgmt, vno, startDate, endDate);
+  }
+
+  /**
+   * BUG-01 수정: 정비 기록 삭제 시 연관 전표도 함께 삭제하여 고아 전표 누적 방지.
+   * 각 정비 항목에 저장된 voucherId를 수집 후 전표 삭제 → 정비 레코드 삭제 순서로 처리.
+   */
+  @Transactional
+  public void delete(Long id) {
+    VehicleMaintenance m = maintenanceRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("정비 기록이 없습니다: " + id));
+
+    List<Long> voucherIds = m.getItems().stream()
+        .map(VehicleMaintenanceItem::getVoucherId)
+        .filter(vid -> vid != null)
+        .toList();
+
+    if (!voucherIds.isEmpty()) {
+      voucherService.deleteByIds(voucherIds);
+      log.info("정비 삭제로 연관 전표 자동 삭제: maintenanceId={}, voucherIds={}", id, voucherIds);
+    }
+
+    maintenanceRepository.delete(m);
   }
 
   private Long nvlLong(Long v) {

@@ -16,6 +16,8 @@ public interface StatementAggRepository extends JpaRepository<VoucherLine, Long>
     Long getAmt();
   }
 
+  // BUG-04 수정: accountCode가 null인 자동전표 라인도 재무제표에 포함되도록
+  // "and l.accountCode is not null" 조건 제거 — null 계정코드는 null 그룹으로 집계됨
   @Query("""
     select l.accountCode as accountCode,
            l.lineType as lineType,
@@ -23,7 +25,6 @@ public interface StatementAggRepository extends JpaRepository<VoucherLine, Long>
       from VoucherLine l
       join l.voucher v
      where v.voucherDate between :start and :end
-       and l.accountCode is not null
        and (:status is null or :status = '' or v.status = :status)
      group by l.accountCode, l.lineType
   """)
@@ -40,7 +41,6 @@ public interface StatementAggRepository extends JpaRepository<VoucherLine, Long>
       from VoucherLine l
       join l.voucher v
      where v.voucherDate <= :ref
-       and l.accountCode is not null
        and (:status is null or :status = '' or v.status = :status)
      group by l.accountCode, l.lineType
   """)

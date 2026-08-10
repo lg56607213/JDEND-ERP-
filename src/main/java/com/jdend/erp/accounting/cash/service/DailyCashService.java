@@ -371,12 +371,14 @@ public class DailyCashService {
     return 0L;
   }
 
+  // BUG-10 수정: 짧은 계좌번호가 긴 계좌번호를 포함한 문자열에 오매칭되는 문제 방지
+  // 계좌번호를 길이 내림차순으로 정렬 후 매칭하여 더 구체적인(긴) 번호가 먼저 체크되도록 함
   private BankAccount matchBankAccount(String description, List<BankAccount> accounts) {
     if (description == null || description.isBlank()) return null;
-    for (BankAccount acc : accounts) {
-      String accNo = acc.getAccountNumber();
-      if (accNo != null && !accNo.isBlank() && description.contains(accNo)) return acc;
-    }
-    return null;
+    return accounts.stream()
+        .filter(a -> a.getAccountNumber() != null && !a.getAccountNumber().isBlank())
+        .sorted(Comparator.comparingInt(a -> -a.getAccountNumber().length()))
+        .filter(a -> description.contains(a.getAccountNumber()))
+        .findFirst().orElse(null);
   }
 }

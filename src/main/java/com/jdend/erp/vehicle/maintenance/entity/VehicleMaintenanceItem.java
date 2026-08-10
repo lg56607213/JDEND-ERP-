@@ -49,6 +49,10 @@ public class VehicleMaintenanceItem {
   @Column(name = "payment_detail", length = 200)
   private String paymentDetail;
 
+  /** BUG-01 수정: 정비 항목에 연결된 전표 ID 저장 — 정비 삭제 시 전표도 함께 삭제하기 위한 참조 */
+  @Column(name = "voucher_id")
+  private Long voucherId;
+
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;

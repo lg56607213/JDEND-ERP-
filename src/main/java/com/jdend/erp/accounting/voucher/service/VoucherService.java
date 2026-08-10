@@ -9,6 +9,8 @@ import com.jdend.erp.payment.payment.entity.Payment;
 import com.jdend.erp.payment.payment.repository.PaymentRepository;
 import com.jdend.erp.payment.receivable.entity.Receivable;
 import com.jdend.erp.payment.receivable.repository.ReceivableRepository;
+import com.jdend.erp.payment.schedule.entity.PaymentSchedule;
+import com.jdend.erp.payment.schedule.repository.PaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class VoucherService {
     private final AccountResolver accountResolver;
     private final PaymentRepository paymentRepository;
     private final ReceivableRepository receivableRepository;
+    private final PaymentScheduleRepository paymentScheduleRepository;
 
     @Transactional(readOnly = true)
     public String nextVoucherNo(LocalDate date) {
@@ -209,12 +212,51 @@ public class VoucherService {
         List<Payment> linked = paymentRepository.findByVoucherIdIn(ids);
         for (Payment p : linked) {
             cancelPaymentReceivable(p.getContractNumber(), p.getPaymentAmount());
+            // BUG-05 수정: 전표 삭제 시 연관 PaymentSchedule의 paymentDate도 null로 복구
+            cancelPaymentSchedule(p.getContractNumber(), p.getPaymentAmount());
             paymentRepository.delete(p);
             log.info("전표 삭제로 수납 자동 취소·삭제: paymentId={}, contractNumber={}", p.getId(), p.getContractNumber());
         }
 
         voucherRepository.deleteAllById(ids);
         return ids.size();
+    }
+
+    /**
+     * BUG-05 수정: 전표 삭제 시 연관 PaymentSchedule의 paymentDate를 null로 복구.
+     * Payment에 installmentNo가 없으므로 가장 최근 납입 완료 스케줄부터 paymentAmount 기준으로 역순 복구.
+     */
+    private void cancelPaymentSchedule(String contractNumber, Long paymentAmount) {
+        if (contractNumber == null || contractNumber.isBlank()) return;
+        if (paymentAmount == null || paymentAmount <= 0) return;
+
+        List<PaymentSchedule> all = paymentScheduleRepository
+                .findByContractNumberOrderByInstallmentNoAsc(contractNumber);
+
+        // 납입완료(paymentDate != null) 스케줄을 최신 회차부터 역순 처리
+        List<PaymentSchedule> paid = all.stream()
+                .filter(s -> s.getPaymentDate() != null)
+                .sorted(Comparator.comparing(PaymentSchedule::getInstallmentNo).reversed())
+                .toList();
+
+        long remaining = paymentAmount;
+        for (PaymentSchedule ps : paid) {
+            if (remaining <= 0) break;
+            long schedAmt = nvl(ps.getRentAmount()) + nvl(ps.getPrincipalAmount()) + nvl(ps.getInterestAmount());
+            if (schedAmt <= 0) {
+                // 금액 정보 없으면 해당 스케줄만 초기화하고 중단
+                ps.setPaymentDate(null);
+                paymentScheduleRepository.save(ps);
+                break;
+            }
+            if (remaining >= schedAmt) {
+                ps.setPaymentDate(null);
+                paymentScheduleRepository.save(ps);
+                remaining -= schedAmt;
+            } else {
+                break;
+            }
+        }
     }
 
     private void cancelPaymentReceivable(String contractNumber, Long paymentAmount) {
@@ -276,5 +318,9 @@ public class VoucherService {
 
     private String nvl(String s) {
         return s == null ? "" : s;
+    }
+
+    private long nvl(Long v) {
+        return v == null ? 0L : v;
     }
 }

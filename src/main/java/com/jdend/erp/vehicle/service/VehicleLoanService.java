@@ -321,6 +321,22 @@ public class VehicleLoanService {
 
         boolean shouldCreateVoucher = req.createVoucher == null || req.createVoucher;
 
+        // BUG-07 수정: 계정 설정은 루프 전 1회만 조회
+        String loanDebitAccount = accountSettings.getLoanDebit1Account();
+        if (loanDebitAccount == null) loanDebitAccount = "장기차입금";
+        String loanCreditAccount = accountSettings.getLoanCreditAccount();
+        if (loanCreditAccount == null) loanCreditAccount = "보통예금";
+        String loanDebitAccount2 = accountSettings.getLoanDebit2Account();
+        if (loanDebitAccount2 == null) loanDebitAccount2 = "이자비용";
+
+        // BUG-07 수정: 복수 차입금 선택 시 전표를 차입금별로 각각 생성하면 대변(출금) 금액이
+        // 차입금 수만큼 중복 적용됨 → 차변 분개는 차입금별로 누적, 대변(출금)은 총액 1건만 생성
+        List<VoucherCreateRequest.VoucherLineRequest> consolidatedDebits = new ArrayList<>();
+        long totalCreditAmount = 0L;
+        String firstVehicleNo = null;
+        String firstContractNo = null;
+        String consolidatedMemo = null;
+
         for (VehicleLoan loan : loans) {
             VehicleOrder order = loan.getVehicleOrder();
             String vehicleNo = order != null ? order.getVehicleNo() : "";
@@ -341,77 +357,72 @@ public class VehicleLoanService {
                             .build()
             );
 
-            if (!shouldCreateVoucher) {
-                loan.setLastPaymentDate(req.voucherDate);
-                loan.setRemainingPrincipal(
-                        Math.max(0L, safeLong(loan.getRemainingPrincipal()) - req.amount)
-                );
-                continue;
-            }
+            // 잔여원금 및 최종납부일 업데이트 (전표 생성 여부와 무관하게 처리)
+            loan.setLastPaymentDate(req.voucherDate);
+            loan.setRemainingPrincipal(
+                    Math.max(0L, safeLong(loan.getRemainingPrincipal()) - req.amount)
+            );
 
-            String loanDebitAccount = accountSettings.getLoanDebit1Account();
-            if (loanDebitAccount == null) loanDebitAccount = "장기차입금";
-            String loanCreditAccount = accountSettings.getLoanCreditAccount();
-            if (loanCreditAccount == null) loanCreditAccount = "보통예금";
+            if (!shouldCreateVoucher) continue;
 
-            // BUG-3 수정: 이자금액이 있으면 차변을 원금(차입금) + 이자(이자비용)로 분리.
-            // loanDebitAccount2(이자비용 계정)가 기타계정관리에 미설정이면 "이자비용"을 기본값으로 사용.
+            // 차입금별 차변 분개 누적 (대변은 루프 후 1건으로 통합)
             long interest = (req.interestAmount != null && req.interestAmount > 0) ? req.interestAmount : 0L;
             long principal = req.amount - interest;
+            String loanTag = (vehicleNo != null && !vehicleNo.isBlank()) ? " [" + vehicleNo + "]" : "";
 
-            String loanDebitAccount2 = accountSettings.getLoanDebit2Account();
-            if (loanDebitAccount2 == null) loanDebitAccount2 = "이자비용"; // 기본값: 이자비용 계정
-
-            List<VoucherCreateRequest.VoucherLineRequest> debitEntries;
             if (interest > 0 && principal > 0) {
-                // BUG-3 수정: 원금 → 차입금 계정, 이자 → 이자비용 계정으로 별도 분개
-                debitEntries = List.of(
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account(loanDebitAccount)
-                                .amount(principal)
-                                .description("차입금 원금 상환")
-                                .build(),
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account(loanDebitAccount2)
-                                .amount(interest)
-                                .description("차입금 이자")
-                                .build()
-                );
+                consolidatedDebits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(loanDebitAccount)
+                        .amount(principal)
+                        .description("차입금 원금 상환" + loanTag)
+                        .build());
+                consolidatedDebits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(loanDebitAccount2)
+                        .amount(interest)
+                        .description("차입금 이자" + loanTag)
+                        .build());
             } else {
-                debitEntries = List.of(
-                        VoucherCreateRequest.VoucherLineRequest.builder()
-                                .account(loanDebitAccount)
-                                .amount(req.amount)
-                                .description("차입금 상환")
-                                .build()
-                );
+                consolidatedDebits.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                        .account(loanDebitAccount)
+                        .amount(req.amount)
+                        .description("차입금 상환" + loanTag)
+                        .build());
             }
 
-            String loanRepayDesc = "차입금 상환";
-            if (loan.getRepaymentAccount() != null && !loan.getRepaymentAccount().isBlank()) {
-                loanRepayDesc += " [계좌: " + loan.getRepaymentAccount() + "]";
+            totalCreditAmount += req.amount;
+
+            if (firstVehicleNo == null) {
+                firstVehicleNo = vehicleNo;
+                firstContractNo = contractNo;
+                consolidatedMemo = finalMemo;
+            }
+        }
+
+        // 통합 전표 1건 생성 (대변 출금이 중복되지 않도록)
+        if (shouldCreateVoucher && !consolidatedDebits.isEmpty()) {
+            String creditDesc = "차입금 상환";
+            if (loans.size() == 1) {
+                VehicleLoan single = loans.get(0);
+                if (single.getRepaymentAccount() != null && !single.getRepaymentAccount().isBlank()) {
+                    creditDesc += " [계좌: " + single.getRepaymentAccount() + "]";
+                }
             }
 
             voucherService.create(
                     VoucherCreateRequest.builder()
                             .voucherDate(req.voucherDate)
-                            .contractNumber(contractNo)
-                            .vehicleNo(vehicleNo)
-                            .memo(finalMemo)
-                            .debitEntries(debitEntries)
+                            .contractNumber(firstContractNo)
+                            .vehicleNo(firstVehicleNo)
+                            .memo(consolidatedMemo != null ? consolidatedMemo : "차입금 상환")
+                            .debitEntries(consolidatedDebits)
                             .creditEntries(List.of(
                                     VoucherCreateRequest.VoucherLineRequest.builder()
                                             .account(loanCreditAccount)
-                                            .amount(req.amount)
-                                            .description(loanRepayDesc)
+                                            .amount(totalCreditAmount)
+                                            .description(creditDesc)
                                             .build()
                             ))
                             .build()
-            );
-
-            loan.setLastPaymentDate(req.voucherDate);
-            loan.setRemainingPrincipal(
-                    Math.max(0L, safeLong(loan.getRemainingPrincipal()) - req.amount)
             );
         }
     }
