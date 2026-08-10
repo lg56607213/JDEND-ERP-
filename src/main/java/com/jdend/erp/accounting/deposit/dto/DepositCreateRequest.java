@@ -24,4 +24,10 @@ public class DepositCreateRequest {
 
     /** 당사 계좌번호 (보통예금 전표 적요에 포함) */
     private String companyAccount;
+
+    /** 지급처 (고객명 또는 직접입력) */
+    private String payee;
+
+    /** 지급계좌 (고객 등록 계좌 또는 직접입력) */
+    private String payeeAccount;
 }

@@ -314,6 +314,21 @@
       <input type="number" id="t1RefundAmount" placeholder="0" min="1">
     </div>
     <div class="mfg">
+      <label>지급처 (고객)</label>
+      <select id="t1RefundPayee" onchange="onRefundPayeeChange()">
+        <option value="">-- 고객 선택 --</option>
+      </select>
+      <input type="text" id="t1RefundPayeeDirect" placeholder="지급처 직접입력" style="margin-top:6px;display:none;width:100%;padding:8px 11px;border:1px solid #d1d5db;border-radius:5px;font-size:0.93rem;box-sizing:border-box;">
+    </div>
+    <div class="mfg">
+      <label>지급계좌 (고객 등록 계좌)</label>
+      <select id="t1RefundPayeeAccount" onchange="onRefundPayeeAccountChange()">
+        <option value="">-- 계좌 선택 --</option>
+        <option value="DIRECT">── 직접입력 ──</option>
+      </select>
+      <input type="text" id="t1RefundPayeeAccountDirect" placeholder="계좌 직접입력" style="margin-top:6px;display:none;width:100%;padding:8px 11px;border:1px solid #d1d5db;border-radius:5px;font-size:0.93rem;box-sizing:border-box;">
+    </div>
+    <div class="mfg">
       <label>당사 계좌번호</label>
       <select id="t1RefundAccount">
         <option value="">-- 계좌 선택 --</option>
@@ -445,6 +460,87 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script>
+  // ─────────────────────────────────────────────────────────────
+  // 지급처(고객) 관련 함수
+  // ─────────────────────────────────────────────────────────────
+
+  async function loadRefundCustomers() {
+    try {
+      const res = await fetch('/api/customers/search?keyword=', { credentials: 'include' });
+      if (!res.ok) return;
+      const customers = await res.json();
+      const sel = document.getElementById('t1RefundPayee');
+      sel.innerHTML = '<option value="">-- 고객 선택 --</option>';
+      customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.customerName + (c.customerNumber ? ' (' + c.customerNumber + ')' : '');
+        sel.appendChild(opt);
+      });
+      const directOpt = document.createElement('option');
+      directOpt.value = 'DIRECT';
+      directOpt.textContent = '── 직접입력 ──';
+      sel.appendChild(directOpt);
+    } catch(e) {
+      console.warn('고객 목록 로드 실패', e);
+    }
+  }
+
+  function onRefundPayeeChange() {
+    const sel = document.getElementById('t1RefundPayee');
+    const directInput = document.getElementById('t1RefundPayeeDirect');
+    const accountSel = document.getElementById('t1RefundPayeeAccount');
+    const accountDirectInput = document.getElementById('t1RefundPayeeAccountDirect');
+
+    accountSel.innerHTML = '<option value="">-- 계좌 선택 --</option><option value="DIRECT">── 직접입력 ──</option>';
+    accountDirectInput.style.display = 'none';
+    accountDirectInput.value = '';
+
+    if (sel.value === 'DIRECT') {
+      directInput.style.display = 'block';
+      directInput.focus();
+    } else {
+      directInput.style.display = 'none';
+      directInput.value = '';
+      if (sel.value) loadRefundCustomerAccounts(sel.value);
+    }
+  }
+
+  function onRefundPayeeAccountChange() {
+    const sel = document.getElementById('t1RefundPayeeAccount');
+    const directInput = document.getElementById('t1RefundPayeeAccountDirect');
+    if (sel.value === 'DIRECT') {
+      directInput.style.display = 'block';
+      directInput.focus();
+    } else {
+      directInput.style.display = 'none';
+      directInput.value = '';
+    }
+  }
+
+  async function loadRefundCustomerAccounts(customerId) {
+    const sel = document.getElementById('t1RefundPayeeAccount');
+    try {
+      const res = await fetch('/api/partner-accounts/by-partner/' + customerId, { credentials: 'include' });
+      if (!res.ok) return;
+      const accounts = await res.json();
+      sel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        const label = [a.bankName, a.accountNumber, a.accountHolder].filter(Boolean).join(' ');
+        opt.value = label;
+        opt.textContent = label;
+        sel.appendChild(opt);
+      });
+      const directOpt = document.createElement('option');
+      directOpt.value = 'DIRECT';
+      directOpt.textContent = '── 직접입력 ──';
+      sel.appendChild(directOpt);
+    } catch(e) {
+      console.warn('고객 계좌 로드 실패', e);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────
   // 당사 계좌 로드
   // ─────────────────────────────────────────────────────────────
@@ -629,6 +725,16 @@
     document.getElementById('t1RefundMemo').value        = '';
     document.querySelectorAll('input[name="t1RefundVoucher"]').forEach(r => { r.checked = r.value === 'false'; });
     hideErr('t1RefundErr');
+
+    // 지급처/지급계좌 초기화
+    document.getElementById('t1RefundPayee').value = '';
+    document.getElementById('t1RefundPayeeDirect').style.display = 'none';
+    document.getElementById('t1RefundPayeeDirect').value = '';
+    document.getElementById('t1RefundPayeeAccount').innerHTML =
+      '<option value="">-- 계좌 선택 --</option><option value="DIRECT">── 직접입력 ──</option>';
+    document.getElementById('t1RefundPayeeAccountDirect').style.display = 'none';
+    document.getElementById('t1RefundPayeeAccountDirect').value = '';
+
     document.getElementById('t1RefundInfo').innerHTML =
       infoRow('고객명', customerName) + infoRow('차량번호', vehicleNo) +
       infoRow('유형', depositType) + infoRow('계약보증금', fmt(contractAmt)) +
@@ -646,13 +752,22 @@
     const createVoucher = document.querySelector('input[name="t1RefundVoucher"]:checked').value === 'true';
     const companyAccount = document.getElementById('t1RefundAccount').value || null;
 
+    const payeeSel = document.getElementById('t1RefundPayee');
+    const payee = payeeSel.value === 'DIRECT'
+      ? document.getElementById('t1RefundPayeeDirect').value.trim() || null
+      : (payeeSel.selectedIndex > 0 ? payeeSel.options[payeeSel.selectedIndex].text : null);
+    const payeeAccountSel = document.getElementById('t1RefundPayeeAccount');
+    const payeeAccount = payeeAccountSel.value === 'DIRECT'
+      ? document.getElementById('t1RefundPayeeAccountDirect').value.trim() || null
+      : payeeAccountSel.value || null;
+
     if (!date)              { showErr('t1RefundErr', '거래일자를 입력하세요.'); return; }
     if (!amount || amount <= 0) { showErr('t1RefundErr', '금액을 올바르게 입력하세요.'); return; }
 
     fetch('/api/deposit-transactions/refund', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher, companyAccount })
+      body: JSON.stringify({ contractId, depositType, amount, transactionDate: date, memo, createVoucher, companyAccount, payee, payeeAccount })
     })
     .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
     .then(({ ok, data }) => {
@@ -898,10 +1013,11 @@
     });
   });
 
-  // 초기 탭1 조회 + 계좌 목록 로드
+  // 초기 탭1 조회 + 계좌 목록 로드 + 고객 목록 로드
   document.addEventListener('DOMContentLoaded', () => {
     loadTab1();
     loadBankAccounts();
+    loadRefundCustomers();
   });
 </script>
 </body>

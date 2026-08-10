@@ -98,4 +98,26 @@ public interface DashboardVoucherRepository extends JpaRepository<VoucherLine, L
           and v.voucherDate = :d
     """)
     Long sumCreditOnByAccountCode(@Param("d") LocalDate d);
+
+    /** 보통예금(100101) 특정일까지 모든 라인 [lineType, amount, description] — 계좌별 잔액 계산용 */
+    @Query("""
+        select vl.lineType, vl.amount, vl.description
+        from VoucherLine vl
+        join vl.voucher v
+        where vl.accountCode = '100101'
+          and v.status = '승인'
+          and v.voucherDate <= :d
+    """)
+    List<Object[]> findAllBankLinesUpTo(@Param("d") LocalDate d);
+
+    /** 보통예금(100101) 특정일 모든 라인 [lineType, amount, description] — 계좌별 당일 입출금용 */
+    @Query("""
+        select vl.lineType, vl.amount, vl.description
+        from VoucherLine vl
+        join vl.voucher v
+        where vl.accountCode = '100101'
+          and v.status = '승인'
+          and v.voucherDate = :d
+    """)
+    List<Object[]> findAllBankLinesOn(@Param("d") LocalDate d);
 }

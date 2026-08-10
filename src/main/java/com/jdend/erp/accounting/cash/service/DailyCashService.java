@@ -3,6 +3,8 @@ package com.jdend.erp.accounting.cash.service;
 import com.jdend.erp.accounting.cash.dto.*;
 import com.jdend.erp.accounting.cash.repository.BankTransactionRepository;
 import com.jdend.erp.accounting.cash.repository.VoucherCashAggRepository;
+import com.jdend.erp.myinfo.entity.BankAccount;
+import com.jdend.erp.myinfo.repository.BankAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ public class DailyCashService {
 
   private final BankTransactionRepository bankRepo;
   private final VoucherCashAggRepository voucherCashRepo;
+  private final BankAccountRepository bankAccountRepo;
 
   // 현금성 계정 키워드(원하면 여기 수정)
   private static final String[] CASH_KEYS = {"현금","예금","보통예금","은행","국민","하나","신한"};
@@ -142,29 +145,70 @@ public class DailyCashService {
         voucherCashRepo.sumCashByAccountOn(date,
             CASH_KEYS[0], CASH_KEYS[1], CASH_KEYS[2], CASH_KEYS[3], CASH_KEYS[4], CASH_KEYS[5], CASH_KEYS[6]);
 
-    // 은행 CSV 없을 때: 전표 기준 보통예금(100101) 잔액으로 Section I 대체
+    // 은행 CSV 없을 때: 전표 기준 보통예금(100101) 잔액으로 Section I 대체 (계좌별 분리)
     if (banks.isEmpty()) {
-      long prevBal = nz(voucherCashRepo.sumNetBefore100101(date));
-      long todayIn = 0, todayOut = 0;
-      for (var r : vRows) {
-        if ("보통예금".equals(r.getAccountName())) {
-          long amt = nz(r.getAmt());
-          if ("DEBIT".equalsIgnoreCase(r.getLineType())) todayIn  += amt;
-          else                                            todayOut += amt;
+      List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
+
+      if (accounts.isEmpty()) {
+        // 계좌 미등록 시 전체 합산 단일 행
+        long prevBal = nz(voucherCashRepo.sumNetBefore100101(date));
+        long todayIn = 0, todayOut = 0;
+        for (var r : vRows) {
+          if ("보통예금".equals(r.getAccountName())) {
+            long amt = nz(r.getAmt());
+            if ("DEBIT".equalsIgnoreCase(r.getLineType())) todayIn  += amt;
+            else                                            todayOut += amt;
+          }
+        }
+        long balance = prevBal + todayIn - todayOut;
+        bankIn = todayIn; bankOut = todayOut;
+        totalPrev = prevBal; totalBalance = balance;
+        banks.add(DailyFundReportResponse.BankRow.builder()
+            .bankName("보통예금 (전표합산)")
+            .prevBalance(prevBal).income(todayIn).expense(todayOut).balance(balance)
+            .build());
+      } else {
+        // 계좌별 분리 — description의 계좌번호로 라인 매칭
+        List<Object[]> prevLines  = voucherCashRepo.findBankLinesBeforeDate(date);
+        List<Object[]> todayLines = voucherCashRepo.findBankLinesOnDate(date);
+
+        Map<Long, Long> openingMap = new LinkedHashMap<>();
+        Map<Long, Long> debitMap   = new LinkedHashMap<>();
+        Map<Long, Long> creditMap  = new LinkedHashMap<>();
+        for (BankAccount a : accounts) {
+          openingMap.put(a.getId(), 0L);
+          debitMap.put(a.getId(), 0L);
+          creditMap.put(a.getId(), 0L);
+        }
+
+        for (Object[] row : prevLines) {
+          String lt = (String) row[0]; long amt = toLong(row[1]); String desc = (String) row[2];
+          BankAccount m = matchBankAccount(desc, accounts);
+          if (m != null) openingMap.merge(m.getId(), "DEBIT".equals(lt) ? amt : -amt, Long::sum);
+        }
+        for (Object[] row : todayLines) {
+          String lt = (String) row[0]; long amt = toLong(row[1]); String desc = (String) row[2];
+          BankAccount m = matchBankAccount(desc, accounts);
+          if (m != null) {
+            if ("DEBIT".equals(lt)) debitMap.merge(m.getId(), amt, Long::sum);
+            else                     creditMap.merge(m.getId(), amt, Long::sum);
+          }
+        }
+
+        for (BankAccount acc : accounts) {
+          long op  = openingMap.get(acc.getId());
+          long dep = debitMap.get(acc.getId());
+          long crd = creditMap.get(acc.getId());
+          long bal = op + dep - crd;
+          String label = acc.getAccountAlias() != null && !acc.getAccountAlias().isBlank()
+              ? acc.getAccountAlias() + " (" + acc.getBankName() + ")"
+              : acc.getBankName();
+          bankIn += dep; bankOut += crd; totalPrev += op; totalBalance += bal;
+          banks.add(DailyFundReportResponse.BankRow.builder()
+              .bankName(label).prevBalance(op).income(dep).expense(crd).balance(bal)
+              .build());
         }
       }
-      long balance = prevBal + todayIn - todayOut;
-      bankIn       = todayIn;
-      bankOut      = todayOut;
-      totalPrev    = prevBal;
-      totalBalance = balance;
-      banks.add(DailyFundReportResponse.BankRow.builder()
-          .bankName("보통예금 (전표합산)")
-          .prevBalance(prevBal)
-          .income(todayIn)
-          .expense(todayOut)
-          .balance(balance)
-          .build());
     }
 
     List<DailyFundReportResponse.VoucherRow> vIn = new ArrayList<>();
@@ -319,4 +363,20 @@ public class DailyCashService {
   }
 
   private long nz(Long v){ return v == null ? 0L : v; }
+
+  private long toLong(Object o) {
+    if (o == null) return 0L;
+    if (o instanceof Long l) return l;
+    if (o instanceof Number n) return n.longValue();
+    return 0L;
+  }
+
+  private BankAccount matchBankAccount(String description, List<BankAccount> accounts) {
+    if (description == null || description.isBlank()) return null;
+    for (BankAccount acc : accounts) {
+      String accNo = acc.getAccountNumber();
+      if (accNo != null && !accNo.isBlank() && description.contains(accNo)) return acc;
+    }
+    return null;
+  }
 }

@@ -63,6 +63,15 @@
     .mfg input, .mfg select { width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.93rem; box-sizing: border-box; }
     .btn-direct { margin-top: 6px; padding: 5px 12px; background: #e5e7eb; border: 1px solid #d1d5db; border-radius: 5px; cursor: pointer; font-size: 0.83rem; color: #374151; }
     .btn-direct:hover { background: #d1d5db; }
+    .type-btn { padding: 5px 13px; border: 1px solid #d1d5db; border-radius: 5px; background: #f9fafb; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: #6b7280; }
+    .type-btn.active { background: #23304e; color: #fff; border-color: #23304e; }
+    .type-btn:hover:not(.active) { background: #e5e7eb; }
+    .payee-result-item { padding: 8px 12px; font-size: 0.88rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: #374151; }
+    .payee-result-item:hover { background: #f0f9ff; color: #1b253a; }
+    .payee-result-item:last-child { border-bottom: none; }
+    .payee-selected-box { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 7px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; }
+    .payee-clear-btn { padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.8rem; color: #374151; }
+    .payee-clear-btn:hover { background: #f3f4f6; }
     .modal-summary { background: #f0fdf4; border-radius: 6px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.9rem; }
     .modal-summary .label { color: #6b7280; }
     .modal-summary .val { font-weight: 700; color: #065f46; font-size: 1rem; }
@@ -152,15 +161,35 @@
     </div>
     <div class="mfg">
       <label>지급처 <span style="color:#9ca3af;font-weight:400;">(선택)</span></label>
-      <select id="payeeSelect" onchange="onPayeeChange()">
-        <option value="">-- 미선택 --</option>
-      </select>
-      <input type="text" id="payeeDirectInput" style="display:none;margin-top:6px;" placeholder="지급처명 직접 입력">
+      <input type="hidden" id="selectedPayeeId">
+      <input type="hidden" id="selectedPayeeType">
+      <!-- 유형 토글 -->
+      <div style="display:flex;gap:6px;margin-bottom:7px;">
+        <button type="button" id="btnTypeCustomer" class="type-btn active" onclick="setPayeeType('customer')">고객</button>
+        <button type="button" id="btnTypePartner" class="type-btn" onclick="setPayeeType('partner')">기타거래처</button>
+        <button type="button" id="btnTypeDirect" class="type-btn" onclick="setPayeeType('direct')">직접입력</button>
+      </div>
+      <!-- 검색 모드 -->
+      <div id="payeeSearchMode">
+        <div style="display:flex;gap:4px;">
+          <input type="text" id="payeeKeyword" placeholder="이름으로 검색" style="flex:1;margin:0;" onkeydown="if(event.key==='Enter')searchPayee()">
+          <button type="button" onclick="searchPayee()" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:5px;background:#f9fafb;cursor:pointer;font-size:1rem;flex-shrink:0;line-height:1;">🔍</button>
+        </div>
+        <div id="payeeResultsList" style="display:none;max-height:150px;overflow-y:auto;border:1px solid #d1d5db;border-top:none;border-radius:0 0 5px 5px;background:#fff;"></div>
+        <div id="payeeSelectedDisplay" style="display:none;" class="payee-selected-box">
+          <span id="payeeSelectedName" style="font-weight:700;color:#065f46;font-size:0.9rem;"></span>
+          <button type="button" class="payee-clear-btn" onclick="clearPayeeSelection()">변경</button>
+        </div>
+      </div>
+      <!-- 직접입력 모드 -->
+      <div id="payeeDirectMode" style="display:none;">
+        <input type="text" id="payeeDirectInput" placeholder="지급처명 직접 입력">
+      </div>
     </div>
     <div class="mfg">
       <label>지급계좌 <span style="color:#9ca3af;font-weight:400;">(선택)</span></label>
       <select id="paymentAccountSelect">
-        <option value="">-- 거래처 선택 후 계좌 표시 --</option>
+        <option value="">-- 지급처 선택 후 계좌 표시 --</option>
       </select>
       <input type="text" id="paymentAccountDirect" style="display:none;margin-top:6px;" placeholder="계좌번호 직접 입력">
       <button type="button" id="btnDirectInput" class="btn-direct" onclick="toggleDirectInput()">직접입력</button>
@@ -294,16 +323,7 @@
     document.getElementById('bankAccount').value = '보통예금';
     document.getElementById('payMemo').value = '';
     onBankAccountInput();
-
-    // 지급처/지급계좌 초기화
-    document.getElementById('payeeDirectInput').style.display = 'none';
-    document.getElementById('payeeDirectInput').value = '';
-    document.getElementById('paymentAccountSelect').innerHTML = '<option value="">-- 거래처 선택 후 계좌 표시 --</option>';
-    document.getElementById('paymentAccountSelect').style.display = '';
-    document.getElementById('paymentAccountDirect').style.display = 'none';
-    document.getElementById('paymentAccountDirect').value = '';
-    document.getElementById('btnDirectInput').textContent = '직접입력';
-    await loadPartners();
+    resetPayeeUI();
 
     document.getElementById('payModal').classList.add('open');
   }
@@ -312,80 +332,136 @@
     document.getElementById('payModal').classList.remove('open');
   }
 
-  // 지급처 목록 로드 (기타거래처 + 직접입력)
-  async function loadPartners() {
-    const sel = document.getElementById('payeeSelect');
-    sel.innerHTML = '<option value="">-- 미선택 --</option>';
-    try {
-      const res = await fetch('/api/partners/search?kw=', { credentials: 'include' });
-      if (res.ok) {
-        const list = await res.json();
-        list.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.dataset.partnerName = p.partnerName;
-          opt.textContent = p.partnerName;
-          sel.appendChild(opt);
-        });
-      }
-    } catch (e) { /* 무시 */ }
-    // 항상 직접입력 옵션 추가
-    const directOpt = document.createElement('option');
-    directOpt.value = 'DIRECT';
-    directOpt.textContent = '── 직접입력 ──';
-    sel.appendChild(directOpt);
+  // ─── 지급처 검색 UI ───────────────────────────────────────────
+
+  let _payeeType = 'customer';
+
+  function resetPayeeUI() {
+    _payeeType = 'customer';
+    document.getElementById('btnTypeCustomer').classList.add('active');
+    document.getElementById('btnTypePartner').classList.remove('active');
+    document.getElementById('btnTypeDirect').classList.remove('active');
+    document.getElementById('payeeKeyword').value = '';
+    document.getElementById('payeeResultsList').style.display = 'none';
+    document.getElementById('payeeResultsList').innerHTML = '';
+    document.getElementById('payeeSelectedDisplay').style.display = 'none';
+    document.getElementById('payeeSelectedName').textContent = '';
+    document.getElementById('selectedPayeeId').value = '';
+    document.getElementById('selectedPayeeType').value = '';
+    document.getElementById('payeeSearchMode').style.display = '';
+    document.getElementById('payeeDirectMode').style.display = 'none';
+    document.getElementById('payeeDirectInput').value = '';
+    resetPayeeAccount();
   }
 
-  // 지급처 변경 시 계좌 목록 갱신
-  async function onPayeeChange() {
-    const sel = document.getElementById('payeeSelect');
-    const partnerId = sel.value;
-    const payeeDirect = document.getElementById('payeeDirectInput');
+  function setPayeeType(type) {
+    _payeeType = type;
+    document.getElementById('btnTypeCustomer').classList.toggle('active', type === 'customer');
+    document.getElementById('btnTypePartner').classList.toggle('active', type === 'partner');
+    document.getElementById('btnTypeDirect').classList.toggle('active', type === 'direct');
+    clearPayeeSelection();
+    document.getElementById('payeeKeyword').value = '';
+    document.getElementById('payeeResultsList').style.display = 'none';
+    document.getElementById('payeeResultsList').innerHTML = '';
+    if (type === 'direct') {
+      document.getElementById('payeeSearchMode').style.display = 'none';
+      document.getElementById('payeeDirectMode').style.display = '';
+    } else {
+      document.getElementById('payeeSearchMode').style.display = '';
+      document.getElementById('payeeDirectMode').style.display = 'none';
+    }
+  }
+
+  async function searchPayee() {
+    const keyword = document.getElementById('payeeKeyword').value.trim();
+    const resultsList = document.getElementById('payeeResultsList');
+    resultsList.innerHTML = '<div style="padding:8px 12px;color:#6b7280;font-size:0.88rem;">검색 중...</div>';
+    resultsList.style.display = 'block';
+    try {
+      let items = [];
+      if (_payeeType === 'customer') {
+        const res = await fetch('/api/customers/search?keyword=' + encodeURIComponent(keyword), { credentials: 'include' });
+        const list = await res.json();
+        items = list.map(c => ({ id: c.id, type: 'customer', label: c.customerName + (c.customerNumber ? ' (' + c.customerNumber + ')' : ''), name: c.customerName }));
+      } else {
+        const res = await fetch('/api/partners/search?kw=' + encodeURIComponent(keyword), { credentials: 'include' });
+        const list = await res.json();
+        items = list.map(p => ({ id: p.id, type: 'partner', label: p.customerName, name: p.customerName }));
+      }
+      if (items.length === 0) {
+        resultsList.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:0.88rem;">검색 결과 없음</div>';
+        return;
+      }
+      resultsList.innerHTML = '';
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'payee-result-item';
+        div.textContent = item.label;
+        div.addEventListener('click', () => selectPayee(item.id, item.type, item.name));
+        resultsList.appendChild(div);
+      });
+    } catch(e) {
+      resultsList.innerHTML = '<div style="padding:8px 12px;color:#dc2626;font-size:0.88rem;">검색 실패</div>';
+    }
+  }
+
+  async function selectPayee(id, type, name) {
+    document.getElementById('selectedPayeeId').value = id;
+    document.getElementById('selectedPayeeType').value = type;
+    document.getElementById('payeeSelectedName').textContent = name + (type === 'customer' ? ' (고객)' : ' (기타거래처)');
+    document.getElementById('payeeSelectedDisplay').style.display = 'flex';
+    document.getElementById('payeeResultsList').style.display = 'none';
+    document.getElementById('payeeKeyword').value = '';
+    await loadPayeeAccounts(id);
+  }
+
+  function clearPayeeSelection() {
+    document.getElementById('selectedPayeeId').value = '';
+    document.getElementById('selectedPayeeType').value = '';
+    document.getElementById('payeeSelectedName').textContent = '';
+    document.getElementById('payeeSelectedDisplay').style.display = 'none';
+    document.getElementById('payeeResultsList').style.display = 'none';
+    resetPayeeAccount();
+  }
+
+  async function loadPayeeAccounts(entityId) {
     const acctSel = document.getElementById('paymentAccountSelect');
     const directInput = document.getElementById('paymentAccountDirect');
-    const btnDirect = document.getElementById('btnDirectInput');
-
-    // 지급처 직접입력 토글
-    if (partnerId === 'DIRECT') {
-      payeeDirect.style.display = '';
-      payeeDirect.focus();
-      // 지급계좌도 직접입력 모드로 자동 전환
-      acctSel.innerHTML = '<option value="">직접 입력</option>';
-      acctSel.style.display = 'none';
-      directInput.style.display = '';
-      directInput.value = '';
-      btnDirect.textContent = '목록으로';
-      return;
-    }
-    payeeDirect.style.display = 'none';
-    payeeDirect.value = '';
-
-    // 지급계좌 초기화
-    acctSel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
+    const btn = document.getElementById('btnDirectInput');
+    acctSel.innerHTML = '<option value="">-- 계좌 로드 중... --</option>';
     acctSel.style.display = '';
     directInput.style.display = 'none';
     directInput.value = '';
-    btnDirect.textContent = '직접입력';
-
-    if (!partnerId) return;
-
+    btn.textContent = '직접입력';
     try {
-      const res = await fetch(`/api/partner-accounts/by-partner/${partnerId}`, { credentials: 'include' });
+      const res = await fetch('/api/partner-accounts/by-partner/' + entityId, { credentials: 'include' });
       if (!res.ok) throw new Error();
       const accounts = await res.json();
       if (!accounts || accounts.length === 0) {
         acctSel.innerHTML = '<option value="">등록된 계좌 없음</option>';
       } else {
+        acctSel.innerHTML = '<option value="">-- 계좌 선택 --</option>';
         accounts.forEach(a => {
           const opt = document.createElement('option');
-          opt.value = `${a.bankName} ${a.accountNumber}`;
-          opt.textContent = `${a.bankName} ${a.accountNumber}` + (a.accountHolder ? ` (${a.accountHolder})` : '');
+          opt.value = a.bankName + ' ' + a.accountNumber;
+          opt.textContent = a.bankName + ' ' + a.accountNumber + (a.accountHolder ? ' (' + a.accountHolder + ')' : '');
           acctSel.appendChild(opt);
         });
       }
-    } catch (e) {
-      acctSel.innerHTML = '<option value="">로드 실패</option>';
+    } catch(e) {
+      acctSel.innerHTML = '<option value="">계좌 로드 실패</option>';
     }
+  }
+
+  function resetPayeeAccount() {
+    const acctSel = document.getElementById('paymentAccountSelect');
+    const directInput = document.getElementById('paymentAccountDirect');
+    const btn = document.getElementById('btnDirectInput');
+    acctSel.innerHTML = '<option value="">-- 지급처 선택 후 계좌 표시 --</option>';
+    acctSel.style.display = '';
+    directInput.style.display = 'none';
+    directInput.value = '';
+    btn.textContent = '직접입력';
   }
 
   // 직접입력 토글
@@ -412,13 +488,12 @@
     const lineIds = Array.from(checked).map(c => Number(c.value));
 
     // 지급처 이름
-    const payeeSelect = document.getElementById('payeeSelect');
     let payeeName = '';
-    if (payeeSelect.value === 'DIRECT') {
+    if (_payeeType === 'direct') {
       payeeName = document.getElementById('payeeDirectInput').value.trim();
     } else {
-      const selectedOpt = payeeSelect.options[payeeSelect.selectedIndex];
-      payeeName = (selectedOpt && selectedOpt.value) ? (selectedOpt.dataset.partnerName || selectedOpt.textContent || '') : '';
+      const rawName = document.getElementById('payeeSelectedName').textContent;
+      payeeName = rawName.replace(/ \(고객\)$/, '').replace(/ \(기타거래처\)$/, '').trim();
     }
 
     // 지급계좌: 직접입력 vs 드롭다운

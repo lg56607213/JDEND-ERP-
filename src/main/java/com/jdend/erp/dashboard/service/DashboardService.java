@@ -134,29 +134,84 @@ public class DashboardService {
     LocalDate today = LocalDate.now();
     LocalDate yesterday = today.minusDays(1);
 
-    // 전표 accountCode='100101'(보통예금) 기준으로 합산 — 계좌명 매칭 불필요
-    long prevBal  = nz(voucherRepo.sumNetUpToByAccountCode(yesterday));
-    long todayDep = nz(voucherRepo.sumDebitOnByAccountCode(today));
-    long todayWit = nz(voucherRepo.sumCreditOnByAccountCode(today));
-    long curBal   = prevBal + todayDep - todayWit;
-
-    // 등록된 계좌 목록으로 표시명 구성 (잔액은 전표 합산값 사용)
     List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
-    String bankLabel = accounts.isEmpty() ? "보통예금"
-        : accounts.stream()
-            .map(a -> a.getAccountAlias() != null && !a.getAccountAlias().isBlank()
-                ? a.getAccountAlias() : a.getBankName())
-            .reduce((a, b) -> a + "/" + b).orElse("보통예금");
 
-    return List.of(DashboardBankSummaryRow.builder()
-        .bankName(bankLabel)
-        .accountNumber("")
-        .accountAlias("전표합산")
-        .balance2DaysAgo(prevBal)
-        .yesterdayDeposit(todayDep)
-        .yesterdayWithdrawal(todayWit)
-        .currentBalance(curBal)
-        .build());
+    // 계좌 미등록 시 기존 전표합산 단일 행 유지
+    if (accounts.isEmpty()) {
+      long prevBal  = nz(voucherRepo.sumNetUpToByAccountCode(yesterday));
+      long todayDep = nz(voucherRepo.sumDebitOnByAccountCode(today));
+      long todayWit = nz(voucherRepo.sumCreditOnByAccountCode(today));
+      return List.of(DashboardBankSummaryRow.builder()
+          .bankName("보통예금")
+          .accountNumber("")
+          .accountAlias("전표합산")
+          .balance2DaysAgo(prevBal)
+          .yesterdayDeposit(todayDep)
+          .yesterdayWithdrawal(todayWit)
+          .currentBalance(prevBal + todayDep - todayWit)
+          .build());
+    }
+
+    // 보통예금 전표 라인 전체 조회 — description 필드에 계좌번호 포함 여부로 매칭
+    List<Object[]> prevLines  = voucherRepo.findAllBankLinesUpTo(yesterday);
+    List<Object[]> todayLines = voucherRepo.findAllBankLinesOn(today);
+
+    Map<Long, Long> openingMap = new LinkedHashMap<>();
+    Map<Long, Long> debitMap   = new LinkedHashMap<>();
+    Map<Long, Long> creditMap  = new LinkedHashMap<>();
+    for (BankAccount a : accounts) {
+      openingMap.put(a.getId(), 0L);
+      debitMap.put(a.getId(), 0L);
+      creditMap.put(a.getId(), 0L);
+    }
+
+    for (Object[] row : prevLines) {
+      String lineType = (String) row[0];
+      long amount = toLong(row[1]);
+      String desc = (String) row[2];
+      long delta = "DEBIT".equals(lineType) ? amount : -amount;
+      BankAccount matched = matchBankAccount(desc, accounts);
+      if (matched != null) openingMap.merge(matched.getId(), delta, Long::sum);
+    }
+
+    for (Object[] row : todayLines) {
+      String lineType = (String) row[0];
+      long amount = toLong(row[1]);
+      String desc = (String) row[2];
+      BankAccount matched = matchBankAccount(desc, accounts);
+      if (matched != null) {
+        if ("DEBIT".equals(lineType)) debitMap.merge(matched.getId(), amount, Long::sum);
+        else                           creditMap.merge(matched.getId(), amount, Long::sum);
+      }
+    }
+
+    List<DashboardBankSummaryRow> result = new ArrayList<>();
+    for (BankAccount acc : accounts) {
+      long op  = openingMap.get(acc.getId());
+      long dep = debitMap.get(acc.getId());
+      long crd = creditMap.get(acc.getId());
+      String label = acc.getAccountAlias() != null && !acc.getAccountAlias().isBlank()
+          ? acc.getAccountAlias() : acc.getBankName();
+      result.add(DashboardBankSummaryRow.builder()
+          .bankName(acc.getBankName())
+          .accountNumber(acc.getAccountNumber())
+          .accountAlias(label)
+          .balance2DaysAgo(op)
+          .yesterdayDeposit(dep)
+          .yesterdayWithdrawal(crd)
+          .currentBalance(op + dep - crd)
+          .build());
+    }
+    return result;
+  }
+
+  private BankAccount matchBankAccount(String description, List<BankAccount> accounts) {
+    if (description == null || description.isBlank()) return null;
+    for (BankAccount acc : accounts) {
+      String accNo = acc.getAccountNumber();
+      if (accNo != null && !accNo.isBlank() && description.contains(accNo)) return acc;
+    }
+    return null;
   }
 
   public List<DashboardBankDiffRow> bankVoucherDiff() {

@@ -146,4 +146,26 @@ public interface VoucherCashAggRepository extends JpaRepository<VoucherLine, Lon
        and v.voucherDate < :date
   """)
   Long sumNetBefore100101(@Param("date") LocalDate date);
+
+  /** 보통예금(100101) 특정일 이전 모든 라인 [lineType, amount, description] — 계좌별 잔액 계산용 */
+  @Query("""
+    select l.lineType, l.amount, l.description
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and l.accountCode = '100101'
+       and v.voucherDate < :date
+  """)
+  List<Object[]> findBankLinesBeforeDate(@Param("date") LocalDate date);
+
+  /** 보통예금(100101) 특정일 모든 라인 [lineType, amount, description] — 계좌별 당일 입출금용 */
+  @Query("""
+    select l.lineType, l.amount, l.description
+      from VoucherLine l
+      join l.voucher v
+     where v.status = '승인'
+       and l.accountCode = '100101'
+       and v.voucherDate = :date
+  """)
+  List<Object[]> findBankLinesOnDate(@Param("date") LocalDate date);
 }

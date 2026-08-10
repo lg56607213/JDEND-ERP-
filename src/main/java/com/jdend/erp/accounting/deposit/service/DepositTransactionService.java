@@ -260,6 +260,12 @@ public class DepositTransactionService {
         if (req.getCompanyAccount() != null && !req.getCompanyAccount().isBlank()) {
             refundCreditDesc += " [계좌: " + req.getCompanyAccount() + "]";
         }
+        if (req.getPayee() != null && !req.getPayee().isBlank()) {
+            refundCreditDesc += " [지급처: " + req.getPayee() + "]";
+        }
+        if (req.getPayeeAccount() != null && !req.getPayeeAccount().isBlank()) {
+            refundCreditDesc += " [지급계좌: " + req.getPayeeAccount() + "]";
+        }
 
         voucherService.create(VoucherCreateRequest.builder()
                 .voucherDate(req.getTransactionDate())
