@@ -56,48 +56,33 @@ public class VoucherBulkUploadService {
     return ExcelTemplateWriter.writeMultiRow(HEADERS, SAMPLE_ROWS);
   }
 
-  public ExcelUploadResultResponse upload(MultipartFile file) {
-    List<Map<String, String>> rows;
-    try {
-      rows = ExcelReader.readRows(file.getInputStream());
-    } catch (Exception e) {
-      throw new IllegalArgumentException("엑셀 파일을 읽을 수 없습니다: " + e.getMessage());
-    }
+  /** 파일을 파싱·검증만 하고 DB에는 저장하지 않는다. 사용자가 결과를 확인 후 upload()로 실제 저장한다. */
+  public ExcelUploadResultResponse preview(MultipartFile file) {
+    List<Map<String, String>> rows = readAndValidateFile(file);
+    LinkedHashMap<String, List<Integer>> groups = buildGroups(rows);
 
-    if (rows.size() > maxBulkUploadRows) {
-      throw new IllegalArgumentException(
-          "한 번에 업로드 가능한 최대 행 수는 " + maxBulkUploadRows + "개입니다. " +
-          "현재 파일의 데이터 행: " + rows.size() + "개. " +
-          "연도별로 나눠서 여러 번 업로드해 주세요.");
-    }
+    int success = 0;
+    List<ExcelUploadResultResponse.RowError> errors = new ArrayList<>();
 
-    // "전표번호"가 있으면 날짜+전표번호 조합으로 묶는다(복합전표).
-    // "전표번호"가 비어있으면 해당 행 혼자 독립 전표 → 전표번호는 생성 시 자동채번.
-    // 전표일자 형식이 잘못된 행은 단독 그룹으로 두어 오류를 그 행에만 보고한다.
-    LinkedHashMap<String, List<Integer>> groups = new LinkedHashMap<>();
-    for (int i = 0; i < rows.size(); i++) {
-      int rowNumber = i + 2;
-      Map<String, String> row = rows.get(i);
-      String voucherNo = str(row, "전표번호");
-
-      LocalDate rowDate = null;
+    for (List<Integer> indices : groups.values()) {
+      List<Integer> rowNumbers = indices.stream().map(i -> i + 2).toList();
       try {
-        rowDate = dateVal(row, "전표일자");
-      } catch (Exception ignored) {
-        // 형식이 잘못된 날짜는 아래에서 단독 그룹으로 처리된다.
+        toRequest(rows, indices); // 검증만, DB 저장 없음
+        success += indices.size();
+      } catch (Exception e) {
+        errors.add(buildRowError(rowNumbers, e.getMessage()));
       }
-
-      String key;
-      if (voucherNo != null && rowDate != null) {
-        // 날짜+전표번호 조합: 다른 날짜에 같은 전표번호가 겹쳐도 별도 전표로 분리된다.
-        key = "G:" + rowDate + ":" + voucherNo;
-      } else {
-        // 전표번호 없음 → 행 하나가 독립 전표 (자동채번)
-        key = "R:" + rowNumber;
-      }
-
-      groups.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
     }
+
+    return ExcelUploadResultResponse.builder()
+        .totalRows(rows.size()).successCount(success)
+        .failCount(rows.size() - success).errors(errors).build();
+  }
+
+  /** preview() 후 사용자가 확인하면 호출. 검증 통과한 전표를 DB에 저장한다. */
+  public ExcelUploadResultResponse upload(MultipartFile file) {
+    List<Map<String, String>> rows = readAndValidateFile(file);
+    LinkedHashMap<String, List<Integer>> groups = buildGroups(rows);
 
     int success = 0;
     List<ExcelUploadResultResponse.RowError> errors = new ArrayList<>();
@@ -108,23 +93,53 @@ public class VoucherBulkUploadService {
         voucherService.create(toRequest(rows, indices));
         success += indices.size();
       } catch (Exception e) {
-        String rowLabel = rowNumbers.size() == 1
-            ? (rowNumbers.get(0) + "행")
-            : (rowNumbers.get(0) + "~" + rowNumbers.get(rowNumbers.size() - 1) + "행");
-
-        errors.add(ExcelUploadResultResponse.RowError.builder()
-            .rowNumber(rowNumbers.get(0))
-            .message(rowLabel + ": " + e.getMessage())
-            .build());
+        errors.add(buildRowError(rowNumbers, e.getMessage()));
       }
     }
 
     return ExcelUploadResultResponse.builder()
-        .totalRows(rows.size())
-        .successCount(success)
-        .failCount(rows.size() - success)
-        .errors(errors)
-        .build();
+        .totalRows(rows.size()).successCount(success)
+        .failCount(rows.size() - success).errors(errors).build();
+  }
+
+  private List<Map<String, String>> readAndValidateFile(MultipartFile file) {
+    List<Map<String, String>> rows;
+    try {
+      rows = ExcelReader.readRows(file.getInputStream());
+    } catch (Exception e) {
+      throw new IllegalArgumentException("엑셀 파일을 읽을 수 없습니다: " + e.getMessage());
+    }
+    if (rows.size() > maxBulkUploadRows) {
+      throw new IllegalArgumentException(
+          "한 번에 업로드 가능한 최대 행 수는 " + maxBulkUploadRows + "개입니다. " +
+          "현재 파일의 데이터 행: " + rows.size() + "개. 연도별로 나눠서 여러 번 업로드해 주세요.");
+    }
+    return rows;
+  }
+
+  private LinkedHashMap<String, List<Integer>> buildGroups(List<Map<String, String>> rows) {
+    LinkedHashMap<String, List<Integer>> groups = new LinkedHashMap<>();
+    for (int i = 0; i < rows.size(); i++) {
+      int rowNumber = i + 2;
+      Map<String, String> row = rows.get(i);
+      String voucherNo = str(row, "전표번호");
+      LocalDate rowDate = null;
+      try { rowDate = dateVal(row, "전표일자"); } catch (Exception ignored) {}
+
+      String key = (voucherNo != null && rowDate != null)
+          ? "G:" + rowDate + ":" + voucherNo
+          : "R:" + rowNumber;
+      groups.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
+    }
+    return groups;
+  }
+
+  private ExcelUploadResultResponse.RowError buildRowError(List<Integer> rowNumbers, String message) {
+    String rowLabel = rowNumbers.size() == 1
+        ? (rowNumbers.get(0) + "행")
+        : (rowNumbers.get(0) + "~" + rowNumbers.get(rowNumbers.size() - 1) + "행");
+    return ExcelUploadResultResponse.RowError.builder()
+        .rowNumber(rowNumbers.get(0)).message(rowLabel + ": " + message).build();
   }
 
   private VoucherCreateRequest toRequest(List<Map<String, String>> rows, List<Integer> indices) {

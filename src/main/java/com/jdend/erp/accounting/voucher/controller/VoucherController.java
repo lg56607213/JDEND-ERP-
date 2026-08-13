@@ -91,6 +91,11 @@ public class VoucherController {
                 .body(bulkUploadService.template());
     }
 
+    @PostMapping("/bulk-upload/preview")
+    public ExcelUploadResultResponse bulkUploadPreview(@RequestParam("file") MultipartFile file) {
+        return bulkUploadService.preview(file);
+    }
+
     @PostMapping("/bulk-upload")
     public ExcelUploadResultResponse bulkUpload(@RequestParam("file") MultipartFile file) {
         return bulkUploadService.upload(file);
