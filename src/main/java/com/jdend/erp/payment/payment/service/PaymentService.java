@@ -258,23 +258,18 @@ public class PaymentService {
         .sortOrder(1)
         .build());
 
+    String vatAccount = accountSettings.getPaymentVatCreditAccount();
+
     if (excess > 0 && totalDue > 0) {
-      // 초과 수납: 대변 ① 렌트수익 (미수금 해당분), 대변 ② 선수금 (초과분)
-      voucher.addLine(VoucherLine.builder()
-          .lineType("CREDIT")
-          .accountCode(accountResolver.codeOf(creditAccount))
-          .accountName(creditAccount)
-          .amount(totalDue)
-          .description("수납등록 입금")
-          .sortOrder(2)
-          .build());
+      // 초과 수납: 대변 ① 렌트수익(공급가액) + ② 부가세예수금, ③ 선수금 (초과분)
+      addRentCreditLines(voucher, creditAccount, vatAccount, totalDue, 2);
       voucher.addLine(VoucherLine.builder()
           .lineType("CREDIT")
           .accountCode(prepaidAccountCode())
           .accountName("선수금")
           .amount(excess)
           .description("초과수납 선수금")
-          .sortOrder(3)
+          .sortOrder(vatAccount != null ? 4 : 3)
           .build());
     } else if (excess > 0) {
       // 미수금 0인데 전액 초과: 대변 선수금 전액
@@ -287,15 +282,8 @@ public class PaymentService {
           .sortOrder(2)
           .build());
     } else {
-      // 일반 수납: 대변 렌트수익 전액
-      voucher.addLine(VoucherLine.builder()
-          .lineType("CREDIT")
-          .accountCode(accountResolver.codeOf(creditAccount))
-          .accountName(creditAccount)
-          .amount(payment.getPaymentAmount())
-          .description("수납등록 입금")
-          .sortOrder(2)
-          .build());
+      // 일반 수납: 대변 렌트수익(공급가액) + 부가세예수금
+      addRentCreditLines(voucher, creditAccount, vatAccount, payment.getPaymentAmount(), 2);
     }
 
     Voucher saved = voucherRepository.save(voucher);
@@ -307,6 +295,44 @@ public class PaymentService {
     String code = accountSettings.getPrepaidDebitAccountCode();
     if (code != null && !code.isBlank()) return code;
     return accountResolver.codeOf("선수금");
+  }
+
+  /**
+   * 렌트수익 대변 라인을 추가한다.
+   * vatAccount 가 설정된 경우 공급가액(렌트수익)과 부가세예수금으로 분리해서 각각 추가한다.
+   * 수납금액은 부가세포함 공급대가이므로 vatAmount = amount * 10 / 110 (floor).
+   */
+  private void addRentCreditLines(Voucher voucher, String creditAccount, String vatAccount,
+                                  long amount, int startOrder) {
+    if (vatAccount != null) {
+      long vatAmount    = amount * 10L / 110L;
+      long supplyAmount = amount - vatAmount;
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(accountResolver.codeOf(creditAccount))
+          .accountName(creditAccount)
+          .amount(supplyAmount)
+          .description("수납등록 입금 (공급가액)")
+          .sortOrder(startOrder)
+          .build());
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(accountResolver.codeOf(vatAccount))
+          .accountName(vatAccount)
+          .amount(vatAmount)
+          .description("수납등록 부가세")
+          .sortOrder(startOrder + 1)
+          .build());
+    } else {
+      voucher.addLine(VoucherLine.builder()
+          .lineType("CREDIT")
+          .accountCode(accountResolver.codeOf(creditAccount))
+          .accountName(creditAccount)
+          .amount(amount)
+          .description("수납등록 입금")
+          .sortOrder(startOrder)
+          .build());
+    }
   }
 
   /**

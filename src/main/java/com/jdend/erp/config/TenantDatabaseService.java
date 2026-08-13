@@ -216,8 +216,9 @@ public class TenantDatabaseService {
     "credit": {"account": "100404", "accountName": "감가상각누계액"}
   },
   "paymentMapping": {
-    "debit":  {"account": "100101", "accountName": "보통예금"},
-    "credit": {"account": "400101", "accountName": "렌트수익"}
+    "debit":     {"account": "100101", "accountName": "보통예금"},
+    "credit":    {"account": "400101", "accountName": "렌트수익"},
+    "vatCredit": {"account": "200103", "accountName": "부가세예수금"}
   },
   "saleMapping": {
     "debit":  {"account": "100101", "accountName": "보통예금"},

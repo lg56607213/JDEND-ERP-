@@ -106,9 +106,11 @@ public class OtherAccountSettingsService {
   /** 차량매각 대변 계정명 */
   public String getSaleCreditAccount()       { return nested("saleMapping",       "credit"); }
   /** 수납 차변 계정명 */
-  public String getPaymentDebitAccount()     { return nested("paymentMapping",    "debit");  }
-  /** 수납 대변 계정명 */
-  public String getPaymentCreditAccount()    { return nested("paymentMapping",    "credit"); }
+  public String getPaymentDebitAccount()     { return nested("paymentMapping",    "debit");     }
+  /** 수납 대변 계정명 (렌트수익 - 공급가액) */
+  public String getPaymentCreditAccount()    { return nested("paymentMapping",    "credit");    }
+  /** 수납 부가세예수금 대변 계정명 */
+  public String getPaymentVatCreditAccount() { return nested("paymentMapping",    "vatCredit"); }
 
   /** 중도해지 미회수렌트료 차변 계정명 */
   public String getEarlyTermUnrealizedRentDebit()  { return nested3("earlyTermMapping","unrealizedRent",   "debit");  }
