@@ -385,18 +385,24 @@
     }
 
     // ── 당사 계좌 목록 (보통예금 선택 시 드롭다운 삽입용) ──────────────────────
-    let bankAccountOptions = '';
+    // '주계좌'는 실제 등록계좌가 아니라, 계좌를 특정하지 않고 끊는 보통예금 전표를 담는 공용계좌다.
+    // 엑셀 일괄업로드처럼 계좌 지정 없이 올라온 보통예금도 자금일보에서 이 주계좌로 집계된다.
+    const MAIN_ACCOUNT_LABEL = '주계좌';
+    let bankAccountOptions = `<option value="${MAIN_ACCOUNT_LABEL}">주계좌 (계좌 미지정 공용)</option>`;
 
     async function loadBankAccountsForVoucher() {
+      let opts = `<option value="${MAIN_ACCOUNT_LABEL}">주계좌 (계좌 미지정 공용)</option>`;
       try {
         const res = await fetch(`${API_BASE}/api/my-info/bank-accounts?activeOnly=true`);
-        if (!res.ok) return;
-        const list = await res.json();
-        bankAccountOptions = list.map(a => {
-          const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
-          return `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`;
-        }).join('');
+        if (res.ok) {
+          const list = await res.json();
+          opts += list.map(a => {
+            const label = [a.accountAlias, a.bankName, a.accountNumber].filter(Boolean).join(' ');
+            return `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`;
+          }).join('');
+        }
       } catch(e) { console.warn('계좌 로드 실패', e); }
+      bankAccountOptions = opts;
     }
 
     function handleVoucherAccountChange(selectEl) {

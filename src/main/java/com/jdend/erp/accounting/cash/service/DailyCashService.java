@@ -145,69 +145,17 @@ public class DailyCashService {
         voucherCashRepo.sumCashByAccountOn(date,
             CASH_KEYS[0], CASH_KEYS[1], CASH_KEYS[2], CASH_KEYS[3], CASH_KEYS[4], CASH_KEYS[5], CASH_KEYS[6]);
 
-    // 은행 CSV 없을 때: 전표 기준 보통예금(100101) 잔액으로 Section I 대체 (계좌별 분리)
+    // 은행 CSV 없을 때: 전표 기준 보통예금(100101) 잔액으로 Section I 대체 (계좌별 분리 + 주계좌)
     if (banks.isEmpty()) {
-      List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
-
-      if (accounts.isEmpty()) {
-        // 계좌 미등록 시 전체 합산 단일 행
-        long prevBal = nz(voucherCashRepo.sumNetBefore100101(date));
-        long todayIn = 0, todayOut = 0;
-        for (var r : vRows) {
-          if ("보통예금".equals(r.getAccountName())) {
-            long amt = nz(r.getAmt());
-            if ("DEBIT".equalsIgnoreCase(r.getLineType())) todayIn  += amt;
-            else                                            todayOut += amt;
-          }
-        }
-        long balance = prevBal + todayIn - todayOut;
-        bankIn = todayIn; bankOut = todayOut;
-        totalPrev = prevBal; totalBalance = balance;
+      for (BankBalance b : voucherBankBalances(
+              voucherCashRepo.findBankLinesBeforeDate(date),
+              voucherCashRepo.findBankLinesOnDate(date))) {
+        bankIn += b.in(); bankOut += b.out();
+        totalPrev += b.opening(); totalBalance += b.balance();
         banks.add(DailyFundReportResponse.BankRow.builder()
-            .bankName("보통예금 (전표합산)")
-            .prevBalance(prevBal).income(todayIn).expense(todayOut).balance(balance)
+            .bankName(b.label()).prevBalance(b.opening())
+            .income(b.in()).expense(b.out()).balance(b.balance())
             .build());
-      } else {
-        // 계좌별 분리 — description의 계좌번호로 라인 매칭
-        List<Object[]> prevLines  = voucherCashRepo.findBankLinesBeforeDate(date);
-        List<Object[]> todayLines = voucherCashRepo.findBankLinesOnDate(date);
-
-        Map<Long, Long> openingMap = new LinkedHashMap<>();
-        Map<Long, Long> debitMap   = new LinkedHashMap<>();
-        Map<Long, Long> creditMap  = new LinkedHashMap<>();
-        for (BankAccount a : accounts) {
-          openingMap.put(a.getId(), 0L);
-          debitMap.put(a.getId(), 0L);
-          creditMap.put(a.getId(), 0L);
-        }
-
-        for (Object[] row : prevLines) {
-          String lt = (String) row[0]; long amt = toLong(row[1]); String desc = (String) row[2];
-          BankAccount m = matchBankAccount(desc, accounts);
-          if (m != null) openingMap.merge(m.getId(), "DEBIT".equals(lt) ? amt : -amt, Long::sum);
-        }
-        for (Object[] row : todayLines) {
-          String lt = (String) row[0]; long amt = toLong(row[1]); String desc = (String) row[2];
-          BankAccount m = matchBankAccount(desc, accounts);
-          if (m != null) {
-            if ("DEBIT".equals(lt)) debitMap.merge(m.getId(), amt, Long::sum);
-            else                     creditMap.merge(m.getId(), amt, Long::sum);
-          }
-        }
-
-        for (BankAccount acc : accounts) {
-          long op  = openingMap.get(acc.getId());
-          long dep = debitMap.get(acc.getId());
-          long crd = creditMap.get(acc.getId());
-          long bal = op + dep - crd;
-          String label = acc.getAccountAlias() != null && !acc.getAccountAlias().isBlank()
-              ? acc.getAccountAlias() + " (" + acc.getBankName() + ")"
-              : acc.getBankName();
-          bankIn += dep; bankOut += crd; totalPrev += op; totalBalance += bal;
-          banks.add(DailyFundReportResponse.BankRow.builder()
-              .bankName(label).prevBalance(op).income(dep).expense(crd).balance(bal)
-              .build());
-        }
       }
     }
 
@@ -310,6 +258,20 @@ public class DailyCashService {
           .build());
     }
 
+    // 은행 CSV 없을 때: 일일자금일보와 동일하게 전표 기준 보통예금 잔액으로 대체 (계좌별 + 주계좌)
+    if (banks.isEmpty()) {
+      for (BankBalance b : voucherBankBalances(
+              voucherCashRepo.findBankLinesBeforeDate(monthStart),
+              voucherCashRepo.findBankLinesBetween(monthStart, monthEnd))) {
+        totalPrev += b.opening(); totalIn += b.in();
+        totalOut += b.out();      totalBalance += b.balance();
+        banks.add(MonthlyFundReportResponse.MonthBankRow.builder()
+            .bankName(b.label()).prevBalance(b.opening())
+            .income(b.in()).expense(b.out()).balance(b.balance())
+            .build());
+      }
+    }
+
     // IV. 월별 세부내역 (전표 현금성 계정, 계정별 집계) — 기존 호환 유지
     List<MonthlyFundReportResponse.VoucherRow> mvIn  = new ArrayList<>();
     List<MonthlyFundReportResponse.VoucherRow> mvOut = new ArrayList<>();
@@ -360,6 +322,61 @@ public class DailyCashService {
         .allVoucherCredits(allMvCredits)
         .allVoucherCreditTotal(allMvCreditSum)
         .build();
+  }
+
+  // ==========================
+  // 보통예금 전표 → 계좌별 잔액 (계좌 미지정분은 '주계좌')
+  // ==========================
+
+  /** 계좌를 지정하지 않고 끊은 보통예금 전표(엑셀 일괄업로드 등)를 모아 보여주는 가상 공용계좌 이름. */
+  public static final String MAIN_ACCOUNT_LABEL = "주계좌";
+
+  private record BankBalance(String label, long opening, long in, long out) {
+    long balance() { return opening + in - out; }
+  }
+
+  /**
+   * 보통예금 전표 라인을 적요에 적힌 계좌번호로 등록계좌에 배분하고,
+   * 어느 계좌에도 매칭되지 않는 라인(계좌 미지정·일괄업로드분)은 '주계좌'로 모은다.
+   *
+   * <p>예전에는 매칭 실패한 라인을 그냥 버려서 자금일보 보통예금 합계가
+   * 재무상태표의 보통예금보다 작게 나왔다. 주계좌로 흡수해 합계를 일치시킨다.
+   */
+  private List<BankBalance> voucherBankBalances(List<Object[]> prevLines, List<Object[]> periodLines) {
+    List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
+
+    Map<Long, long[]> byAccount = new LinkedHashMap<>(); // accountId → [전기이월, 입금, 출금]
+    for (BankAccount a : accounts) byAccount.put(a.getId(), new long[3]);
+    long[] main = new long[3]; // 계좌 미지정분
+
+    for (Object[] row : prevLines) {
+      BankAccount m = matchBankAccount((String) row[2], accounts);
+      long[] t = (m != null) ? byAccount.get(m.getId()) : main;
+      t[0] += "DEBIT".equals(row[0]) ? toLong(row[1]) : -toLong(row[1]);
+    }
+    for (Object[] row : periodLines) {
+      BankAccount m = matchBankAccount((String) row[2], accounts);
+      long[] t = (m != null) ? byAccount.get(m.getId()) : main;
+      if ("DEBIT".equals(row[0])) t[1] += toLong(row[1]);
+      else                        t[2] += toLong(row[1]);
+    }
+
+    List<BankBalance> out = new ArrayList<>();
+
+    // 주계좌는 항상 맨 위. 등록계좌가 없으면 전체가 주계좌 한 행이 된다.
+    if (accounts.isEmpty() || main[0] != 0 || main[1] != 0 || main[2] != 0) {
+      out.add(new BankBalance(MAIN_ACCOUNT_LABEL, main[0], main[1], main[2]));
+    }
+
+    for (BankAccount a : accounts) {
+      long[] t = byAccount.get(a.getId());
+      String label = (a.getAccountAlias() != null && !a.getAccountAlias().isBlank())
+          ? a.getAccountAlias() + " (" + a.getBankName() + ")"
+          : a.getBankName();
+      out.add(new BankBalance(label, t[0], t[1], t[2]));
+    }
+
+    return out;
   }
 
   private long nz(Long v){ return v == null ? 0L : v; }
