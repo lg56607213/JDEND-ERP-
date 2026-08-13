@@ -61,9 +61,10 @@ public class VehicleInspectionService {
     // 정기검사 비용 > 0 이면 전표 자동 생성
     long cost = saved.getInspectionCost() != null ? saved.getInspectionCost() : 0L;
     if (cost > 0) {
-      String debitAccount = accountSettings.getInspectionDebitAccount();
+      String debitAccount    = accountSettings.getInspectionDebitAccount();
       if (debitAccount == null) debitAccount = "차량유지비";
-      String creditAccount = accountSettings.getInspectionCreditAccount();
+      String vatDebitAccount = accountSettings.getInspectionVatDebitAccount();
+      String creditAccount   = accountSettings.getInspectionCreditAccount();
       if (creditAccount == null) creditAccount = "미지급금";
 
       LocalDate voucherDate = req.inspectionDate != null ? req.inspectionDate : LocalDate.now();
@@ -75,18 +76,25 @@ public class VehicleInspectionService {
         creditDesc += " [계좌: " + req.companyAccount + "]";
       }
 
+      List<VoucherCreateRequest.VoucherLineRequest> debitEntries = new ArrayList<>();
+      if (vatDebitAccount != null) {
+        long vatAmount     = cost * 10L / 110L;
+        long supplyAmount  = cost - vatAmount;
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(debitAccount).amount(supplyAmount).description("정기검사비용 (공급가액)").build());
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(vatDebitAccount).amount(vatAmount).description("정기검사비용 부가세").build());
+      } else {
+        debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+            .account(debitAccount).amount(cost).description("정기검사비용").build());
+      }
+
       voucherService.create(
           VoucherCreateRequest.builder()
               .voucherDate(voucherDate)
               .vehicleNo(vo.getVehicleNo())
               .memo(memo)
-              .debitEntries(List.of(
-                  VoucherCreateRequest.VoucherLineRequest.builder()
-                      .account(debitAccount)
-                      .amount(cost)
-                      .description("정기검사비용")
-                      .build()
-              ))
+              .debitEntries(debitEntries)
               .creditEntries(List.of(
                   VoucherCreateRequest.VoucherLineRequest.builder()
                       .account(creditAccount)

@@ -208,8 +208,9 @@ public class TenantDatabaseService {
     "credit": {"account": "100101", "accountName": "보통예금"}
   },
   "inspectionMapping": {
-    "debit":  {"account": "500203", "accountName": "차량유지비"},
-    "credit": {"account": "100101", "accountName": "보통예금"}
+    "debit":    {"account": "500203", "accountName": "차량유지비"},
+    "vatDebit": {"account": "100506", "accountName": "부가세대급금"},
+    "credit":   {"account": "100101", "accountName": "보통예금"}
   },
   "deprecMapping": {
     "debit":  {"account": "500202", "accountName": "감가상각비"},
@@ -217,6 +218,12 @@ public class TenantDatabaseService {
   },
   "paymentMapping": {
     "debit":     {"account": "100101", "accountName": "보통예금"},
+    "credit":    {"account": "400101", "accountName": "렌트수익"},
+    "vatCredit": {"account": "200103", "accountName": "부가세예수금"}
+  },
+  "prepaidMapping": {
+    "bank":      {"account": "100101", "accountName": "보통예금"},
+    "debit":     {"account": "200102", "accountName": "선수금"},
     "credit":    {"account": "400101", "accountName": "렌트수익"},
     "vatCredit": {"account": "200103", "accountName": "부가세예수금"}
   },
@@ -254,8 +261,9 @@ public class TenantDatabaseService {
   },
   "earlyTermMapping": {
     "unrealizedRent": {
-      "debit":  {"account": "100503", "accountName": "미수금"},
-      "credit": {"account": "400101", "accountName": "렌트수익"}
+      "debit":     {"account": "100503", "accountName": "미수금"},
+      "credit":    {"account": "400101", "accountName": "렌트수익"},
+      "vatCredit": {"account": "200103", "accountName": "부가세예수금"}
     },
     "terminationFee": {
       "debit":  {"account": "100101", "accountName": "보통예금"},

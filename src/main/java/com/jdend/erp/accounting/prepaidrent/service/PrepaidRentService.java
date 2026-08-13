@@ -239,9 +239,24 @@ public class PrepaidRentService {
         // 기타계정관리 > 선수금 전표 설정의 계정코드를 사용한다 (미설정 시 기본코드).
         String prepaidCode = settingsService.getPrepaidDebitAccountCode();
         String revenueCode = settingsService.getPrepaidCreditAccountCode();
+        String vatCode     = settingsService.getPrepaidVatCreditAccountCode(); // null이면 VAT 분리 없음
 
         Contract contract = findContract(req.getContractId());
         String memoText = "선수금 적용" + appendMemo(req.getMemo());
+        long amount = req.getAmount();
+
+        List<VoucherCreateRequest.VoucherLineRequest> creditEntries = new ArrayList<>();
+        if (vatCode != null) {
+            long vatAmount    = amount * 10L / 110L;
+            long supplyAmount = amount - vatAmount;
+            creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                    .accountCode(revenueCode).amount(supplyAmount).description(memoText + " (공급가액)").build());
+            creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                    .accountCode(vatCode).amount(vatAmount).description(memoText + " 부가세").build());
+        } else {
+            creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+                    .accountCode(revenueCode).amount(amount).description(memoText).build());
+        }
 
         voucherService.create(VoucherCreateRequest.builder()
                 .voucherDate(req.getTransactionDate())
@@ -250,14 +265,10 @@ public class PrepaidRentService {
                 .memo(memoText)
                 .debitEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
                         .accountCode(prepaidCode)
-                        .amount(req.getAmount())
+                        .amount(amount)
                         .description(memoText)
                         .build()))
-                .creditEntries(List.of(VoucherCreateRequest.VoucherLineRequest.builder()
-                        .accountCode(revenueCode)
-                        .amount(req.getAmount())
-                        .description(memoText)
-                        .build()))
+                .creditEntries(creditEntries)
                 .build());
     }
 

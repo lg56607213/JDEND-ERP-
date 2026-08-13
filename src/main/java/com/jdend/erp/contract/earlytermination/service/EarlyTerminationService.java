@@ -321,8 +321,9 @@ public class EarlyTerminationService {
     long terminationAmount = safe(et.getTerminationAmount());
     long terminationFee    = safe(et.getTerminationFee());
 
-    String unrDebit  = accountSettings.getEarlyTermUnrealizedRentDebit();
-    String unrCredit = accountSettings.getEarlyTermUnrealizedRentCredit();
+    String unrDebit      = accountSettings.getEarlyTermUnrealizedRentDebit();
+    String unrCredit     = accountSettings.getEarlyTermUnrealizedRentCredit();
+    String unrVatCredit  = accountSettings.getEarlyTermUnrealizedRentVatCredit();
     String amtDebit  = accountSettings.getEarlyTermAmountDebit();
     // BUG-9차-02: 미회수렌트료(uncollectedRent)가 0이면 미수금 잔액이 없는 상태이므로
     // 별도 대변 계정(creditNoReceivable)을 사용한다. 미설정 시 기본 credit 계정으로 fallback.
@@ -344,10 +345,21 @@ public class EarlyTerminationService {
       if (unrDebit == null || unrCredit == null) {
         log.warn("중도해지 미회수렌트료 분개 생략: 기타계정관리 > 중도해지 > 미회수렌트료 차변/대변을 설정해주세요. etId={}", et.getId());
       } else {
+        // 차변(미수금)은 항상 총액
         debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
             .account(unrDebit).amount(uncollectedRent).description("미회수렌트료").build());
-        creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
-            .account(unrCredit).amount(uncollectedRent).description("미회수렌트료").build());
+        // 대변: 부가세예수금 설정 시 공급가액/VAT 분리, 미설정 시 총액
+        if (unrVatCredit != null) {
+          long vatAmount    = uncollectedRent * 10L / 110L;
+          long supplyAmount = uncollectedRent - vatAmount;
+          creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+              .account(unrCredit).amount(supplyAmount).description("미회수렌트료 (공급가액)").build());
+          creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+              .account(unrVatCredit).amount(vatAmount).description("미회수렌트료 부가세").build());
+        } else {
+          creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
+              .account(unrCredit).amount(uncollectedRent).description("미회수렌트료").build());
+        }
       }
     }
 
