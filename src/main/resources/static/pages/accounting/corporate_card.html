@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>법인카드내역 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .content-wrapper { margin-left: 220px; padding: 32px; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1b253a; margin-bottom: 4px; }
+    .page-sub { font-size: 0.88rem; color: #6b7280; margin-bottom: 24px; }
+
+    /* 검색 영역 */
+    .search-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 18px 24px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fg label { font-size: 0.82rem; font-weight: 700; color: #374151; }
+    .fg input, .fg select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.9rem; }
+    .date-row { display: flex; align-items: center; gap: 6px; }
+    .date-row input { width: 130px; }
+    .quick-btns { display: flex; gap: 5px; }
+    .quick-btn { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 5px; background: #f9fafb; cursor: pointer; font-size: 0.8rem; color: #374151; }
+    .quick-btn:hover { background: #e5e7eb; }
+
+    /* 버튼 */
+    .btn { padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+    .btn-search { background: #23304e; color: #fff; }
+    .btn-search:hover { background: #1b253a; }
+    .btn-upload { background: #2f6fed; color: #fff; }
+    .btn-upload:hover { background: #2559c9; }
+    .btn-download { background: #0f766e; color: #fff; }
+    .btn-download:hover { background: #115e59; }
+    .btn-save { background: #10b981; color: #fff; }
+    .btn-save:hover:not(:disabled) { background: #059669; }
+    .btn-save:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; }
+    .btn-danger:hover:not(:disabled) { background: #fecaca; }
+    .btn-danger:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+    .btn-apply { background: #7c3aed; color: #fff; }
+    .btn-apply:hover:not(:disabled) { background: #6d28d9; }
+    .btn-apply:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+
+    /* 계정별 요약 */
+    .summary-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 14px 20px; margin-bottom: 16px; }
+    .summary-title { font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 10px; }
+    .summary-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .summary-chip { display: inline-flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 999px; padding: 6px 14px; font-size: 0.85rem; color: #374151; }
+    .summary-chip .name { font-weight: 700; color: #1b253a; }
+    .summary-chip .amt { font-variant-numeric: tabular-nums; color: #065f46; font-weight: 700; }
+    .summary-chip.none .name { color: #b45309; }
+    .summary-chip.none .amt { color: #b45309; }
+    .summary-empty { font-size: 0.85rem; color: #9ca3af; }
+
+    /* 일괄적용 바 */
+    .apply-bar { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .apply-bar .msg { font-size: 0.88rem; color: #5b21b6; font-weight: 700; }
+    .apply-bar select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.88rem; min-width: 240px; }
+    .apply-bar .hint { font-size: 0.8rem; color: #6b7280; }
+
+    /* 목록 카드 */
+    .list-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 20px 24px; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .list-info { font-size: 0.88rem; color: #6b7280; }
+    .list-info strong { color: #1b253a; }
+    .list-actions { display: flex; gap: 8px; }
+
+    /* 테이블 */
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-top: 2px solid #23304e; border-bottom: 2px solid #e5e7eb; }
+    th { padding: 10px 12px; font-size: 0.85rem; font-weight: 700; color: #374151; background: #f8fafc; text-align: center; }
+    th.left { text-align: left; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; color: #374151; }
+    td.center { text-align: center; }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+    td.amount.minus { color: #dc2626; }
+    tr:hover td { background: #f9fafb; }
+    tr.dirty td { background: #fffbeb; }
+    .empty { text-align: center; color: #9ca3af; padding: 48px 0; }
+
+    .checkbox-cell { width: 42px; text-align: center; }
+    .checkbox-cell input { width: 15px; height: 15px; cursor: pointer; }
+
+    .detail-input { width: 100%; padding: 6px 9px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.87rem; box-sizing: border-box; }
+    .detail-input:focus { outline: none; border-color: #2f6fed; }
+    .acct-select { width: 100%; padding: 6px 9px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.87rem; box-sizing: border-box; background: #fff; }
+    .acct-select.unset { border-color: #fbbf24; background: #fffbeb; }
+
+    /* 합계 행 */
+    .sum-row td { background: #f0fdf4; font-weight: 700; border-top: 2px solid #10b981; }
+
+    .save-hint { font-size: 0.82rem; color: #b45309; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <h1>법인카드내역</h1>
+  <p class="page-sub">월별 법인카드 사용내역을 엑셀로 업로드하고, 각 건의 내역과 계정분류를 지정해 관리합니다.</p>
+
+  <!-- 검색 -->
+  <div class="search-card">
+    <div class="fg">
+      <label>조회기간</label>
+      <div class="date-row">
+        <input type="date" id="startDate">
+        <span style="color:#9ca3af;">~</span>
+        <input type="date" id="endDate">
+      </div>
+    </div>
+    <div class="fg">
+      <label>기간 선택</label>
+      <div class="quick-btns">
+        <button type="button" class="quick-btn" onclick="setMonth(0)">이번달</button>
+        <button type="button" class="quick-btn" onclick="setMonth(-1)">지난달</button>
+        <button type="button" class="quick-btn" onclick="setYear()">올해</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label>계정분류</label>
+      <select id="accountFilter" style="min-width:200px;">
+        <option value="">전체</option>
+        <option value="__NONE__">미분류만</option>
+      </select>
+    </div>
+    <button class="btn btn-search" onclick="loadList()">조회</button>
+    <button class="btn btn-upload" onclick="openUpload()">엑셀 업로드</button>
+    <button class="btn btn-download" onclick="downloadExcel()">엑셀 내려받기</button>
+  </div>
+
+  <!-- 계정별 요약 -->
+  <div class="summary-card">
+    <div class="summary-title">조회기간 계정분류별 집계</div>
+    <div class="summary-list" id="summaryList">
+      <span class="summary-empty">조회된 내역이 없습니다.</span>
+    </div>
+  </div>
+
+  <!-- 일괄적용 -->
+  <div class="apply-bar">
+    <span class="msg">선택 <span id="applyCount">0</span>건을</span>
+    <select id="applyAccount"><option value="">계정 선택</option></select>
+    <span class="msg">(으)로</span>
+    <button class="btn btn-apply" id="btnApply" onclick="applyAccountToChecked()" disabled>적용</button>
+    <span class="hint">※ 적용은 화면에만 반영됩니다. 반드시 아래 <strong>저장</strong>을 눌러야 계정이 저장됩니다.</span>
+  </div>
+
+  <!-- 목록 -->
+  <div class="list-card">
+    <div class="list-header">
+      <div class="list-info">
+        총 <strong id="totalCount">0</strong>건 &nbsp;|&nbsp; 합계 <strong id="totalAmount">0</strong> 원
+        &nbsp;|&nbsp; 미분류 <strong id="unclassifiedCount">0</strong>건
+        <span id="dirtyHint" class="save-hint" style="display:none;">&nbsp;·&nbsp;변경 <span id="dirtyCount">0</span>건 (저장 필요)</span>
+      </div>
+      <div class="list-actions">
+        <button class="btn btn-danger" id="btnDelete" onclick="deleteChecked()" disabled>선택삭제</button>
+        <button class="btn btn-save" id="btnSave" onclick="saveAll()" disabled>저장</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="checkbox-cell">
+            <input type="checkbox" id="checkAll" onchange="toggleAll(this)">
+          </th>
+          <th style="width:110px;">사용일자</th>
+          <th style="width:110px;">카드명</th>
+          <th class="left">적요</th>
+          <th style="width:120px;">금액</th>
+          <th class="left" style="width:24%;">내역</th>
+          <th class="left" style="width:24%;">계정분류</th>
+        </tr>
+      </thead>
+      <tbody id="listBody">
+        <tr><td colspan="7" class="empty">조회 버튼을 눌러 법인카드 내역을 불러오세요.</td></tr>
+      </tbody>
+      <tfoot id="listFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/excel-upload.js"></script>
+<script>
+  const BASE = '/api/corporate-cards';
+
+  let allItems = [];                 // 서버에서 내려온 원본
+  let accountOptionsHtml = '<option value="">계정 선택</option>';
+
+  function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  function toDateStr(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  // ─── 기간 프리셋 ─────────────────────────────────────────────
+  function setMonth(offset) {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const last  = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+    document.getElementById('startDate').value = toDateStr(first);
+    document.getElementById('endDate').value   = toDateStr(last);
+    loadList();
+  }
+
+  function setYear() {
+    const y = new Date().getFullYear();
+    document.getElementById('startDate').value = `${y}-01-01`;
+    document.getElementById('endDate').value   = `${y}-12-31`;
+    loadList();
+  }
+
+  // ─── 계정 목록 ───────────────────────────────────────────────
+  // 계정은 하드코딩하지 않고 재무제표관리에 등록된 전기가능 계정을 그대로 사용한다.
+  async function loadAccountOptions() {
+    try {
+      const res = await fetch('/api/financial-statement-accounts/leaves', { credentials: 'include' });
+      const accounts = await res.json();
+
+      const groups = new Map();
+      for (const a of accounts) {
+        const key = a.parentName || '기타';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(a);
+      }
+
+      let html = '<option value="">계정 선택</option>';
+      let filterHtml = '<option value="">전체</option><option value="__NONE__">미분류만</option>';
+      for (const [key, list] of groups) {
+        html       += `<optgroup label="${escHtml(key)}">`;
+        filterHtml += `<optgroup label="${escHtml(key)}">`;
+        for (const a of list) {
+          const label = `[${escHtml(a.accountCode)}] ${escHtml(a.accountName)}`;
+          html       += `<option value="${escHtml(a.accountCode)}">${label}</option>`;
+          filterHtml += `<option value="${escHtml(a.accountCode)}">${label}</option>`;
+        }
+        html       += '</optgroup>';
+        filterHtml += '</optgroup>';
+      }
+      accountOptionsHtml = html;
+
+      const filterSel = document.getElementById('accountFilter');
+      const prev = filterSel.value;
+      filterSel.innerHTML = filterHtml;
+      filterSel.value = prev;
+
+      document.getElementById('applyAccount').innerHTML = html;
+    } catch (e) {
+      console.error('계정 목록 조회 실패', e);
+    }
+  }
+
+  // ─── 조회 ────────────────────────────────────────────────────
+  function searchParams() {
+    const p = new URLSearchParams();
+    const s = document.getElementById('startDate').value;
+    const e = document.getElementById('endDate').value;
+    const a = document.getElementById('accountFilter').value;
+    if (s) p.set('startDate', s);
+    if (e) p.set('endDate', e);
+    if (a) p.set('accountCode', a);
+    return p;
+  }
+
+  async function loadList() {
+    document.getElementById('listBody').innerHTML =
+      '<tr><td colspan="7" class="empty">조회 중...</td></tr>';
+
+    try {
+      const res = await fetch(BASE + '?' + searchParams().toString(), { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      allItems = await res.json();
+    } catch (e) {
+      document.getElementById('listBody').innerHTML =
+        '<tr><td colspan="7" class="empty">조회 실패: ' + escHtml(e.message) + '</td></tr>';
+      return;
+    }
+
+    renderList();
+    renderSummary();
+    updateSelection();
+  }
+
+  function renderList() {
+    const tbody = document.getElementById('listBody');
+    const tfoot = document.getElementById('listFoot');
+
+    const total = allItems.reduce((s, i) => s + (i.amount || 0), 0);
+    const unclassified = allItems.filter(i => !i.accountCode).length;
+    document.getElementById('totalCount').textContent = allItems.length;
+    document.getElementById('totalAmount').textContent = fmt(total);
+    document.getElementById('unclassifiedCount').textContent = unclassified;
+
+    if (!allItems.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">해당 기간에 법인카드 내역이 없습니다. [엑셀 업로드]로 등록하세요.</td></tr>';
+      tfoot.innerHTML = '';
+      document.getElementById('checkAll').checked = false;
+      updateDirty();
+      return;
+    }
+
+    tbody.innerHTML = allItems.map(item => `
+      <tr data-id="${item.id}">
+        <td class="checkbox-cell">
+          <input type="checkbox" class="row-check" value="${item.id}" onchange="updateSelection()">
+        </td>
+        <td class="center">${escHtml(item.useDate ?? '')}</td>
+        <td class="center">${escHtml(item.cardName ?? '')}</td>
+        <td>${escHtml(item.summary ?? '')}</td>
+        <td class="amount${(item.amount || 0) < 0 ? ' minus' : ''}">${fmt(item.amount)}</td>
+        <td>
+          <input type="text" class="detail-input" data-id="${item.id}"
+                 value="${escHtml(item.detail ?? '')}" placeholder="내역 입력"
+                 oninput="updateDirty()">
+        </td>
+        <td>
+          <select class="acct-select" data-id="${item.id}" onchange="updateDirty()">
+            ${accountOptionsHtml}
+          </select>
+        </td>
+      </tr>`).join('');
+
+    // 계정 select 초기값 세팅 (옵션에 없는 코드면 임시 옵션을 추가해 값 유실을 막는다)
+    allItems.forEach(item => {
+      const sel = tbody.querySelector(`.acct-select[data-id="${item.id}"]`);
+      if (!sel) return;
+      const code = item.accountCode || '';
+      if (code && !Array.from(sel.options).some(o => o.value === code)) {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `[${code}] ${item.accountName || '(사용중지 계정)'}`;
+        sel.appendChild(opt);
+      }
+      sel.value = code;
+    });
+
+    tfoot.innerHTML = `
+      <tr class="sum-row">
+        <td colspan="4" class="center">합  계</td>
+        <td class="amount">${fmt(total)}</td>
+        <td colspan="2"></td>
+      </tr>`;
+
+    updateDirty();
+  }
+
+  function renderSummary() {
+    const box = document.getElementById('summaryList');
+    if (!allItems.length) {
+      box.innerHTML = '<span class="summary-empty">조회된 내역이 없습니다.</span>';
+      return;
+    }
+
+    // 저장된 계정 기준 집계 (화면에서 변경만 하고 저장 안 한 값은 반영되지 않음)
+    const map = new Map();
+    for (const i of allItems) {
+      const key = i.accountCode || '';
+      const name = i.accountCode ? (i.accountName || i.accountCode) : '미분류';
+      const cur = map.get(key) || { name, count: 0, amount: 0 };
+      cur.count += 1;
+      cur.amount += (i.amount || 0);
+      map.set(key, cur);
+    }
+
+    const entries = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    box.innerHTML = entries.map(([code, v]) => `
+      <span class="summary-chip${code ? '' : ' none'}">
+        <span class="name">${escHtml(v.name)}</span>
+        <span>${v.count}건</span>
+        <span class="amt">${fmt(v.amount)}원</span>
+      </span>`).join('');
+  }
+
+  // ─── 선택/일괄적용 ───────────────────────────────────────────
+  function toggleAll(src) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = src.checked);
+    updateSelection();
+  }
+
+  function updateSelection() {
+    const checks = document.querySelectorAll('.row-check');
+    const checked = document.querySelectorAll('.row-check:checked');
+
+    const ca = document.getElementById('checkAll');
+    ca.checked = checks.length > 0 && checked.length === checks.length;
+    ca.indeterminate = checked.length > 0 && checked.length < checks.length;
+
+    document.getElementById('applyCount').textContent = checked.length;
+    document.getElementById('btnApply').disabled = checked.length === 0;
+    document.getElementById('btnDelete').disabled = checked.length === 0;
+  }
+
+  function applyAccountToChecked() {
+    const code = document.getElementById('applyAccount').value;
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length === 0) { alert('적용할 행을 선택해주세요.'); return; }
+
+    checked.forEach(chk => {
+      const row = chk.closest('tr');
+      const sel = row.querySelector('.acct-select');
+      if (sel) sel.value = code;
+    });
+
+    updateDirty();
+  }
+
+  // ─── 변경 감지 ───────────────────────────────────────────────
+  function collectChanged() {
+    const changed = [];
+    for (const item of allItems) {
+      const detailEl = document.querySelector(`.detail-input[data-id="${item.id}"]`);
+      const acctEl   = document.querySelector(`.acct-select[data-id="${item.id}"]`);
+      if (!detailEl || !acctEl) continue;
+
+      const detail = detailEl.value.trim();
+      const code   = acctEl.value;
+      if (detail !== (item.detail ?? '') || code !== (item.accountCode ?? '')) {
+        changed.push({ id: item.id, detail, accountCode: code });
+      }
+    }
+    return changed;
+  }
+
+  function updateDirty() {
+    const changed = collectChanged();
+    const ids = new Set(changed.map(c => c.id));
+
+    document.querySelectorAll('#listBody tr[data-id]').forEach(tr => {
+      tr.classList.toggle('dirty', ids.has(Number(tr.dataset.id)));
+    });
+
+    document.querySelectorAll('.acct-select').forEach(sel => {
+      sel.classList.toggle('unset', !sel.value);
+    });
+
+    document.getElementById('dirtyCount').textContent = changed.length;
+    document.getElementById('dirtyHint').style.display = changed.length ? '' : 'none';
+    document.getElementById('btnSave').disabled = changed.length === 0;
+  }
+
+  // ─── 저장 ────────────────────────────────────────────────────
+  async function saveAll() {
+    const items = collectChanged();
+    if (!items.length) { alert('변경된 내용이 없습니다.'); return; }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+
+    try {
+      const res = await fetch(BASE, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      const data = await res.json();
+      if (!res.ok || data.message) throw new Error(data.message || ('HTTP ' + res.status));
+
+      alert(`저장 완료: ${data.saved}건`);
+      await loadList();
+    } catch (e) {
+      alert('저장 실패: ' + e.message);
+    } finally {
+      btn.textContent = '저장';
+      updateDirty();
+    }
+  }
+
+  // ─── 삭제 ────────────────────────────────────────────────────
+  async function deleteChecked() {
+    const checked = Array.from(document.querySelectorAll('.row-check:checked')).map(c => Number(c.value));
+    if (!checked.length) return;
+    if (!confirm(`선택한 ${checked.length}건을 삭제하시겠습니까?`)) return;
+
+    try {
+      const res = await fetch(BASE + '/delete', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: checked })
+      });
+      const data = await res.json();
+      if (!res.ok || data.message) throw new Error(data.message || ('HTTP ' + res.status));
+
+      alert(`${data.deleted}건 삭제되었습니다.`);
+      await loadList();
+    } catch (e) {
+      alert('삭제 실패: ' + e.message);
+    }
+  }
+
+  // ─── 업로드 / 내려받기 ───────────────────────────────────────
+  function openUpload() {
+    openExcelUploadModal({
+      title: '법인카드 내역 엑셀 업로드 (사용일자/금액/적요/카드명)',
+      templateUrl: BASE + '/upload/template',
+      previewUrl:  BASE + '/upload/preview',
+      uploadUrl:   BASE + '/upload',
+      onSuccess: () => loadList(),
+    });
+  }
+
+  function downloadExcel() {
+    window.location.href = BASE + '/export?' + searchParams().toString();
+  }
+
+  // 저장 안 한 변경사항이 있으면 이탈 경고
+  window.addEventListener('beforeunload', (e) => {
+    if (allItems.length && collectChanged().length) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // ─── 초기화 ──────────────────────────────────────────────────
+  (async function init() {
+    const now = new Date();
+    document.getElementById('startDate').value = toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
+    document.getElementById('endDate').value   = toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+
+    await loadAccountOptions();
+    await loadList();
+  })();
+
+  loadSidebar();
+</script>
+</body>
+</html>
