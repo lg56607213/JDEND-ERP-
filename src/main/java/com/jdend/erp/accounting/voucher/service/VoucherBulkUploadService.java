@@ -20,16 +20,11 @@ import static com.jdend.erp.common.excel.ExcelRowParsers.*;
  * 전표 엑셀 일괄 업로드.
  *
  * <p><b>열 구성</b><br>
- * 한 행에 차변계정코드+차변금액, 대변계정코드+대변금액을 모두 입력할 수 있다.
- * 1:1 단순전표는 한 행에 차변/대변을 모두 기입하고,
- * 1:N 복합전표는 "그룹" 열을 통해 여러 행을 하나의 전표로 묶는다.
+ * 전표일자 / 전표번호 / 차변계정코드 / 차변금액 / 차변적요 / 대변계정코드 / 대변금액 / 대변적요
  *
  * <p><b>그룹핑 규칙</b><br>
- * "그룹" 열에 값(1, 2, A, B …)을 입력하면 같은 날짜 + 같은 그룹 값의 행들이 하나의 전표로 묶인다.
- * "그룹"을 비워두면 같은 "전표일자"의 행들이 자동으로 하나의 전표로 묶인다.
- *
- * <p><b>전표번호는 자동채번</b><br>
- * 업로드 시 전표번호는 입력하지 않으며, 전표 생성 시점에 규칙(YYYYMMDD+5자리 순번)에 따라 부여된다.
+ * "전표번호"를 입력하면 같은 전표일자 + 같은 전표번호의 행들이 하나의 전표로 묶인다(복합전표 작성 시 사용).
+ * "전표번호"를 비워두면 해당 행 혼자 독립 전표가 되며, 전표번호는 자동채번된다.
  *
  * <p>묶은 그룹 안에서 차변 합계와 대변 합계가 같으면 정상, 다르면 그 그룹 전체를 오류로 보고한다.
  */
@@ -38,23 +33,16 @@ import static com.jdend.erp.common.excel.ExcelRowParsers.*;
 public class VoucherBulkUploadService {
 
   private static final List<String> HEADERS = List.of(
-      "그룹", "전표일자", "계약번호", "차량번호", "차변계정코드", "차변금액", "대변계정코드", "대변금액", "적요", "메모"
+      "전표일자", "전표번호", "차변계정코드", "차변금액", "차변적요", "대변계정코드", "대변금액", "대변적요"
   );
 
-  // 한 행에 차변계정코드+차변금액, 대변계정코드+대변금액을 모두 입력할 수 있다.
-  // 1:1 단순전표: 행 하나에 차변/대변 모두 입력.
-  // 1:N 복합전표: "그룹" 열에 같은 값을 넣어 여러 행을 하나의 전표로 묶는다.
-  //   - 첫 행에 차변계정코드+차변금액 입력, 나머지 행에는 대변계정코드+대변금액만 입력.
-  // 전표번호는 업로드 시 자동채번되므로 입력 불필요.
   private static final List<List<String>> SAMPLE_ROWS = List.of(
-      // 1:2 복합전표 (차변1 : 대변2) → 그룹=1 두 행으로 묶임
-      List.of("1", "2026-06-25", "R00001001", "12가3456", "100101", "100000", "400101", "90909", "렌트수익 입금", ""),
-      List.of("1", "2026-06-25", "", "", "", "", "200103", "9091", "부가세예수금", ""),
-      // 1:1 단순전표 (한 행에 차변+대변 모두)
-      List.of("", "2026-06-26", "", "", "100101", "50000", "200101", "50000", "비용지급", "법인카드"),
-      // 그룹 번호로 같은 날짜에 여러 개의 전표를 구분
-      List.of("A", "2026-06-27", "R00002001", "", "100102", "200000", "400101", "181818", "계좌이체 입금", ""),
-      List.of("A", "2026-06-27", "", "", "", "", "200103", "18182", "부가세예수금", "")
+      // 1:1 단순전표 (전표번호 공란 → 자동채번, 한 행에 차변+대변 모두)
+      List.of("2026-06-25", "", "100101", "1100000", "보통예금 입금", "400101", "1100000", "렌트수익"),
+      List.of("2026-06-25", "", "100101", "55000",   "보통예금 입금", "200101", "55000",   "미지급금 상환"),
+      // 전표번호로 행을 묶는 복합전표 (차변1 : 대변2) → 전표번호 V001 두 행이 하나의 전표
+      List.of("2026-06-26", "V001", "100101", "1100000", "보통예금 입금", "400101", "1000000", "렌트수익 (공급가액)"),
+      List.of("2026-06-26", "V001", "",        "",         "",             "200103", "100000",   "부가세예수금")
   );
 
   /** application.yml의 erp.voucher.bulk-upload.max-rows 값으로 재정의 가능. 기본 3000행. */
@@ -83,32 +71,28 @@ public class VoucherBulkUploadService {
           "연도별로 나눠서 여러 번 업로드해 주세요.");
     }
 
-    // "그룹" 열이 있으면 날짜+그룹 조합으로 묶는다(같은 날짜에 여러 전표를 올릴 때 사용).
-    // "그룹"이 비어있으면 같은 "전표일자"의 행들을 한 전표로 묶는다(기본 동작).
-    // 전표일자 형식이 잘못돼 날짜로도 묶을 수 없으면 그 행 혼자 그룹으로 두어 오류를 그 행에만 보고한다.
-    // 전표번호는 입력받지 않으며 전표 생성 시 자동채번된다.
+    // "전표번호"가 있으면 날짜+전표번호 조합으로 묶는다(복합전표).
+    // "전표번호"가 비어있으면 해당 행 혼자 독립 전표 → 전표번호는 생성 시 자동채번.
+    // 전표일자 형식이 잘못된 행은 단독 그룹으로 두어 오류를 그 행에만 보고한다.
     LinkedHashMap<String, List<Integer>> groups = new LinkedHashMap<>();
     for (int i = 0; i < rows.size(); i++) {
       int rowNumber = i + 2;
       Map<String, String> row = rows.get(i);
-      String groupNo = str(row, "그룹");
+      String voucherNo = str(row, "전표번호");
 
       LocalDate rowDate = null;
       try {
         rowDate = dateVal(row, "전표일자");
       } catch (Exception ignored) {
-        // 형식이 잘못된 날짜는 아래에서 단독 그룹으로 처리되어 같은 오류가 그 행에만 보고된다.
+        // 형식이 잘못된 날짜는 아래에서 단독 그룹으로 처리된다.
       }
 
       String key;
-      if (groupNo != null && rowDate != null) {
-        // 날짜+그룹 조합: 다른 날짜에 같은 그룹번호가 겹쳐도 별도 전표로 분리된다.
-        key = "G:" + rowDate + ":" + groupNo;
-      } else if (groupNo != null) {
-        key = "G::" + groupNo;
-      } else if (rowDate != null) {
-        key = "D:" + rowDate;
+      if (voucherNo != null && rowDate != null) {
+        // 날짜+전표번호 조합: 다른 날짜에 같은 전표번호가 겹쳐도 별도 전표로 분리된다.
+        key = "G:" + rowDate + ":" + voucherNo;
       } else {
+        // 전표번호 없음 → 행 하나가 독립 전표 (자동채번)
         key = "R:" + rowNumber;
       }
 
@@ -145,11 +129,8 @@ public class VoucherBulkUploadService {
 
   private VoucherCreateRequest toRequest(List<Map<String, String>> rows, List<Integer> indices) {
     LocalDate voucherDate = null;
-    String contractNumber = null;
-    String vehicleNo = null;
-    String memo = null;
 
-    List<VoucherCreateRequest.VoucherLineRequest> debitEntries = new ArrayList<>();
+    List<VoucherCreateRequest.VoucherLineRequest> debitEntries  = new ArrayList<>();
     List<VoucherCreateRequest.VoucherLineRequest> creditEntries = new ArrayList<>();
 
     for (int i : indices) {
@@ -161,21 +142,18 @@ public class VoucherBulkUploadService {
       }
       if (voucherDate == null) {
         voucherDate = rowDate;
-        contractNumber = str(row, "계약번호");
-        vehicleNo = str(row, "차량번호");
-        memo = str(row, "메모");
       } else if (!voucherDate.equals(rowDate)) {
-        throw new IllegalArgumentException("같은 그룹 안에서 전표일자가 서로 다릅니다.");
+        throw new IllegalArgumentException("같은 전표번호로 묶인 행들의 전표일자가 서로 다릅니다.");
       }
 
-      String description = str(row, "적요");
-
-      String debitCode   = str(row, "차변계정코드");
-      Long   debitAmount = longVal(row, "차변금액");
-      boolean hasDebit   = debitCode != null && debitAmount != null && debitAmount > 0;
+      String debitCode    = str(row, "차변계정코드");
+      Long   debitAmount  = longVal(row, "차변금액");
+      String debitDesc    = str(row, "차변적요");
+      boolean hasDebit    = debitCode != null && debitAmount != null && debitAmount > 0;
 
       String creditCode   = str(row, "대변계정코드");
       Long   creditAmount = longVal(row, "대변금액");
+      String creditDesc   = str(row, "대변적요");
       boolean hasCredit   = creditCode != null && creditAmount != null && creditAmount > 0;
 
       if (!hasDebit && !hasCredit) {
@@ -186,16 +164,16 @@ public class VoucherBulkUploadService {
       if (hasDebit) {
         debitEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
             .accountCode(debitCode).account(resolveAccountName(debitCode))
-            .amount(debitAmount).description(description).build());
+            .amount(debitAmount).description(debitDesc).build());
       }
       if (hasCredit) {
         creditEntries.add(VoucherCreateRequest.VoucherLineRequest.builder()
             .accountCode(creditCode).account(resolveAccountName(creditCode))
-            .amount(creditAmount).description(description).build());
+            .amount(creditAmount).description(creditDesc).build());
       }
     }
 
-    long debitSum = debitEntries.stream().mapToLong(VoucherCreateRequest.VoucherLineRequest::getAmount).sum();
+    long debitSum  = debitEntries.stream().mapToLong(VoucherCreateRequest.VoucherLineRequest::getAmount).sum();
     long creditSum = creditEntries.stream().mapToLong(VoucherCreateRequest.VoucherLineRequest::getAmount).sum();
 
     if (debitSum != creditSum) {
@@ -205,9 +183,6 @@ public class VoucherBulkUploadService {
 
     return VoucherCreateRequest.builder()
         .voucherDate(voucherDate)
-        .contractNumber(contractNumber)
-        .vehicleNo(vehicleNo)
-        .memo(memo)
         .debitEntries(debitEntries)
         .creditEntries(creditEntries)
         .build();
