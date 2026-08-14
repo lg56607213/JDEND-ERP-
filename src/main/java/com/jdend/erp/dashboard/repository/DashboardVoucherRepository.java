@@ -63,42 +63,6 @@ public interface DashboardVoucherRepository extends JpaRepository<VoucherLine, L
 
     // ── accountCode='100101'(보통예금) 기준 집계 ──────────────────────────────
 
-    /** 보통예금(100101) 특정일까지 누적 순잔액 (차변합 - 대변합) — 승인 전표만 */
-    @Query("""
-        select coalesce(
-            sum(case when vl.lineType = 'DEBIT' then vl.amount else -vl.amount end), 0)
-        from VoucherLine vl
-        join vl.voucher v
-        where vl.accountCode = '100101'
-          and v.status = '승인'
-          and v.voucherDate <= :d
-    """)
-    Long sumNetUpToByAccountCode(@Param("d") LocalDate d);
-
-    /** 보통예금(100101) 특정일 차변(수입) 합계 — 승인 전표만 */
-    @Query("""
-        select coalesce(sum(vl.amount), 0)
-        from VoucherLine vl
-        join vl.voucher v
-        where vl.accountCode = '100101'
-          and v.status = '승인'
-          and vl.lineType = 'DEBIT'
-          and v.voucherDate = :d
-    """)
-    Long sumDebitOnByAccountCode(@Param("d") LocalDate d);
-
-    /** 보통예금(100101) 특정일 대변(지출) 합계 — 승인 전표만 */
-    @Query("""
-        select coalesce(sum(vl.amount), 0)
-        from VoucherLine vl
-        join vl.voucher v
-        where vl.accountCode = '100101'
-          and v.status = '승인'
-          and vl.lineType = 'CREDIT'
-          and v.voucherDate = :d
-    """)
-    Long sumCreditOnByAccountCode(@Param("d") LocalDate d);
-
     /** 보통예금(100101) 특정일까지 모든 라인 [lineType, amount, description] — 계좌별 잔액 계산용 */
     @Query("""
         select vl.lineType, vl.amount, vl.description

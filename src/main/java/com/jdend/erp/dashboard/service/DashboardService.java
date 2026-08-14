@@ -136,82 +136,71 @@ public class DashboardService {
 
     List<BankAccount> accounts = bankAccountRepo.findByIsActiveTrueOrderByIdAsc();
 
-    // 계좌 미등록 시 기존 전표합산 단일 행 유지
-    if (accounts.isEmpty()) {
-      long prevBal  = nz(voucherRepo.sumNetUpToByAccountCode(yesterday));
-      long todayDep = nz(voucherRepo.sumDebitOnByAccountCode(today));
-      long todayWit = nz(voucherRepo.sumCreditOnByAccountCode(today));
-      return List.of(DashboardBankSummaryRow.builder()
-          .bankName("보통예금")
-          .accountNumber("")
-          .accountAlias("전표합산")
-          .balance2DaysAgo(prevBal)
-          .yesterdayDeposit(todayDep)
-          .yesterdayWithdrawal(todayWit)
-          .currentBalance(prevBal + todayDep - todayWit)
-          .build());
-    }
-
     // 보통예금 전표 라인 전체 조회 — description 필드에 계좌번호 포함 여부로 매칭
     List<Object[]> prevLines  = voucherRepo.findAllBankLinesUpTo(yesterday);
     List<Object[]> todayLines = voucherRepo.findAllBankLinesOn(today);
 
-    Map<Long, Long> openingMap = new LinkedHashMap<>();
-    Map<Long, Long> debitMap   = new LinkedHashMap<>();
-    Map<Long, Long> creditMap  = new LinkedHashMap<>();
-    for (BankAccount a : accounts) {
-      openingMap.put(a.getId(), 0L);
-      debitMap.put(a.getId(), 0L);
-      creditMap.put(a.getId(), 0L);
-    }
+    Map<Long, long[]> byAccount = new LinkedHashMap<>(); // accountId → [전일잔액, 금일수입, 금일지출]
+    for (BankAccount a : accounts) byAccount.put(a.getId(), new long[3]);
+    long[] main = new long[3]; // 계좌 미지정분 → 주계좌
 
     for (Object[] row : prevLines) {
-      String lineType = (String) row[0];
-      long amount = toLong(row[1]);
-      String desc = (String) row[2];
-      long delta = "DEBIT".equals(lineType) ? amount : -amount;
-      BankAccount matched = matchBankAccount(desc, accounts);
-      if (matched != null) openingMap.merge(matched.getId(), delta, Long::sum);
+      BankAccount matched = matchBankAccount((String) row[2], accounts);
+      long[] t = (matched != null) ? byAccount.get(matched.getId()) : main;
+      t[0] += "DEBIT".equals(row[0]) ? toLong(row[1]) : -toLong(row[1]);
     }
 
     for (Object[] row : todayLines) {
-      String lineType = (String) row[0];
-      long amount = toLong(row[1]);
-      String desc = (String) row[2];
-      BankAccount matched = matchBankAccount(desc, accounts);
-      if (matched != null) {
-        if ("DEBIT".equals(lineType)) debitMap.merge(matched.getId(), amount, Long::sum);
-        else                           creditMap.merge(matched.getId(), amount, Long::sum);
-      }
+      BankAccount matched = matchBankAccount((String) row[2], accounts);
+      long[] t = (matched != null) ? byAccount.get(matched.getId()) : main;
+      if ("DEBIT".equals(row[0])) t[1] += toLong(row[1]);
+      else                        t[2] += toLong(row[1]);
     }
 
     List<DashboardBankSummaryRow> result = new ArrayList<>();
+
+    // 계좌를 지정하지 않고 끊은 보통예금(엑셀 일괄업로드 등)은 '주계좌'로 모아 맨 위에 표시한다.
+    // 예전에는 이 라인들을 버려서 대시보드 합계가 재무상태표 보통예금보다 작게 나왔다.
+    if (accounts.isEmpty() || main[0] != 0 || main[1] != 0 || main[2] != 0) {
+      result.add(DashboardBankSummaryRow.builder()
+          .bankName(MAIN_ACCOUNT_LABEL)
+          .accountNumber("")
+          .accountAlias("계좌 미지정 공용")
+          .balance2DaysAgo(main[0])
+          .yesterdayDeposit(main[1])
+          .yesterdayWithdrawal(main[2])
+          .currentBalance(main[0] + main[1] - main[2])
+          .build());
+    }
+
     for (BankAccount acc : accounts) {
-      long op  = openingMap.get(acc.getId());
-      long dep = debitMap.get(acc.getId());
-      long crd = creditMap.get(acc.getId());
+      long[] t = byAccount.get(acc.getId());
       String label = acc.getAccountAlias() != null && !acc.getAccountAlias().isBlank()
           ? acc.getAccountAlias() : acc.getBankName();
       result.add(DashboardBankSummaryRow.builder()
           .bankName(acc.getBankName())
           .accountNumber(acc.getAccountNumber())
           .accountAlias(label)
-          .balance2DaysAgo(op)
-          .yesterdayDeposit(dep)
-          .yesterdayWithdrawal(crd)
-          .currentBalance(op + dep - crd)
+          .balance2DaysAgo(t[0])
+          .yesterdayDeposit(t[1])
+          .yesterdayWithdrawal(t[2])
+          .currentBalance(t[0] + t[1] - t[2])
           .build());
     }
     return result;
   }
 
+  /** 자금일보와 동일하게, 계좌 미지정 보통예금을 담는 가상 공용계좌 이름. */
+  private static final String MAIN_ACCOUNT_LABEL = "주계좌";
+
+  // 짧은 계좌번호가 긴 계좌번호를 포함한 적요에 오매칭되지 않도록 긴 번호부터 검사한다.
   private BankAccount matchBankAccount(String description, List<BankAccount> accounts) {
     if (description == null || description.isBlank()) return null;
-    for (BankAccount acc : accounts) {
-      String accNo = acc.getAccountNumber();
-      if (accNo != null && !accNo.isBlank() && description.contains(accNo)) return acc;
-    }
-    return null;
+    return accounts.stream()
+        .filter(a -> a.getAccountNumber() != null && !a.getAccountNumber().isBlank())
+        .sorted(java.util.Comparator.comparingInt(a -> -a.getAccountNumber().length()))
+        .filter(a -> description.contains(a.getAccountNumber()))
+        .findFirst().orElse(null);
   }
 
   public List<DashboardBankDiffRow> bankVoucherDiff() {
