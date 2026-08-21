@@ -25,7 +25,17 @@ public final class ExcelReader {
 
     private ExcelReader() {}
 
+    /** 첫 번째 행을 헤더로 간주하고 읽는다. */
     public static List<Map<String, String>> readRows(InputStream is) {
+        return readRows(is, List.of());
+    }
+
+    /**
+     * expectedHeaders 중 2개 이상이 들어있는 첫 행을 헤더로 간주하고 읽는다.
+     * 은행 홈페이지에서 받은 파일처럼 헤더 위에 제목/계좌정보 행이 붙어 있어도 인식된다.
+     * expectedHeaders가 비어 있으면 첫 번째 행을 헤더로 사용한다(기존 동작).
+     */
+    public static List<Map<String, String>> readRows(InputStream is, List<String> expectedHeaders) {
         Path tmp = null;
         try {
             // OPCPackage는 seekable 스트림이 필요하므로 임시파일에 먼저 기록
@@ -40,7 +50,7 @@ public final class ExcelReader {
                 XSSFReader.SheetIterator sheets =
                         (XSSFReader.SheetIterator) xssfReader.getSheetsData();
 
-                RowCollector handler = new RowCollector();
+                RowCollector handler = new RowCollector(expectedHeaders);
 
                 if (sheets.hasNext()) {
                     try (InputStream sheetStream = sheets.next()) {
@@ -65,9 +75,14 @@ public final class ExcelReader {
     }
 
     private static final class RowCollector implements XSSFSheetXMLHandler.SheetContentsHandler {
-        private final List<Map<String, String>> rows = new ArrayList<>();
-        private List<String> headers = null;
+        private final List<String> expected;
+        /** 원본 행: (엑셀 행번호, 열번호 → 값) */
+        private final List<Map.Entry<Integer, Map<Integer, String>>> rawRows = new ArrayList<>();
         private final Map<Integer, String> currentCells = new TreeMap<>();
+
+        private RowCollector(List<String> expectedHeaders) {
+            this.expected = expectedHeaders == null ? List.of() : expectedHeaders;
+        }
 
         @Override
         public void startRow(int rowNum) {
@@ -76,26 +91,7 @@ public final class ExcelReader {
 
         @Override
         public void endRow(int rowNum) {
-            if (rowNum == 0) {
-                int maxCol = currentCells.isEmpty() ? 0
-                        : Collections.max(currentCells.keySet()) + 1;
-                headers = new ArrayList<>(Collections.nCopies(maxCol, ""));
-                currentCells.forEach((col, val) -> {
-                    if (col < headers.size()) headers.set(col, val.trim());
-                });
-            } else if (headers != null) {
-                boolean blank = currentCells.values().stream().allMatch(String::isBlank);
-                if (!blank) {
-                    Map<String, String> map = new LinkedHashMap<>();
-                    for (int i = 0; i < headers.size(); i++) {
-                        String h = headers.get(i);
-                        if (!h.isBlank()) {
-                            map.put(h, currentCells.getOrDefault(i, "").trim());
-                        }
-                    }
-                    rows.add(map);
-                }
-            }
+            rawRows.add(Map.entry(rowNum, new TreeMap<>(currentCells)));
         }
 
         @Override
@@ -105,6 +101,63 @@ public final class ExcelReader {
             currentCells.put((int) ref.getCol(), formattedValue);
         }
 
-        public List<Map<String, String>> getRows() { return rows; }
+        public List<Map<String, String>> getRows() {
+            int headerIdx = findHeaderIndex();
+            List<Map<String, String>> rows = new ArrayList<>();
+            if (headerIdx < 0) return rows;
+
+            List<String> headers = toHeaders(rawRows.get(headerIdx).getValue());
+
+            for (int i = headerIdx + 1; i < rawRows.size(); i++) {
+                Map<Integer, String> cells = rawRows.get(i).getValue();
+                if (cells.values().stream().allMatch(String::isBlank)) continue;
+
+                Map<String, String> map = new LinkedHashMap<>();
+                for (int c = 0; c < headers.size(); c++) {
+                    String h = headers.get(c);
+                    if (!h.isBlank()) {
+                        map.put(h, cells.getOrDefault(c, "").trim());
+                    }
+                }
+                if (!map.isEmpty()) rows.add(map);
+            }
+            return rows;
+        }
+
+        /** expected가 있으면 해당 헤더가 2개 이상 있는 첫 행, 없으면 엑셀 0번 행 */
+        private int findHeaderIndex() {
+            if (rawRows.isEmpty()) return -1;
+
+            if (!expected.isEmpty()) {
+                Set<String> wanted = new HashSet<>();
+                expected.forEach(h -> wanted.add(norm(h)));
+                for (int i = 0; i < rawRows.size(); i++) {
+                    long hit = toHeaders(rawRows.get(i).getValue()).stream()
+                            .map(RowCollector::norm)
+                            .filter(wanted::contains)
+                            .distinct()
+                            .count();
+                    if (hit >= 2) return i;
+                }
+            }
+            for (int i = 0; i < rawRows.size(); i++) {
+                if (rawRows.get(i).getKey() == 0) return i;
+            }
+            return expected.isEmpty() ? -1 : 0;
+        }
+
+        /** 헤더 비교용 정규화: 공백 제거 + 대문자화 */
+        private static String norm(String s) {
+            return s == null ? "" : s.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        }
+
+        private List<String> toHeaders(Map<Integer, String> cells) {
+            int maxCol = cells.isEmpty() ? 0 : Collections.max(cells.keySet()) + 1;
+            List<String> headers = new ArrayList<>(Collections.nCopies(maxCol, ""));
+            cells.forEach((col, val) -> {
+                if (col < headers.size()) headers.set(col, val.trim());
+            });
+            return headers;
+        }
     }
 }

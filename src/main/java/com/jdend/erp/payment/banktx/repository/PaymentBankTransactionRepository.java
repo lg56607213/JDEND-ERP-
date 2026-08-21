@@ -36,4 +36,19 @@ public interface PaymentBankTransactionRepository extends JpaRepository<BankTran
     order by t.bankName asc, t.accountNo asc
   """)
   List<Object[]> distinctAccounts(@Param("kw") String kw);
+
+  // ✅ 중복 판정용: 같은 계좌의 특정 기간 기존 내역 (건별 대조에 사용)
+  @Query("""
+    select t
+    from BankTransaction t
+    where t.bankName = :bankName
+      and t.accountNo = :accountNo
+      and t.txDate between :startDate and :endDate
+  """)
+  List<BankTransaction> findForDuplicateCheck(
+      @Param("bankName") String bankName,
+      @Param("accountNo") String accountNo,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate
+  );
 }

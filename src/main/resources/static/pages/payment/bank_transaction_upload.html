@@ -131,8 +131,10 @@
           <div class="search-grid">
 
             <div class="form-group">
-              <label for="searchBank">은행명</label>
-              <input type="text" id="searchBank" placeholder="은행명 검색" style="width:130px;">
+              <label for="searchAccount">계좌</label>
+              <select id="searchAccount" style="width:260px;">
+                <option value="">전체 계좌</option>
+              </select>
             </div>
 
             <div class="form-group">
@@ -160,10 +162,16 @@
           <!-- 업로드 영역 -->
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
             <div class="form-group">
+              <label for="uploadAccount">업로드할 계좌 <span class="required-star">*</span></label>
+              <select id="uploadAccount" style="width:300px;" onchange="onUploadAccountChange()">
+                <option value="">-- 계좌 선택 --</option>
+              </select>
+            </div>
+            <div class="form-group manual-account" style="display:none;">
               <label for="uploadBankName">은행명 <span class="required-star">*</span></label>
               <input type="text" id="uploadBankName" placeholder="예: 신한은행" style="width:140px;">
             </div>
-            <div class="form-group">
+            <div class="form-group manual-account" style="display:none;">
               <label for="uploadAccountNo">계좌번호 <span class="required-star">*</span></label>
               <input type="text" id="uploadAccountNo" placeholder="예: 110-123-456789" style="width:180px;">
             </div>
@@ -172,13 +180,16 @@
               <div class="upload-row">
                 <button class="btn-template" onclick="downloadTemplate()">양식 다운로드</button>
                 <label class="btn-upload-label" for="excelFile">엑셀 업로드</label>
-                <input type="file" id="excelFile" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event)">
+                <input type="file" id="excelFile" accept=".xlsx" style="display:none;" onchange="handleFileUpload(event)">
                 <span class="file-name" id="fileName">선택된 파일 없음</span>
               </div>
             </div>
           </div>
           <div style="margin-top:8px;font-size:12px;color:#888;">
-            ※ 양식을 다운로드 후 <strong>일자, 입금액, 출금액, 잔액, 적요</strong> 항목을 입력하여 업로드하세요.
+            ※ 계좌는 <strong>내정보관리 &gt; 통장</strong>에 등록된 목록에서 선택합니다.
+            등록된 계좌가 없으면 <a href="../management/my_info.html">내정보관리</a>에서 먼저 등록하세요.<br>
+            ※ 파일은 <strong>.xlsx</strong> 형식만 지원하며, <strong>일자, 입금액, 출금액, 잔액, 적요</strong> 열이 필요합니다.
+            (헤더 위에 제목 행이 있어도 자동으로 찾습니다. 은행 사이트에서 받은 .xls/.csv 파일은 엑셀에서 열어 xlsx로 저장 후 올리세요.)
           </div>
         </div>
 
@@ -303,16 +314,86 @@
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('searchStartDate').value = startOfMonthISO();
       document.getElementById('searchEndDate').value   = todayISO();
+      loadMyBankAccounts();
       loadConnections();
     });
 
+    // ── 내정보관리에 등록된 계좌 ─────────────────────────────
+
+    let myAccounts = [];
+
+    function accountLabel(acc) {
+      const head = [acc.bankName, acc.accountNumber].filter(Boolean).join(' ');
+      const tail = [acc.accountAlias, acc.accountHolder].filter(Boolean).join('/');
+      return tail ? `${head} (${tail})` : head;
+    }
+
+    async function loadMyBankAccounts() {
+      const upSel = document.getElementById('uploadAccount');
+      const seSel = document.getElementById('searchAccount');
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/my-info/bank-accounts?activeOnly=true`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        myAccounts = await res.json();
+      } catch (e) {
+        console.warn('계좌 목록 로드 실패:', e);
+        myAccounts = [];
+      }
+
+      myAccounts.forEach((acc, i) => {
+        const label = accountLabel(acc);
+        const o1 = document.createElement('option');
+        o1.value = String(i); o1.textContent = label;
+        upSel.appendChild(o1);
+        const o2 = document.createElement('option');
+        o2.value = String(i); o2.textContent = label;
+        seSel.appendChild(o2);
+      });
+
+      const manual = document.createElement('option');
+      manual.value = 'MANUAL';
+      manual.textContent = '직접 입력';
+      upSel.appendChild(manual);
+
+      if (myAccounts.length === 0) {
+        upSel.options[0].textContent = '-- 등록된 계좌 없음 (내정보관리에서 등록) --';
+      } else if (myAccounts.length === 1) {
+        upSel.value = '0';
+      }
+      onUploadAccountChange();
+    }
+
+    function onUploadAccountChange() {
+      const v = document.getElementById('uploadAccount').value;
+      const show = (v === 'MANUAL');
+      document.querySelectorAll('.manual-account').forEach(el => {
+        el.style.display = show ? 'flex' : 'none';
+      });
+    }
+
+    /** 업로드에 사용할 은행명/계좌번호 */
+    function selectedUploadAccount() {
+      const v = document.getElementById('uploadAccount').value;
+      if (v === 'MANUAL') {
+        return {
+          bankName:  document.getElementById('uploadBankName').value.trim(),
+          accountNo: document.getElementById('uploadAccountNo').value.trim()
+        };
+      }
+      if (v === '') return { bankName: '', accountNo: '' };
+      const acc = myAccounts[Number(v)];
+      return { bankName: acc?.bankName ?? '', accountNo: acc?.accountNumber ?? '' };
+    }
+
     async function searchTransactions() {
-      const bank      = document.getElementById('searchBank').value.trim();
+      const v         = document.getElementById('searchAccount').value;
+      const acc       = v === '' ? null : myAccounts[Number(v)];
       const startDate = document.getElementById('searchStartDate').value;
       const endDate   = document.getElementById('searchEndDate').value;
 
       const qs = new URLSearchParams();
-      if (bank)      qs.set('bank', bank);
+      if (acc?.bankName)      qs.set('bank', acc.bankName);
+      if (acc?.accountNumber) qs.set('accountNo', acc.accountNumber);
       if (startDate) qs.set('startDate', startDate);
       if (endDate)   qs.set('endDate', endDate);
 
@@ -512,11 +593,18 @@
       const fileNameEl = document.getElementById('fileName');
       if (!file) { fileNameEl.textContent = '선택된 파일 없음'; return; }
 
-      const bankName  = document.getElementById('uploadBankName').value.trim();
-      const accountNo = document.getElementById('uploadAccountNo').value.trim();
+      const { bankName, accountNo } = selectedUploadAccount();
 
-      if (!bankName) { alert('은행명을 먼저 입력하세요.'); event.target.value = ''; return; }
-      if (!accountNo) { alert('계좌번호를 먼저 입력하세요.'); event.target.value = ''; return; }
+      if (!bankName || !accountNo) {
+        alert('업로드할 계좌를 먼저 선택하세요.\n(내정보관리 > 통장에 등록된 계좌가 목록에 표시됩니다.)');
+        event.target.value = '';
+        return;
+      }
+      if (!/\.xlsx$/i.test(file.name)) {
+        alert('xlsx 파일만 업로드할 수 있습니다.\n은행에서 받은 파일은 엑셀에서 열어 "Excel 통합 문서(*.xlsx)"로 저장 후 올려주세요.');
+        event.target.value = '';
+        return;
+      }
 
       fileNameEl.textContent = file.name;
 
@@ -536,9 +624,28 @@
           method: 'POST',
           body: fd
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          let msg = `HTTP ${res.status}`;
+          try {
+            const err = await res.json();
+            if (err.message) msg = err.message;
+          } catch (_) { /* 무시 */ }
+          throw new Error(msg);
+        }
         const result = await res.json();
-        alert(`업로드 완료\n\n저장: ${result.insertedRows}건\n중복 제외: ${result.skippedDuplicates}건`);
+
+        let msg = '업로드 완료\n\n'
+          + `읽은 행: ${result.parsedRows}건\n`
+          + `저장: ${result.insertedRows}건\n`
+          + `중복 제외: ${result.skippedDuplicates}건 (이미 등록된 동일 거래)\n`
+          + `형식 오류 제외: ${result.skippedInvalid ?? 0}건`;
+        if (result.detectedHeaders?.length) {
+          msg += `\n\n인식된 열: ${result.detectedHeaders.join(', ')}`;
+        }
+        if (result.skipReasons?.length) {
+          msg += '\n\n[등록되지 않은 행]\n' + result.skipReasons.join('\n');
+        }
+        alert(msg);
         await searchTransactions();
       } catch (e) {
         alert('업로드 실패: ' + e.message);
