@@ -21,11 +21,18 @@ public class SubscriptionEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${admin.email}")
+    /** admin.email 미설정 시 메일 발신 계정(app.contact.recipient-email)으로 폴백한다. */
+    @Value("${admin.email:${app.contact.recipient-email:}}")
     private String adminEmail;
 
     public void sendPaymentCompleteNotice(SubscriptionPayment payment) {
         try {
+            if (adminEmail == null || adminEmail.isBlank()) {
+                log.warn("[SubscriptionEmail] admin.email 미설정으로 알림을 건너뜁니다. orderId={}",
+                        payment.getOrderId());
+                return;
+            }
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(adminEmail);
             message.setSubject("[JDEND ERP] 새 구독 결제 완료 - " + payment.getCompanyName());
