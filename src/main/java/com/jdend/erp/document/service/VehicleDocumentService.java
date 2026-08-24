@@ -144,6 +144,63 @@ public class VehicleDocumentService {
         }
     }
 
+    /**
+     * 서버가 생성한 파일(전자서명 계약서 PDF 등)을 문서함에 저장한다.
+     * MultipartFile 없이 바이트 배열을 그대로 받는다는 점만 upload()와 다르다.
+     */
+    public DocumentInfo saveBytes(String documentType,
+                                  String vehicleNo,
+                                  String contractNumber,
+                                  String fileName,
+                                  byte[] content,
+                                  String uploadedBy) {
+        if (content == null || content.length == 0) {
+            throw new IllegalArgumentException("저장할 파일 내용이 없습니다.");
+        }
+        if (documentType == null || documentType.isBlank()) {
+            throw new IllegalArgumentException("documentType은 필수입니다.");
+        }
+        if (content.length > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("파일 크기는 10MB를 초과할 수 없습니다.");
+        }
+
+        String ext = extractExtension(fileName);
+        if (!ALLOWED_EXTENSIONS.contains(ext.toLowerCase())) {
+            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다. (허용: pdf, jpg, jpeg, png)");
+        }
+
+        String yearMonth = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        String savedFileName = UUID.randomUUID() + "." + ext.toLowerCase();
+
+        Path dirPath = Path.of(uploadDir)
+                .resolve("documents")
+                .resolve(documentType)
+                .resolve(yearMonth);
+
+        try {
+            Files.createDirectories(dirPath);
+            Path filePath = dirPath.resolve(savedFileName);
+            Files.write(filePath, content);
+
+            VehicleDocument doc = VehicleDocument.builder()
+                    .documentType(documentType)
+                    .vehicleNo(vehicleNo)
+                    .contractNumber(contractNumber)
+                    .fileName(fileName)
+                    .filePath(filePath.toString())
+                    .fileSize((long) content.length)
+                    .uploadedBy(uploadedBy != null ? uploadedBy : "system")
+                    .uploadedAt(LocalDateTime.now())
+                    .deletedYn("N")
+                    .build();
+
+            return toDocumentInfo(repository.save(doc));
+
+        } catch (IOException e) {
+            throw new RuntimeException("파일 저장 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
     // ──────────────────────────────────────────────
     // 파일 바이트 조회 (뷰용)
     // ──────────────────────────────────────────────

@@ -39,7 +39,8 @@ public class WebConfig implements WebMvcConfigurer {
         .excludePathPatterns(
             "/api/auth/**",
             "/api/company-applications/**",
-            "/api/subscription/kiwoom/**"   // 구독 결제 공개 엔드포인트 (비로그인)
+            "/api/subscription/kiwoom/**",  // 구독 결제 공개 엔드포인트 (비로그인)
+            "/api/contract-sign/**"         // 계약서 전자서명 (고객이 비로그인으로 접근)
         );
   }
 }

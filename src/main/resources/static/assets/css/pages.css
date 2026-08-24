@@ -337,3 +337,66 @@ body {
     padding: 25px 20px;
   }
 }
+
+/* ── 모바일 보강 ─────────────────────────────────────────
+   좁은 화면에서 표가 페이지를 밀어내지 않도록 표만 가로로 스크롤시키고,
+   입력/버튼은 손가락으로 누를 수 있는 크기로 키운다. */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+
+  .card-body { padding: 16px 12px; }
+
+  /* 표는 자기 영역 안에서만 가로 스크롤 */
+  .table-container,
+  .table-wrap,
+  .tbl-wrap,
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card-body > table,
+  .table-container > table,
+  .tbl-wrap > table {
+    min-width: 640px;
+  }
+
+  /* 검색/입력 영역은 세로로 쌓기 */
+  .search-grid,
+  .search-row,
+  .filter-row,
+  .form-row {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .search-grid > *,
+  .search-row > *,
+  .filter-row > * {
+    width: 100%;
+  }
+
+  /* 터치 타겟 확보 */
+  input[type="text"],
+  input[type="date"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    min-height: 42px;
+    font-size: 16px; /* iOS에서 입력 시 자동 확대되는 것을 막는다 */
+  }
+  .btn, button {
+    min-height: 40px;
+  }
+  .btn-sm {
+    min-height: 32px;
+  }
+
+  /* 모달은 화면에 맞춘다 */
+  .modal-box,
+  .modal-content {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+}

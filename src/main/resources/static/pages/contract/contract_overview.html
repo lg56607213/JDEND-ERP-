@@ -192,6 +192,38 @@
       border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.88rem;
     }
     .scan-modal-btns .btn-ok:hover { background: #1b253a; }
+
+    /* ── 전자서명 ── */
+    .btn-sign {
+      background:#1a56db; color:#fff; border:1px solid #1a56db; margin-left:4px;
+    }
+    .btn-sign:hover { background:#1447b3; }
+    .sign-modal-back {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+      z-index:9500; align-items:center; justify-content:center;
+    }
+    .sign-modal-back.open { display:flex; }
+    .sign-modal {
+      background:#fff; border-radius:12px; padding:24px; width:400px; max-width:94vw;
+      text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.2);
+    }
+    .sign-modal h3 { margin:0 0 6px; font-size:1.05rem; }
+    .sign-modal .sub { color:#666; font-size:.85rem; margin-bottom:16px; }
+    .sign-qr { width:240px; height:240px; border:1px solid #e5e7eb; border-radius:8px; }
+    .sign-link {
+      margin-top:12px; font-size:.75rem; color:#555; word-break:break-all;
+      background:#f8f9fa; border-radius:6px; padding:8px;
+    }
+    .sign-expire { margin-top:8px; font-size:.8rem; color:#d93025; }
+    .sign-actions { display:flex; gap:8px; margin-top:16px; }
+    .sign-actions .btn { flex:1; }
+    .sign-status { font-size:.85rem; margin-top:10px; }
+
+    /* ── 모바일 대응 ── */
+    @media (max-width: 768px) {
+      .sign-modal { padding:18px; }
+      .sign-qr { width:200px; height:200px; }
+    }
   </style>
 </head>
 <body>
@@ -226,7 +258,7 @@
             <th>계약종료일</th>
             <th>상태</th>
             <th>스캔</th>
-            <th style="width:80px;">관리</th>
+            <th style="width:170px;">관리</th>
           </tr>
         </thead>
         <tbody id="contractListBody">
@@ -843,6 +875,7 @@
         <td onclick="event.stopPropagation()" style="white-space:nowrap;">
           <button class="btn btn-sm btn-add" onclick="openScanModal('${esc(c.contractNumber)}')">업로드</button>
           ${hasScan ? `<button class="btn btn-sm" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;margin-left:4px;" onclick="openConScanList('${esc(c.contractNumber)}')">파일</button>` : ''}
+          <button class="btn btn-sm btn-sign" onclick="openSignModal('${esc(c.contractNumber)}','${esc(c.customerName||'')}')">서명요청</button>
         </td>
       </tr>`;
     }).join('');
@@ -939,6 +972,102 @@
 
   loadContractList();
   loadSidebar();
+
+  /* ===== 계약서 전자서명 ===== */
+  let _signContractNo = '', _signUrl = '';
+
+  async function openSignModal(contractNumber, customerName) {
+    _signContractNo = contractNumber;
+    document.getElementById('signModalSub').textContent =
+      `${contractNumber}${customerName ? ' / ' + customerName : ''}`;
+    document.getElementById('signStatus').textContent = '';
+    document.getElementById('signLink').textContent = '발급 중...';
+    document.getElementById('signExpire').textContent = '';
+    document.getElementById('signQr').removeAttribute('src');
+    document.getElementById('signModalBack').classList.add('open');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/contracts/${encodeURIComponent(contractNumber)}/sign-request`,
+        { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || '서명요청 생성 실패');
+
+      _signUrl = data.signUrl;
+      document.getElementById('signQr').src = data.qrUrl;
+      document.getElementById('signLink').textContent = data.signUrl;
+
+      if (data.expiresAt) {
+        const t = new Date(data.expiresAt);
+        document.getElementById('signExpire').textContent =
+          `유효시간: ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} 까지`;
+      }
+    } catch (e) {
+      document.getElementById('signLink').textContent = '오류: ' + e.message;
+    }
+  }
+
+  function closeSignModal() {
+    document.getElementById('signModalBack').classList.remove('open');
+  }
+
+  async function copySignLink() {
+    if (!_signUrl) return;
+    try {
+      await navigator.clipboard.writeText(_signUrl);
+      document.getElementById('signStatus').textContent = '링크를 복사했습니다.';
+    } catch (e) {
+      document.getElementById('signStatus').textContent = '복사 실패 — 링크를 길게 눌러 복사해 주세요.';
+    }
+  }
+
+  async function checkSignStatus() {
+    if (!_signContractNo) return;
+    const el = document.getElementById('signStatus');
+    el.textContent = '확인 중...';
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/contracts/${encodeURIComponent(_signContractNo)}/sign-status`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || '조회 실패');
+
+      const label = {
+        NONE: '서명 요청 없음',
+        PENDING: '서명 대기 중',
+        SIGNED: '서명 완료',
+        EXPIRED: '링크 만료 — 다시 요청하세요',
+        CANCELED: '취소됨'
+      }[d.status] || d.status;
+
+      el.textContent = d.status === 'SIGNED'
+        ? `${label} (${d.signerName || ''} / ${_fmtDt(d.signedAt)})`
+        : label;
+      el.style.color = d.status === 'SIGNED' ? '#137333' : '#555';
+    } catch (e) {
+      el.textContent = '오류: ' + e.message;
+    }
+  }
+
 </script>
+
+<!-- 전자서명 요청 모달 -->
+<div class="sign-modal-back" id="signModalBack">
+  <div class="sign-modal">
+    <h3>계약서 전자서명 요청</h3>
+    <div class="sub" id="signModalSub"></div>
+
+    <div id="signModalBody">
+      <img class="sign-qr" id="signQr" alt="서명 링크 QR">
+      <div class="sign-expire" id="signExpire"></div>
+      <div class="sign-link" id="signLink"></div>
+      <div class="sign-status" id="signStatus"></div>
+    </div>
+
+    <div class="sign-actions">
+      <button class="btn" onclick="copySignLink()">링크 복사</button>
+      <button class="btn" onclick="checkSignStatus()">상태 확인</button>
+      <button class="btn btn-primary" onclick="closeSignModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
