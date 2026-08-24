@@ -14,6 +14,7 @@ public class TenantDatabaseService {
     private final JdbcTemplate jdbcTemplate;
     private final DynamicRoutingDataSource routingDataSource;
     private final MultiDbProperties properties;
+    private final DataSourceConfig dataSourceConfig;
 
     public String normalizeTenantDb(String input, String loginId) {
         String raw = input == null || input.isBlank() ? loginId : input;
@@ -151,6 +152,7 @@ public class TenantDatabaseService {
         ds.setUsername(auth.getUsername());
         ds.setPassword(auth.getPassword());
         ds.setDriverClassName(auth.getDriverClassName());
+        dataSourceConfig.applyPoolSettings(ds, targetDb);
 
         routingDataSource.addDataSource(targetDb, ds);
     }

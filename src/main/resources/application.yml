@@ -45,6 +45,16 @@ app:
   upload-dir: uploads/accounts
   multidb:
     default-db: auth
+    # 회사(테넌트)마다 별도 풀이 생기므로 HikariCP 기본값(최대 10, 유휴 10)을 쓰면
+    # 회사 수 × 10 만큼 커넥션을 상시 점유해 MySQL max_connections에 금방 도달한다.
+    pool:
+      auth-max-size: 5
+      auth-min-idle: 1
+      tenant-max-size: 3
+      tenant-min-idle: 0
+      idle-timeout-ms: 60000
+      connection-timeout-ms: 10000
+      max-lifetime-ms: 1500000
     datasources:
       auth:
         url: ${DB_URL_AUTH}
