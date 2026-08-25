@@ -31,6 +31,7 @@ public class VehicleOrderService {
     private final ContractRepository contractRepo;
     private final VehicleNumberGenerator numberGenerator;
     private final VehicleLoanService vehicleLoanService;
+    private final com.jdend.erp.common.storage.FileStorage storage;
     private final VehicleDocumentService vehicleDocumentService;
 
     @Transactional(readOnly = true)
@@ -699,16 +700,12 @@ public class VehicleOrderService {
 
     private String saveFile(String mgmtNo, MultipartFile file) {
         try {
-            Path baseDir = Paths.get("uploads", "vehicle-register");
-            Files.createDirectories(baseDir);
-
             String original = (file.getOriginalFilename() == null) ? "file" : file.getOriginalFilename();
             String safe = original.replaceAll("[\\\\/:*?\"<>|]", "_");
-            String filename = mgmtNo + "_" + UUID.randomUUID() + "_" + safe;
+            String key = "vehicle-register/" + mgmtNo + "_" + UUID.randomUUID() + "_" + safe;
 
-            Path target = baseDir.resolve(filename);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            return target.toString();
+            storage.put(key, file.getBytes(), file.getContentType());
+            return key;
         } catch (Exception e) {
             throw new RuntimeException("파일 저장 실패: " + e.getMessage());
         }

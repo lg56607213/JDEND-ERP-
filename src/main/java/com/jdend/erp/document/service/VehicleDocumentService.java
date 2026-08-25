@@ -1,15 +1,14 @@
 package com.jdend.erp.document.service;
 
+import com.jdend.erp.common.storage.FileStorage;
 import com.jdend.erp.document.entity.VehicleDocument;
 import com.jdend.erp.document.repository.VehicleDocumentRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,9 +20,10 @@ import java.util.stream.Collectors;
 public class VehicleDocumentService {
 
     private final VehicleDocumentRepository repository;
+    private final FileStorage storage;
 
-    @Value("${app.upload-dir:uploads/accounts}")
-    private String uploadDir;
+    /** 저장 키 접두사. 로컬 저장소에서는 {app.storage.local-root}/accounts/... 가 된다. */
+    private static final String KEY_ROOT = "accounts";
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024; // 10MB
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "jpg", "jpeg", "png");
@@ -107,20 +107,10 @@ public class VehicleDocumentService {
             throw new IllegalArgumentException("파일 크기는 10MB를 초과할 수 없습니다.");
         }
 
-        // 저장 경로 구성: {uploadDir}/documents/{documentType}/{yyyy-MM}/{uuid}.{ext}
-        String yearMonth = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
-        String uuid = UUID.randomUUID().toString();
-        String savedFileName = uuid + "." + ext.toLowerCase();
-
-        Path dirPath = Path.of(uploadDir)
-                .resolve("documents")
-                .resolve(documentType)
-                .resolve(yearMonth);
+        String key = buildKey(documentType, ext);
 
         try {
-            Files.createDirectories(dirPath);
-            Path filePath = dirPath.resolve(savedFileName);
-            Files.write(filePath, file.getBytes());
+            storage.put(key, file.getBytes(), file.getContentType());
 
             VehicleDocument doc = VehicleDocument.builder()
                     .documentType(documentType)
@@ -128,8 +118,8 @@ public class VehicleDocumentService {
                     .vehicleNo(vehicleNo)
                     .contractNumber(contractNumber)
                     .insuranceId(insuranceId)
-                    .fileName(originalFilename != null ? originalFilename : savedFileName)
-                    .filePath(filePath.toString())
+                    .fileName(originalFilename != null ? originalFilename : key)
+                    .filePath(key)
                     .fileSize(file.getSize())
                     .uploadedBy(uploadedBy != null ? uploadedBy : "system")
                     .uploadedAt(LocalDateTime.now())
@@ -142,6 +132,13 @@ public class VehicleDocumentService {
         } catch (IOException e) {
             throw new RuntimeException("파일 저장 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
+    }
+
+    /** 저장 키: accounts/documents/{종류}/{yyyy-MM}/{uuid}.{확장자} */
+    private String buildKey(String documentType, String ext) {
+        String yearMonth = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        return String.join("/", KEY_ROOT, "documents", documentType, yearMonth,
+                UUID.randomUUID() + "." + ext.toLowerCase());
     }
 
     /**
@@ -169,36 +166,22 @@ public class VehicleDocumentService {
             throw new IllegalArgumentException("허용되지 않는 파일 형식입니다. (허용: pdf, jpg, jpeg, png)");
         }
 
-        String yearMonth = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
-        String savedFileName = UUID.randomUUID() + "." + ext.toLowerCase();
+        String key = buildKey(documentType, ext);
+        storage.put(key, content, contentTypeOf(ext));
 
-        Path dirPath = Path.of(uploadDir)
-                .resolve("documents")
-                .resolve(documentType)
-                .resolve(yearMonth);
+        VehicleDocument doc = VehicleDocument.builder()
+                .documentType(documentType)
+                .vehicleNo(vehicleNo)
+                .contractNumber(contractNumber)
+                .fileName(fileName)
+                .filePath(key)
+                .fileSize((long) content.length)
+                .uploadedBy(uploadedBy != null ? uploadedBy : "system")
+                .uploadedAt(LocalDateTime.now())
+                .deletedYn("N")
+                .build();
 
-        try {
-            Files.createDirectories(dirPath);
-            Path filePath = dirPath.resolve(savedFileName);
-            Files.write(filePath, content);
-
-            VehicleDocument doc = VehicleDocument.builder()
-                    .documentType(documentType)
-                    .vehicleNo(vehicleNo)
-                    .contractNumber(contractNumber)
-                    .fileName(fileName)
-                    .filePath(filePath.toString())
-                    .fileSize((long) content.length)
-                    .uploadedBy(uploadedBy != null ? uploadedBy : "system")
-                    .uploadedAt(LocalDateTime.now())
-                    .deletedYn("N")
-                    .build();
-
-            return toDocumentInfo(repository.save(doc));
-
-        } catch (IOException e) {
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다: " + e.getMessage(), e);
-        }
+        return toDocumentInfo(repository.save(doc));
     }
 
     // ──────────────────────────────────────────────
@@ -210,11 +193,7 @@ public class VehicleDocumentService {
                 .filter(d -> "N".equals(d.getDeletedYn()))
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다. id=" + id));
 
-        try {
-            return Files.readAllBytes(Path.of(doc.getFilePath()));
-        } catch (IOException e) {
-            throw new RuntimeException("파일을 읽을 수 없습니다: " + e.getMessage(), e);
-        }
+        return storage.get(doc.getFilePath());
     }
 
     // ──────────────────────────────────────────────
@@ -226,8 +205,11 @@ public class VehicleDocumentService {
                 .filter(d -> "N".equals(d.getDeletedYn()))
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다. id=" + id));
 
-        String ext = extractExtension(doc.getFileName()).toLowerCase();
-        return switch (ext) {
+        return contentTypeOf(extractExtension(doc.getFileName()));
+    }
+
+    private static String contentTypeOf(String ext) {
+        return switch (ext == null ? "" : ext.toLowerCase()) {
             case "pdf"  -> "application/pdf";
             case "jpg", "jpeg" -> "image/jpeg";
             case "png"  -> "image/png";

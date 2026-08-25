@@ -43,6 +43,17 @@ app:
   contact:
     recipient-email: ${MAIL_USERNAME}
   upload-dir: uploads/accounts
+  # 첨부파일 저장소: local(서버 디스크) | s3
+  # s3로 바꾸면 EC2 인스턴스 역할의 권한으로 접근한다. 문제가 생기면 local로 되돌리면 된다.
+  storage:
+    type: local
+    local-root: uploads
+    migrate-on-start: false
+    s3:
+      bucket: ""
+      region: ap-northeast-2
+      prefix: ""
+
   multidb:
     default-db: auth
     # 회사(테넌트)마다 별도 풀이 생기므로 HikariCP 기본값(최대 10, 유휴 10)을 쓰면

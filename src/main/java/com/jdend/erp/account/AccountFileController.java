@@ -3,6 +3,8 @@ package com.jdend.erp.account;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import com.jdend.erp.common.storage.FileStorage;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +22,20 @@ public class AccountFileController {
     private final AccountRepository accountRepo;
     private final AccountFileRepository fileRepo;
 
-    @Value("${app.upload-dir:uploads/accounts}")
-    private String uploadDir;
+    private final FileStorage storage;
 
-    public AccountFileController(AccountRepository accountRepo, AccountFileRepository fileRepo) {
+    /** 저장 키 접두사 (로컬에서는 {local-root}/accounts/... 로 기존 경로와 동일) */
+    private static final String KEY_ROOT = "accounts";
+
+    public AccountFileController(AccountRepository accountRepo, AccountFileRepository fileRepo,
+                                 FileStorage storage) {
         this.accountRepo = accountRepo;
         this.fileRepo = fileRepo;
+        this.storage = storage;
+    }
+
+    private String keyOf(String storedName) {
+        return KEY_ROOT + "/" + storedName;
     }
 
     // ✅ 업로드: POST /api/accounts/{id}/files
@@ -36,9 +46,6 @@ public class AccountFileController {
         if (files == null || files.isEmpty()) return ResponseEntity.badRequest().body("파일 없음");
 
         try {
-            Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.createDirectories(base);
-
             List<AccountFile> saved = new ArrayList<>();
 
             for (MultipartFile f : files) {
@@ -55,9 +62,7 @@ public class AccountFileController {
                 if (dot >= 0) ext = original.substring(dot);
 
                 String stored = "acc_" + id + "_" + UUID.randomUUID() + ext;
-                Path target = base.resolve(stored);
-
-                Files.copy(f.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+                storage.put(keyOf(stored), f.getBytes(), f.getContentType());
 
                 AccountFile meta = AccountFile.builder()
                         .accountId(id)
@@ -90,11 +95,14 @@ public class AccountFileController {
         AccountFile meta = fileRepo.findById(fileId).orElse(null);
         if (meta == null) return ResponseEntity.notFound().build();
 
-        Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
-        File file = base.resolve(meta.getStoredName()).toFile();
-        if (!file.exists()) return ResponseEntity.notFound().build();
+        byte[] content;
+        try {
+            content = storage.get(keyOf(meta.getStoredName()));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
 
-        Resource resource = new FileSystemResource(file);
+        Resource resource = new ByteArrayResource(content);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment()
@@ -109,7 +117,7 @@ public class AccountFileController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .contentType(type)
-                .contentLength(file.length())
+                .contentLength(content.length)
                 .body(resource);
     }
 
@@ -120,8 +128,7 @@ public class AccountFileController {
         if (meta == null) return ResponseEntity.notFound().build();
 
         try {
-            Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.deleteIfExists(base.resolve(meta.getStoredName()));
+            storage.delete(keyOf(meta.getStoredName()));
             fileRepo.deleteById(fileId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {

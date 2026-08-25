@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import com.jdend.erp.common.storage.FileStorage;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,9 +27,14 @@ import java.util.UUID;
 public class TaxConsultationService {
 
     private final TaxConsultationRepository repo;
+    private final FileStorage storage;
 
-    @Value("${app.tax-upload-dir:uploads/tax}")
-    private String uploadDir;
+    /** 저장 키 접두사 (로컬에서는 {local-root}/tax/... 로 기존 경로와 동일) */
+    private static final String KEY_ROOT = "tax";
+
+    private String keyOf(String storedName) {
+        return KEY_ROOT + "/" + storedName;
+    }
 
     @Transactional(readOnly = true)
     public List<TaxConsultationResponse> list(HttpSession session) {
@@ -58,14 +65,12 @@ public class TaxConsultationService {
         if (file != null && !file.isEmpty()) {
             validateFile(file);
             try {
-                Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
-                Files.createDirectories(base);
                 originalName = StringUtils.cleanPath(Objects.requireNonNullElse(file.getOriginalFilename(), "file"));
                 String ext = "";
                 int dot = originalName.lastIndexOf('.');
                 if (dot >= 0) ext = originalName.substring(dot);
                 storedName = "tax_" + UUID.randomUUID() + ext;
-                Files.copy(file.getInputStream(), base.resolve(storedName), StandardCopyOption.REPLACE_EXISTING);
+                storage.put(keyOf(storedName), file.getBytes(), file.getContentType());
                 fileType = file.getContentType();
             } catch (Exception e) {
                 throw new RuntimeException("파일 저장 실패: " + e.getMessage());
@@ -117,9 +122,11 @@ public class TaxConsultationService {
         checkAccess(tc, session);
         if (tc.getFileName() == null) throw new RuntimeException("첨부파일이 없습니다.");
 
-        Path file = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(tc.getFileName());
-        if (!Files.exists(file)) throw new RuntimeException("파일을 찾을 수 없습니다.");
-        return new FileSystemResource(file);
+        try {
+            return new ByteArrayResource(storage.get(keyOf(tc.getFileName())));
+        } catch (Exception e) {
+            throw new RuntimeException("파일을 찾을 수 없습니다.");
+        }
     }
 
     public String getOriginalFileName(Long id) {
