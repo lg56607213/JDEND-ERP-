@@ -38,6 +38,19 @@ public class TenantFilter implements Filter {
             // 이 두 테이블을 쓰는 API는 세션의 회사 DB와 무관하게 항상 auth로 라우팅한다.
             if (uri.startsWith("/api/auth") || uri.startsWith("/api/tax-consultations")) {
                 TenantContext.setCurrentDb("auth");
+            } else if (uri.startsWith("/api/loan-apply")) {
+                // 대출신청: 고객이 로그인 없이 여는 공개 경로. 신청 데이터는 auth DB에 있다.
+                TenantContext.setCurrentDb("auth");
+            } else if (uri.startsWith("/api/loan-applications")) {
+                // 직원용 목록/처리 — 데이터가 auth DB에 있으므로 회사 DB로 라우팅하지 않는다.
+                TenantContext.setCurrentDb("auth");
+                jakarta.servlet.http.HttpSession s2 = req.getSession(false);
+                if (s2 == null || s2.getAttribute(AuthService.SESSION_LOGIN_ID) == null) {
+                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
+                    return;
+                }
             } else if (uri.startsWith("/api/contract-sign")) {
                 // 계약서 전자서명: 고객이 로그인 없이 여는 공개 경로.
                 // 서명 요청 토큰은 auth DB에 있고, 회사 DB 전환은 서비스가 직접 한다.

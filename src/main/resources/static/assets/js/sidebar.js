@@ -141,6 +141,12 @@ function loadSidebar() {
             </ul>
           </li>
           <li class="has-sub">
+            <span class="menu-label">대출신청</span>
+            <ul>
+              <li><a href="${basePath}pages/loan/loan_application_list.html">신청현황</a></li>
+            </ul>
+          </li>
+          <li class="has-sub">
             <span class="menu-label">수납관리</span>
             <ul>
               <li class="has-sub">
