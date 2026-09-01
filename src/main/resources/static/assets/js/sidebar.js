@@ -141,9 +141,12 @@ function loadSidebar() {
             </ul>
           </li>
           <li class="has-sub">
-            <span class="menu-label">대출신청</span>
+            <span class="menu-label">금융</span>
             <ul>
-              <li><a href="${basePath}pages/loan/loan_application_list.html">신청현황</a></li>
+              <li><a href="${basePath}pages/loan/loan_application.html">차량 증차 자금신청</a></li>
+              <li id="loanAdminMenuItem" style="display:none;">
+                <a href="${basePath}pages/loan/loan_application_list.html">대출신청 관리</a>
+              </li>
             </ul>
           </li>
           <li class="has-sub">
@@ -324,6 +327,10 @@ function loadSidebar() {
         // 구독관리 메뉴 — ADMIN 전용
         const subscriptionItem = document.getElementById('subscriptionMenuItem');
         if (subscriptionItem && role === 'ADMIN') subscriptionItem.style.display = '';
+
+        // 대출신청 관리 — 운영자(ADMIN) 전용
+        const loanAdminItem = document.getElementById('loanAdminMenuItem');
+        if (loanAdminItem && role === 'ADMIN') loanAdminItem.style.display = '';
 
         // MT 메뉴 — 운영자이거나 maintenanceEnabled 권한이 있는 업체만 노출
         if (role === 'ADMIN' || maintenanceEnabled) {

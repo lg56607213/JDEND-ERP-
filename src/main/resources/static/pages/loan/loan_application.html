@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차량 증차 자금신청 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .hero {
+      display:flex; gap:20px; flex-wrap:wrap; align-items:stretch; margin-bottom:18px;
+    }
+    .hero-left { flex:2; min-width:320px; }
+    .hero-left h2 { font-size:22px; margin:0 0 8px; line-height:1.35; }
+    .hero-left .sub { color:#6b7280; font-size:14px; margin-bottom:16px; }
+    .info-box {
+      background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px;
+      padding:12px 14px; font-size:13px; color:#4b5563; line-height:1.7;
+    }
+    .info-box b { color:#1a56db; }
+
+    .hero-right {
+      flex:1; min-width:260px; border:2px solid #c7d2fe; border-radius:14px;
+      padding:18px; background:#fff;
+    }
+    .stat { margin-bottom:16px; }
+    .stat .k { font-size:12px; color:#6b7280; margin-bottom:4px; }
+    .stat .v { font-size:26px; font-weight:800; color:#111827; }
+    .stat .v small { font-size:14px; font-weight:600; color:#6b7280; margin-left:2px; }
+
+    .partners { margin-top:6px; }
+    .partners .t { font-size:12px; color:#6b7280; margin-bottom:8px; }
+    .partner-list { display:flex; flex-wrap:wrap; gap:6px; }
+    .partner {
+      border:1px solid #e5e7eb; background:#fafafa; border-radius:16px;
+      padding:5px 11px; font-size:12px; color:#374151; font-weight:600;
+    }
+
+    .form-card { background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+                 padding:20px; margin-bottom:18px; }
+    .form-card h3 { font-size:15px; margin:0 0 16px; color:#1a56db; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .group { margin-bottom:16px; }
+    .group label.field { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px; }
+    .req { color:#d93025; }
+    .group input[type=text], .group input[type=tel], .group input[type=number], .group textarea {
+      width:100%; padding:0 12px; font-size:14px; border:1px solid #d1d5db; border-radius:7px;
+    }
+    .group input { height:42px; }
+    .group textarea { padding:10px 12px; min-height:70px; resize:vertical; font-family:inherit; }
+    .group input:focus, .group textarea:focus { outline:none; border-color:#1a56db; }
+    .hint { font-size:12px; color:#9ca3af; margin-top:5px; }
+
+    .opts { display:flex; gap:8px; flex-wrap:wrap; }
+    .opt {
+      flex:1; min-width:80px; height:42px; border:1px solid #d1d5db; background:#fff;
+      border-radius:7px; font-size:14px; font-weight:600; color:#374151; cursor:pointer;
+    }
+    .opt.on { border-color:#1a56db; background:#eff4ff; color:#1a56db; }
+
+    .agree { display:flex; align-items:flex-start; gap:10px; font-size:13px; color:#4b5563; }
+    .agree input { width:19px; height:19px; flex:none; margin-top:1px; }
+
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+    .btn-main {
+      flex:2; min-width:200px; height:50px; border:none; border-radius:9px;
+      background:#1a56db; color:#fff; font-size:16px; font-weight:700; cursor:pointer;
+    }
+    .btn-main:disabled { background:#b7c3d8; }
+    .btn-sub {
+      flex:1; min-width:160px; height:50px; border:1px solid #1a56db; border-radius:9px;
+      background:#fff; color:#1a56db; font-size:15px; font-weight:700; cursor:pointer;
+    }
+
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { background:#f1f3f4; font-weight:600; color:#444; padding:10px 8px; text-align:center;
+         border-bottom:2px solid #ddd; white-space:nowrap; }
+    td { padding:9px 8px; border-bottom:1px solid #eee; text-align:center; color:#333; }
+    td.left { text-align:left; }
+    td.no-data { text-align:center; color:#aaa; padding:32px; }
+    .badge { display:inline-block; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:700; }
+    .st-NEW       { background:#fce8e6; color:#c5221f; }
+    .st-REVIEWING { background:#e8f0fe; color:#1a56db; }
+    .st-DONE      { background:#e6f4ea; color:#137333; }
+    .st-REJECTED  { background:#f3e8e8; color:#8a1c1c; }
+    .st-CANCELED  { background:#f1f3f4; color:#5f6368; }
+    .btn-cancel {
+      height:28px; padding:0 10px; background:#fff; color:#d93025;
+      border:1px solid #f0c4c1; border-radius:4px; font-size:12px; cursor:pointer;
+    }
+
+    @media (max-width: 768px) {
+      .grid2 { grid-template-columns:1fr; }
+      .hero-right { min-width:100%; }
+      .tbl-wrap > table { min-width:820px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>차량 증차 자금신청</h1>
+      <p>금융 &gt; 차량 증차 자금신청</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+
+        <!-- 안내 -->
+        <div class="hero">
+          <div class="hero-left">
+            <h2>영업용 차량 증차, 서류 없이 신청하세요</h2>
+            <div class="sub">ERP에 쌓인 운영 기록으로 제휴 금융사 조건을 확인해 드립니다.</div>
+            <div class="info-box">
+              · 별도 서류 제출 없이 <b>ERP에 등록된 차량·계약 정보</b>를 바탕으로 상담이 진행됩니다.<br>
+              · 신청서를 접수하면 담당자가 제휴사 조건을 비교해 안내드립니다.<br>
+              · 신청만으로 계약이 성립하지 않으며, 최종 조건은 금융사 심사 결과에 따릅니다.
+            </div>
+          </div>
+
+          <div class="hero-right">
+            <div class="stat">
+              <div class="k">현재 등록 차량</div>
+              <div class="v"><span id="vehicleCount">-</span><small>대</small></div>
+            </div>
+            <div class="stat" style="margin-bottom:10px;">
+              <div class="k">진행 중인 신청</div>
+              <div class="v"><span id="openCount">-</span><small>건</small></div>
+            </div>
+            <div class="partners">
+              <div class="t">제휴 금융사</div>
+              <div class="partner-list">
+                <span class="partner">신한카드</span>
+                <span class="partner">우리카드</span>
+                <span class="partner">오릭스캐피탈</span>
+                <span class="partner">현대캐피탈</span>
+                <span class="partner">폭스바겐파이낸셜</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 신청서 -->
+        <div class="form-card">
+          <h3>신청 내용</h3>
+
+          <div class="grid2">
+            <div class="group">
+              <label class="field" for="carModel">증차 차종 <span class="req">*</span></label>
+              <input type="text" id="carModel" placeholder="예: 그랜저 IG 2.4 / 카니발 9인승">
+              <div class="hint">증차하려는 차량을 직접 입력하세요.</div>
+            </div>
+            <div class="group">
+              <label class="field" for="vehicleCount2">증차 대수</label>
+              <input type="number" id="vehicleCount2" min="1" max="999" placeholder="예: 5">
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="group">
+              <label class="field" for="expectedDelivery">출고 예상 시기</label>
+              <input type="text" id="expectedDelivery" placeholder="예: 2026년 11월 / 3개월 이내">
+            </div>
+            <div class="group">
+              <label class="field">구분 <span class="req">*</span></label>
+              <div class="opts" id="financeOpts">
+                <button type="button" class="opt" data-v="할부">할부</button>
+                <button type="button" class="opt" data-v="리스">리스</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="group">
+              <label class="field">희망 선납금 <span class="req">*</span></label>
+              <div class="opts" id="downOpts">
+                <button type="button" class="opt" data-v="10">10%</button>
+                <button type="button" class="opt" data-v="20">20%</button>
+                <button type="button" class="opt" data-v="30">30%</button>
+              </div>
+            </div>
+            <div class="group">
+              <label class="field">희망 신청기간 <span class="req">*</span></label>
+              <div class="opts" id="termOpts">
+                <button type="button" class="opt" data-v="36">36개월</button>
+                <button type="button" class="opt" data-v="48">48개월</button>
+                <button type="button" class="opt" data-v="60">60개월</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>연락처</h3>
+
+          <div class="grid2">
+            <div class="group">
+              <label class="field" for="managerName">담당자</label>
+              <input type="text" id="managerName" placeholder="담당자 성함">
+            </div>
+            <div class="group">
+              <label class="field" for="contactPhone">연락받을 번호 <span class="req">*</span></label>
+              <input type="tel" id="contactPhone" placeholder="010-1234-5678" inputmode="tel">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="field" for="memo">요청사항</label>
+            <textarea id="memo" placeholder="희망 조건, 통화 가능한 시간대 등을 남겨주세요."></textarea>
+          </div>
+
+          <div class="group">
+            <label class="agree">
+              <input type="checkbox" id="agree">
+              <span>상담·심사를 위해 위 신청 내용과 담당자 연락처를
+                    <b>제휴 금융사에 제공</b>하는 데 동의합니다.</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-main" id="submitBtn" onclick="submitForm()">자금신청 접수</button>
+            <button type="button" class="btn-sub" id="phoneBtn" onclick="submitPhone()">유선 상담 요청</button>
+          </div>
+          <div class="hint">
+            조건을 정하기 어려우시면 <strong>유선 상담 요청</strong>을 눌러주세요.
+            담당자 연락처만 남기면 전화로 안내드립니다.
+          </div>
+        </div>
+
+        <!-- 내 신청 내역 -->
+        <div class="form-card">
+          <h3>내 신청 내역</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:44px;">No</th>
+                  <th>신청일시</th>
+                  <th>구분</th>
+                  <th>차종</th>
+                  <th>대수</th>
+                  <th>출고예상</th>
+                  <th>할부/리스</th>
+                  <th>선납금</th>
+                  <th>기간</th>
+                  <th>진행상태</th>
+                  <th>담당자 안내</th>
+                  <th style="width:70px;">취소</th>
+                </tr>
+              </thead>
+              <tbody id="myBody">
+                <tr><td colspan="12" class="no-data">불러오는 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+  <script>
+    let finance = '', down = null, term = null;
+
+    const $ = id => document.getElementById(id);
+    function esc(s) {
+      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;')
+        .replaceAll('>','&gt;').replaceAll('"','&quot;');
+    }
+    function fmtDt(dt) { return dt ? String(dt).replace('T',' ').substring(0,16) : '-'; }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadCompany();
+      await loadMine();
+    });
+
+    async function loadCompany() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/loan-applications/my-company`);
+        if (!res.ok) return;
+        const d = await res.json();
+        $('vehicleCount').textContent = (d.vehicleCount ?? 0).toLocaleString();
+        $('openCount').textContent = d.openApplications ?? 0;
+        if (!$('managerName').value && d.managerName) $('managerName').value = d.managerName;
+      } catch (e) { console.warn('회사 정보 조회 실패', e); }
+    }
+
+    function bindOpts(containerId, onPick) {
+      $(containerId).addEventListener('click', e => {
+        const btn = e.target.closest('.opt');
+        if (!btn) return;
+        [...$(containerId).querySelectorAll('.opt')].forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        onPick(btn.dataset.v);
+      });
+    }
+    bindOpts('financeOpts', v => finance = v);
+    bindOpts('downOpts',    v => down = Number(v));
+    bindOpts('termOpts',    v => term = Number(v));
+
+    function basePayload(type) {
+      return {
+        inquiryType: type,
+        managerName: $('managerName').value.trim(),
+        contactPhone: $('contactPhone').value.trim(),
+        memo: $('memo').value.trim(),
+        agreed: $('agree').checked
+      };
+    }
+
+    function checkCommon() {
+      if (!$('contactPhone').value.trim()) {
+        alert('연락받을 번호를 입력해 주세요.'); $('contactPhone').focus(); return false;
+      }
+      if (!$('agree').checked) {
+        alert('제휴 금융사 정보 제공에 동의해 주세요.'); return false;
+      }
+      return true;
+    }
+
+    async function post(payload, btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '접수 중...';
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/loan-applications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '접수에 실패했습니다.');
+        alert(data.message);
+        resetForm();
+        await loadCompany();
+        await loadMine();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    function submitForm() {
+      if (!$('carModel').value.trim()) { alert('증차할 차종을 입력해 주세요.'); $('carModel').focus(); return; }
+      if (!finance) { alert('할부 또는 리스를 선택해 주세요.'); return; }
+      if (down === null) { alert('희망 선납금을 선택해 주세요.'); return; }
+      if (term === null) { alert('희망 신청기간을 선택해 주세요.'); return; }
+      if (!checkCommon()) return;
+
+      const cnt = $('vehicleCount2').value.trim();
+      post(Object.assign(basePayload('FORM'), {
+        carModel: $('carModel').value.trim(),
+        vehicleCount: cnt ? Number(cnt) : null,
+        expectedDelivery: $('expectedDelivery').value.trim(),
+        financeType: finance,
+        downPaymentPercent: down,
+        termMonths: term
+      }), $('submitBtn'));
+    }
+
+    function submitPhone() {
+      if (!checkCommon()) return;
+      post(basePayload('PHONE'), $('phoneBtn'));
+    }
+
+    function resetForm() {
+      ['carModel','vehicleCount2','expectedDelivery','memo'].forEach(id => $(id).value = '');
+      $('agree').checked = false;
+      finance = ''; down = null; term = null;
+      document.querySelectorAll('.opt').forEach(b => b.classList.remove('on'));
+    }
+
+    async function loadMine() {
+      const tbody = $('myBody');
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/loan-applications/mine`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const list = await res.json();
+        if (!list.length) {
+          tbody.innerHTML = '<tr><td colspan="12" class="no-data">신청 내역이 없습니다.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = list.map((a, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${fmtDt(a.createdAt)}</td>
+            <td>${esc(a.inquiryTypeLabel)}</td>
+            <td class="left">${esc(a.carModel || '-')}</td>
+            <td>${a.vehicleCount ? a.vehicleCount + '대' : '-'}</td>
+            <td>${esc(a.expectedDelivery || '-')}</td>
+            <td>${esc(a.financeType || '-')}</td>
+            <td>${a.downPaymentPercent ? a.downPaymentPercent + '%' : '-'}</td>
+            <td>${a.termMonths ? a.termMonths + '개월' : '-'}</td>
+            <td><span class="badge st-${esc(a.status)}">${esc(a.statusLabel)}</span></td>
+            <td class="left">${esc(a.replyMessage || '-')}</td>
+            <td>${a.status === 'NEW'
+                  ? `<button class="btn-cancel" onclick="cancelApp(${a.id})">취소</button>` : '-'}</td>
+          </tr>`).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="12" class="no-data">조회 실패: ${esc(e.message)}</td></tr>`;
+      }
+    }
+
+    async function cancelApp(id) {
+      if (!confirm('이 신청을 취소할까요?')) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/loan-applications/${id}/cancel`, { method: 'POST' });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.message || `HTTP ${res.status}`);
+        }
+        await loadCompany();
+        await loadMine();
+      } catch (e) {
+        alert('취소 실패: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

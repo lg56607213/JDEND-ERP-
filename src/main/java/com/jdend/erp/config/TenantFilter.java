@@ -38,14 +38,14 @@ public class TenantFilter implements Filter {
             // 이 두 테이블을 쓰는 API는 세션의 회사 DB와 무관하게 항상 auth로 라우팅한다.
             if (uri.startsWith("/api/auth") || uri.startsWith("/api/tax-consultations")) {
                 TenantContext.setCurrentDb("auth");
-            } else if (uri.startsWith("/api/loan-apply")) {
-                // 대출신청: 고객이 로그인 없이 여는 공개 경로. 신청 데이터는 auth DB에 있다.
-                TenantContext.setCurrentDb("auth");
             } else if (uri.startsWith("/api/loan-applications")) {
-                // 직원용 목록/처리 — 데이터가 auth DB에 있으므로 회사 DB로 라우팅하지 않는다.
-                TenantContext.setCurrentDb("auth");
-                jakarta.servlet.http.HttpSession s2 = req.getSession(false);
-                if (s2 == null || s2.getAttribute(AuthService.SESSION_LOGIN_ID) == null) {
+                // 증차 자금 신청 — 신청 데이터는 auth DB에 있지만, 보유 차량 수는
+                // 업체 DB에서 읽으므로 세션의 회사 DB로 라우팅하고 서비스가 필요할 때
+                // auth로 전환한다.
+                HttpSession s3 = req.getSession(false);
+                String db3 = s3 == null ? null : (String) s3.getAttribute(AuthService.SESSION_TARGET_DB);
+                TenantContext.setCurrentDb(db3 == null || db3.isBlank() ? "auth" : db3);
+                if (s3 == null || s3.getAttribute(AuthService.SESSION_LOGIN_ID) == null) {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     res.setContentType("application/json;charset=UTF-8");
                     res.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");

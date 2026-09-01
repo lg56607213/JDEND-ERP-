@@ -8,17 +8,20 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * 고객이 홈페이지/링크로 넣는 대출(할부·리스) 신청.
+ * 영업용 차량 증차 자금 신청.
  *
- * <p>고객은 로그인하지 않으므로 세션으로 회사 DB를 알 수 없다. 그래서 이 테이블은
- * <b>auth DB</b>에 두고, 신청 링크에 담긴 회사코드(login_users.login_id)로 어느 업체의
- * 신청인지 구분한다.</p>
+ * <p>ERP를 쓰는 렌터카 업체가 차량을 늘릴 때 신청하고, 운영자(플랫폼)가 접수해
+ * 제휴 금융사에 알선한다. 신청 주체가 업체 자신이므로 로그인 세션에서 업체를 확정한다.</p>
+ *
+ * <p>업체 정보는 auth DB(login_users)에 있고 신청은 업체 구분 없이 운영자가 한 번에
+ * 봐야 하므로, 이 테이블도 <b>auth DB</b>에 둔다.</p>
  */
 @Entity
-@Table(name = "loan_applications",
+// 고객용으로 먼저 만들었던 loan_applications 와 컬럼 구성이 달라 테이블을 분리한다.
+@Table(name = "vehicle_loan_applications",
        indexes = {
-           @Index(name = "idx_loan_app_company", columnList = "company_code"),
-           @Index(name = "idx_loan_app_status", columnList = "status")
+           @Index(name = "idx_vla_company", columnList = "company_id"),
+           @Index(name = "idx_vla_status", columnList = "status")
        })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -26,40 +29,53 @@ public class LoanApplication {
 
     /** 신청 방식 */
     public static final String TYPE_FORM  = "FORM";   // 조건까지 입력한 정식 신청
-    public static final String TYPE_PHONE = "PHONE";  // 유선 문의 요청
+    public static final String TYPE_PHONE = "PHONE";  // 유선 상담 요청
 
     /** 처리 상태 */
     public static final String STATUS_NEW       = "NEW";        // 접수
-    public static final String STATUS_CONTACTED = "CONTACTED";  // 상담중
-    public static final String STATUS_DONE      = "DONE";       // 완료
+    public static final String STATUS_REVIEWING = "REVIEWING";  // 심사/알선중
+    public static final String STATUS_DONE      = "DONE";       // 실행완료
+    public static final String STATUS_REJECTED  = "REJECTED";   // 부결
     public static final String STATUS_CANCELED  = "CANCELED";   // 취소
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 어느 업체로 들어온 신청인지 (login_users.login_id) */
-    @Column(name = "company_code", nullable = false, length = 50)
-    private String companyCode;
+    /** 신청 업체 (login_users.id) */
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
+
+    /** 접수 시점의 업체명 — 운영자 목록에서 바로 보기 위한 사본 */
+    @Column(name = "company_name", length = 100)
+    private String companyName;
+
+    /** 실제로 신청 버튼을 누른 ERP 사용자 아이디 */
+    @Column(name = "requested_by", length = 50)
+    private String requestedBy;
 
     @Column(name = "inquiry_type", nullable = false, length = 10)
     @Builder.Default
     private String inquiryType = TYPE_FORM;
 
-    // ── 신청자 ──────────────────────────────────────────────
+    // ── 연락 ────────────────────────────────────────────────
 
-    @Column(name = "applicant_name", length = 50)
-    private String applicantName;
+    @Column(name = "manager_name", length = 50)
+    private String managerName;
 
-    /** 연락받을 번호 (유선 문의는 이 값만으로도 접수된다) */
+    /** 연락받을 번호 */
     @Column(name = "contact_phone", nullable = false, length = 30)
     private String contactPhone;
 
-    // ── 신청 조건 (유선 문의는 비어 있을 수 있다) ─────────────
+    // ── 신청 조건 (유선 상담 요청은 비어 있을 수 있다) ────────
 
-    /** 차종 — 목록이 아니라 직접 입력 */
+    /** 증차하려는 차종 — 목록이 아니라 직접 입력 */
     @Column(name = "car_model", length = 100)
     private String carModel;
+
+    /** 증차 대수 */
+    @Column(name = "vehicle_count")
+    private Integer vehicleCount;
 
     /** 출고 예상 시기 */
     @Column(name = "expected_delivery", length = 50)
@@ -86,12 +102,13 @@ public class LoanApplication {
     @Builder.Default
     private String status = STATUS_NEW;
 
+    /** 운영자 메모 (신청 업체에는 보이지 않는다) */
     @Column(name = "admin_memo", length = 500)
     private String adminMemo;
 
-    /** 접수 경로 추적용 */
-    @Column(name = "submit_ip", length = 60)
-    private String submitIp;
+    /** 업체에게 안내하는 진행 내용 */
+    @Column(name = "reply_message", length = 500)
+    private String replyMessage;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
