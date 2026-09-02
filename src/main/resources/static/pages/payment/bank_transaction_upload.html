@@ -69,7 +69,13 @@
     }
     .btn-delete:hover { background:#b31712; }
     .btn-delete:disabled { background:#e5a9a5; cursor:not-allowed; }
-    .top-actions { display:flex; align-items:center; gap:8px; }
+    .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .btn-select-all {
+      background:#fff; color:#1a73e8; border:1px solid #1a73e8; border-radius:6px;
+      padding:8px 16px; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap;
+    }
+    .btn-select-all:hover { background:#e8f0fe; }
+    .btn-select-all:disabled { color:#aab; border-color:#dde; cursor:not-allowed; background:#fff; }
     .sel-count { font-size:13px; color:#d93025; font-weight:600; }
     td.check-cell, th.check-cell { width:38px; }
     input.row-check, input#checkAll { width:16px; height:16px; cursor:pointer; }
@@ -138,9 +144,12 @@
           <span style="font-size:13px;color:#555;">
             비고 작성 후 저장 버튼을 누르세요.
             잘못 올린 내역은 체크 후 <strong>선택 삭제</strong>로 지우고 다시 업로드하세요.
+            업로드 건을 통째로 취소하려면 조회 조건을 그 업로드 범위로 맞춘 뒤
+            <strong>모두 선택</strong> → <strong>선택 삭제</strong> 하시면 됩니다.
           </span>
           <div class="top-actions">
             <span class="sel-count" id="selCount"></span>
+            <button class="btn-select-all" id="btnSelectAll" onclick="toggleSelectAll()" disabled>모두 선택</button>
             <button class="btn-delete" id="btnDelete" onclick="deleteSelected()" disabled>선택 삭제</button>
             <button class="btn-save" onclick="saveRemarks()">저장</button>
           </div>
@@ -479,10 +488,16 @@
     function refreshSelection() {
       const boxes = Array.from(document.querySelectorAll('.row-check'));
       const picked = boxes.filter(cb => cb.checked);
+      const allPicked = boxes.length > 0 && picked.length === boxes.length;
 
       document.getElementById('btnDelete').disabled = picked.length === 0;
       document.getElementById('selCount').textContent =
         picked.length ? `${picked.length}건 선택됨` : '';
+
+      // 조회된 목록이 없으면 모두 선택도 의미가 없다
+      const selBtn = document.getElementById('btnSelectAll');
+      selBtn.disabled = boxes.length === 0;
+      selBtn.textContent = allPicked ? '선택 해제' : `모두 선택 (${boxes.length}건)`;
 
       const all = document.getElementById('checkAll');
       all.checked = boxes.length > 0 && picked.length === boxes.length;
@@ -491,6 +506,15 @@
       boxes.forEach(cb => {
         cb.closest('tr').classList.toggle('row-selected', cb.checked);
       });
+    }
+
+    /** 조회된 목록 전체를 선택하거나 모두 해제한다. */
+    function toggleSelectAll() {
+      const boxes = Array.from(document.querySelectorAll('.row-check'));
+      if (!boxes.length) return;
+      const allPicked = boxes.every(cb => cb.checked);
+      boxes.forEach(cb => { cb.checked = !allPicked; });
+      refreshSelection();
     }
 
     function toggleAll(master) {
