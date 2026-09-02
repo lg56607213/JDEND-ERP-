@@ -62,6 +62,19 @@
 
     .required-star { color:#d93025; }
 
+    /* ── 선택 삭제 ── */
+    .btn-delete {
+      background:#d93025; color:#fff; border:none; border-radius:6px;
+      padding:8px 18px; font-size:14px; font-weight:600; cursor:pointer;
+    }
+    .btn-delete:hover { background:#b31712; }
+    .btn-delete:disabled { background:#e5a9a5; cursor:not-allowed; }
+    .top-actions { display:flex; align-items:center; gap:8px; }
+    .sel-count { font-size:13px; color:#d93025; font-weight:600; }
+    td.check-cell, th.check-cell { width:38px; }
+    input.row-check, input#checkAll { width:16px; height:16px; cursor:pointer; }
+    tr.row-selected td { background:#fff5f5 !important; }
+
     /* ── CODEF 자동연동 ── */
     .codef-section { background:#f0f7ff; border:1px solid #c5d9f7; border-radius:8px; padding:14px 16px; margin-bottom:16px; }
     .codef-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
@@ -122,8 +135,15 @@
 
         <!-- 상단 저장 버튼 -->
         <div class="top-bar">
-          <span style="font-size:13px;color:#555;">비고 작성 후 저장 버튼을 누르세요.</span>
-          <button class="btn-save" onclick="saveRemarks()">저장</button>
+          <span style="font-size:13px;color:#555;">
+            비고 작성 후 저장 버튼을 누르세요.
+            잘못 올린 내역은 체크 후 <strong>선택 삭제</strong>로 지우고 다시 업로드하세요.
+          </span>
+          <div class="top-actions">
+            <span class="sel-count" id="selCount"></span>
+            <button class="btn-delete" id="btnDelete" onclick="deleteSelected()" disabled>선택 삭제</button>
+            <button class="btn-save" onclick="saveRemarks()">저장</button>
+          </div>
         </div>
 
         <!-- 조회 + 업로드 섹션 -->
@@ -209,6 +229,7 @@
           <table>
             <thead>
               <tr>
+                <th class="check-cell no-export"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
                 <th>No</th>
                 <th>은행명</th>
                 <th>계좌번호</th>
@@ -222,7 +243,7 @@
             </thead>
             <tbody id="transactionTableBody">
               <tr>
-                <td colspan="9" class="no-data">조회 또는 업로드 후 데이터가 표시됩니다.</td>
+                <td colspan="10" class="no-data">조회 또는 업로드 후 데이터가 표시됩니다.</td>
               </tr>
             </tbody>
           </table>
@@ -398,7 +419,7 @@
       if (endDate)   qs.set('endDate', endDate);
 
       const tbody = document.getElementById('transactionTableBody');
-      tbody.innerHTML = `<tr><td colspan="9" class="no-data">불러오는 중...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="no-data">불러오는 중...</td></tr>`;
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/bank-transactions?` + qs.toString());
@@ -406,14 +427,15 @@
         currentRows = await res.json();
         renderRows(currentRows);
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" class="no-data">조회 실패: ${escapeHtml(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="no-data">조회 실패: ${escapeHtml(e.message)}</td></tr>`;
       }
     }
 
     function renderRows(list) {
       const tbody = document.getElementById('transactionTableBody');
       if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="no-data">검색 결과가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="no-data">검색 결과가 없습니다.</td></tr>`;
+        refreshSelection();
         return;
       }
 
@@ -422,7 +444,10 @@
         const wd  = Number(it.withdrawalAmount ?? 0);
         const bal = Number(it.balance ?? 0);
         return `
-          <tr>
+          <tr data-row-id="${it.id}">
+            <td class="check-cell no-export">
+              <input type="checkbox" class="row-check" value="${it.id}" onchange="onRowCheck(this)">
+            </td>
             <td>${idx + 1}</td>
             <td>${escapeHtml(it.bankName ?? '')}</td>
             <td>${escapeHtml(it.accountNo ?? '')}</td>
@@ -439,6 +464,93 @@
             </td>
           </tr>`;
       }).join('');
+
+      refreshSelection();
+    }
+
+    /* ── 선택 삭제 ─────────────────────────────────────── */
+
+    function selectedIds() {
+      return Array.from(document.querySelectorAll('.row-check:checked'))
+        .map(cb => Number(cb.value))
+        .filter(n => Number.isFinite(n));
+    }
+
+    function refreshSelection() {
+      const boxes = Array.from(document.querySelectorAll('.row-check'));
+      const picked = boxes.filter(cb => cb.checked);
+
+      document.getElementById('btnDelete').disabled = picked.length === 0;
+      document.getElementById('selCount').textContent =
+        picked.length ? `${picked.length}건 선택됨` : '';
+
+      const all = document.getElementById('checkAll');
+      all.checked = boxes.length > 0 && picked.length === boxes.length;
+      all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+
+      boxes.forEach(cb => {
+        cb.closest('tr').classList.toggle('row-selected', cb.checked);
+      });
+    }
+
+    function toggleAll(master) {
+      document.querySelectorAll('.row-check').forEach(cb => { cb.checked = master.checked; });
+      refreshSelection();
+    }
+
+    function onRowCheck() { refreshSelection(); }
+
+    async function deleteSelected() {
+      const ids = selectedIds();
+      if (!ids.length) { alert('삭제할 내역을 선택하세요.'); return; }
+
+      const rows = ids.map(id => currentRows.find(r => r.id === id)).filter(Boolean);
+      const preview = rows.slice(0, 5)
+        .map(r => `· ${r.txDate} ${r.summary || ''} ${Number(r.depositAmount) > 0
+                    ? '입금 ' + Number(r.depositAmount).toLocaleString()
+                    : '출금 ' + Number(r.withdrawalAmount).toLocaleString()}원`)
+        .join('
+');
+
+      const msg = `선택한 ${ids.length}건을 삭제합니다.
+
+${preview}`
+        + (ids.length > 5 ? `
+… 외 ${ids.length - 5}건` : '')
+        + '
+
+삭제한 내역은 되돌릴 수 없습니다.
+같은 파일을 다시 업로드하면 새로 등록됩니다.
+
+계속할까요?';
+
+      if (!confirm(msg)) return;
+
+      const btn = document.getElementById('btnDelete');
+      btn.disabled = true;
+      const label = btn.textContent;
+      btn.textContent = '삭제 중...';
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bank-transactions/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ids)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        alert(`${data.deleted}건이 삭제되었습니다.`);
+        document.getElementById('checkAll').checked = false;
+        await searchTransactions();
+      } catch (e) {
+        alert('삭제 실패: ' + e.message);
+      } finally {
+        btn.textContent = label;
+        refreshSelection();
+      }
     }
 
     async function saveRemarks() {

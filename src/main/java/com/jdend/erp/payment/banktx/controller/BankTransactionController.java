@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -44,6 +45,12 @@ public class BankTransactionController {
       @RequestParam("file") MultipartFile file
   ) {
     return service.uploadExcel(bankName, accountNo, file);
+  }
+
+  /** 선택 삭제 — 지울 id가 많을 수 있어 본문으로 받는다. */
+  @PostMapping("/delete")
+  public Map<String, Integer> delete(@RequestBody List<Long> ids) {
+    return Map.of("deleted", service.deleteByIds(ids));
   }
 
   @PatchMapping("/remarks")

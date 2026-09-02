@@ -6,6 +6,7 @@ import com.jdend.erp.payment.banktx.dto.*;
 import com.jdend.erp.payment.banktx.entity.BankTransaction;
 import com.jdend.erp.payment.banktx.repository.PaymentBankTransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -208,6 +210,31 @@ public class BankTransactionService {
         .detectedHeaders(detectedHeaders)
         .skipReasons(skipReasons)
         .build();
+  }
+
+  /**
+   * 선택한 은행내역을 삭제한다.
+   *
+   * <p>잘못 올린 파일을 지우고 다시 올리는 용도라 실제로 행을 지운다.
+   * 표시만 지우면 중복 판정이 그 행을 계속 세기 때문에 재업로드가 막힌다.</p>
+   *
+   * @return 실제로 지워진 건수
+   */
+  public int deleteByIds(List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new IllegalArgumentException("삭제할 내역을 선택하세요.");
+    }
+    List<Long> targets = ids.stream().filter(Objects::nonNull).distinct().toList();
+    if (targets.isEmpty()) {
+      throw new IllegalArgumentException("삭제할 내역을 선택하세요.");
+    }
+
+    List<BankTransaction> found = repo.findAllById(targets);
+    if (found.isEmpty()) return 0;
+
+    repo.deleteAll(found);
+    log.info("[BankTx] 은행내역 삭제: 요청 {}건, 삭제 {}건", targets.size(), found.size());
+    return found.size();
   }
 
   public void updateRemarksBulk(List<RemarksUpdateRequest> list) {

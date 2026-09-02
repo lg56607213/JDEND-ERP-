@@ -21,6 +21,7 @@ function exportTableToExcel(tbodyId, filename) {
     if (headerRow) {
       rows.push(
         Array.from(headerRow.querySelectorAll('th'))
+          .filter(function(th) { return !th.classList.contains('no-export'); })
           .map(function(th) { return th.textContent.trim(); })
       );
     }
@@ -33,9 +34,12 @@ function exportTableToExcel(tbodyId, filename) {
     if (!cells.length) continue;
     if (cells.length === 1 && cells[0].hasAttribute('colspan')) continue;
     rows.push(
-      Array.from(cells).map(function(td) {
-        return td.textContent.trim().replace(/\s+/g, ' ');
-      })
+      // 체크박스처럼 화면 조작용 열은 no-export 를 붙여 내보내기에서 뺀다
+      Array.from(cells)
+        .filter(function(td) { return !td.classList.contains('no-export'); })
+        .map(function(td) {
+          return td.textContent.trim().replace(/\s+/g, ' ');
+        })
     );
   }
 
