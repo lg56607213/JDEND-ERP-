@@ -32,10 +32,11 @@ public class VehicleDocumentController {
             @RequestParam(required = false) String vehicleMgmtNo,
             @RequestParam(required = false) String vehicleNo,
             @RequestParam(required = false) String contractNumber,
-            @RequestParam(required = false) Long insuranceId) {
+            @RequestParam(required = false) Long insuranceId,
+            @RequestParam(required = false) Long fineId) {
         try {
             List<VehicleDocumentService.DocumentInfo> result =
-                    service.list(documentType, vehicleMgmtNo, vehicleNo, contractNumber, insuranceId);
+                    service.list(documentType, vehicleMgmtNo, vehicleNo, contractNumber, insuranceId, fineId);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -55,6 +56,7 @@ public class VehicleDocumentController {
             @RequestParam(required = false) String vehicleNo,
             @RequestParam(required = false) String contractNumber,
             @RequestParam(required = false) Long insuranceId,
+            @RequestParam(required = false) Long fineId,
             @RequestParam("file") MultipartFile file,
             HttpSession session) {
         try {
@@ -63,7 +65,7 @@ public class VehicleDocumentController {
 
             VehicleDocumentService.DocumentInfo result =
                     service.upload(documentType, vehicleMgmtNo, vehicleNo, contractNumber, insuranceId,
-                            file, uploadedBy);
+                            fineId, file, uploadedBy);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

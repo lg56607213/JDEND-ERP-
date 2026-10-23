@@ -21,6 +21,9 @@ public interface VehicleDocumentRepository extends JpaRepository<VehicleDocument
     List<VehicleDocument> findByInsuranceIdAndDeletedYnOrderByUploadedAtDesc(
             Long insuranceId, String deletedYn);
 
+    List<VehicleDocument> findByFineIdAndDeletedYnOrderByUploadedAtAsc(
+            Long fineId, String deletedYn);
+
     boolean existsByContractNumberAndDeletedYn(String contractNumber, String deletedYn);
 
     boolean existsByInsuranceIdAndDeletedYn(Long insuranceId, String deletedYn);
@@ -35,6 +38,10 @@ public interface VehicleDocumentRepository extends JpaRepository<VehicleDocument
     @Query("select d.contractNumber from VehicleDocument d " +
            "where d.contractNumber in :numbers and d.deletedYn = 'N'")
     List<String> findContractNumbersWithDocument(@Param("numbers") List<String> numbers);
+
+    @Query("select distinct d.fineId from VehicleDocument d " +
+           "where d.fineId in :ids and d.deletedYn = 'N'")
+    List<Long> findFineIdsWithDocument(@Param("ids") List<Long> ids);
 
     @Query("select d.insuranceId from VehicleDocument d " +
            "where d.insuranceId in :ids and d.deletedYn = 'N'")

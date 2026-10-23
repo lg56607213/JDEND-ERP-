@@ -130,6 +130,9 @@ function loadSidebar() {
                   <li><a href="${basePath}pages/vehicle/insurance_status.html">보험현황</a></li>
                 </ul>
               </li>
+              <li>
+                <a href="${basePath}pages/vehicle/traffic_fine.html">과태료</a>
+              </li>
               <li class="has-sub">
                 <span class="menu-label">스캔관리</span>
                 <ul>

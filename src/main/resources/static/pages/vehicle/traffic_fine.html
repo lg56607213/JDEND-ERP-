@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>과태료 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <style>
+    .btn{padding:8px 18px;border-radius:5px;border:none;cursor:pointer;font-size:.88rem;font-weight:700}
+    .btn-primary{background:#23304e;color:#fff}.btn-primary:hover{background:#1b253a}
+    .search-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:16px 20px;margin-bottom:14px}
+    .search-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+    .sfg{display:flex;flex-direction:column;gap:4px}
+    .sfg label{font-size:.8rem;font-weight:700;color:#374151}
+    .sfg input,.sfg select{padding:8px 11px;border:1px solid #d1d5db;border-radius:5px;font-size:.9rem;height:36px;box-sizing:border-box;outline:none;background:#fff}
+    .sfg input:focus,.sfg select:focus{border-color:#23304e}
+    .date-sep{color:#9ca3af;align-self:flex-end;line-height:36px;font-size:.9rem}
+    .table-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:16px 20px}
+    .card-header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+    .card-title{font-size:.95rem;font-weight:700;color:#1b253a}
+    .result-count{font-size:.82rem;color:#6b7280}
+    .tbl-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse}
+    thead tr{border-top:2px solid #23304e;border-bottom:2px solid #e5e7eb}
+    th{padding:9px 10px;font-size:.8rem;font-weight:700;color:#374151;background:#f8fafc;white-space:nowrap;text-align:center}
+    td{padding:9px 10px;border-bottom:1px solid #f1f5f9;font-size:.87rem;color:#374151;white-space:nowrap;text-align:center}
+    td.l{text-align:left}
+    td.r{text-align:right}
+    tr:hover td{background:#f9fafb}
+    .empty-row td{text-align:center;color:#9ca3af;padding:32px}
+    .badge-yes{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
+    .badge-no{background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
+    .badge-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
+    .st{border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700;border:1px solid}
+    .st-접수{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+    .st-변경요청{background:#fef3c7;color:#92400e;border-color:#fde68a}
+    .st-처리완료{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+    .btn-sm{border-radius:5px;cursor:pointer;font-size:.8rem;font-weight:700;padding:4px 10px;border:1px solid}
+    .btn-edit{background:#f8fafc;color:#374151;border-color:#d1d5db}.btn-edit:hover{background:#f1f5f9}
+    .btn-list{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.btn-list:hover{background:#dbeafe}
+    .btn-print{background:#23304e;color:#fff;border-color:#23304e}.btn-print:hover{background:#1b253a}
+    .btn-view{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}.btn-view:hover{background:#dcfce7}
+    .btn-dl{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;font-size:.8rem;font-weight:700;padding:4px 10px;text-decoration:none;display:inline-block}
+    .btn-del{background:#fff5f5;color:#c53030;border-color:#fed7d7}.btn-del:hover{background:#fed7d7}
+    /* 모달 공통 */
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center}
+    .modal-backdrop.open{display:flex}
+    .modal-box{background:#fff;border-radius:12px;padding:24px 28px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+    .modal-box h3{margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#1b253a}
+    .modal-sub{color:#6b7280;font-size:.82rem;margin-bottom:16px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+    .form-grid .full{grid-column:1 / -1}
+    .modal-field label{display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:5px}
+    .modal-field label .req{color:#ef4444}
+    .modal-field input,.modal-field select,.modal-field textarea{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:.9rem;outline:none;font-family:inherit;background:#fff}
+    .modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:#23304e}
+    .modal-field textarea{resize:vertical;min-height:56px}
+    .hint{font-size:.78rem;color:#6b7280;margin-top:4px}
+    .hint.warn{color:#b45309}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+    .btn-cancel-m{padding:9px 18px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-weight:600;cursor:pointer;font-size:.88rem}
+    .btn-cancel-m:hover{background:#e5e7eb}
+    .btn-ok-m{padding:9px 22px;background:#23304e;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:.88rem}
+    .btn-ok-m:hover{background:#1b253a}
+    .btn-ok-m:disabled{opacity:.6;cursor:default}
+    @media (max-width:640px){.form-grid{grid-template-columns:1fr}}
+    /* 목록 모달 */
+    .list-box{background:#fff;border-radius:12px;width:min(760px,96vw);max-height:84vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+    .list-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #eee}
+    .list-title{font-weight:700;font-size:1rem;color:#111827}
+    .x-close{border:1px solid #ddd;background:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+    .x-close:hover{background:#f5f5f5}
+    .list-body{flex:1;overflow-y:auto;padding:16px}
+    .sec-title{font-size:.88rem;font-weight:800;color:#1b253a;margin:4px 0 8px}
+    .upload-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    /* 뷰어 모달 */
+    .viewer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;align-items:center;justify-content:center}
+    .viewer-backdrop.open{display:flex}
+    .viewer-box{background:#fff;border-radius:12px;width:min(860px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden}
+    .viewer-body{flex:1;overflow:auto;padding:16px;display:flex;align-items:center;justify-content:center;background:#f8fafc}
+    .viewer-body img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:4px}
+    .viewer-body iframe{width:100%;height:70vh;border:none}
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<div class="content-wrapper">
+  <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <h1>과태료</h1>
+      <p>차량관리 &gt; 과태료</p>
+    </div>
+    <button class="btn btn-primary" onclick="openFormModal()">+ 과태료 등록</button>
+  </div>
+
+  <div class="search-card">
+    <div class="search-row">
+      <div class="sfg">
+        <label>위반일</label>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="date" id="searchStartDate" style="width:140px;">
+          <span class="date-sep">~</span>
+          <input type="date" id="searchEndDate" style="width:140px;">
+        </div>
+      </div>
+      <div class="sfg">
+        <label>차량번호</label>
+        <input type="text" id="searchVehicleNo" placeholder="차량번호" style="width:130px;" onkeydown="if(event.key==='Enter')doSearch()">
+      </div>
+      <div class="sfg">
+        <label>임차인</label>
+        <input type="text" id="searchCustomer" placeholder="임차인" style="width:130px;" onkeydown="if(event.key==='Enter')doSearch()">
+      </div>
+      <div class="sfg">
+        <label>처리상태</label>
+        <select id="searchStatus" style="width:110px;">
+          <option value="">전체</option>
+          <option>접수</option>
+          <option>변경요청</option>
+          <option>처리완료</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="doSearch()">조회</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="card-header-row">
+      <span class="card-title">과태료 목록</span>
+      <span class="result-count" id="resultCount"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44px;">#</th>
+            <th>위반일시</th>
+            <th>차량번호</th>
+            <th>위반내용</th>
+            <th>금액</th>
+            <th>부과기관</th>
+            <th>납부기한</th>
+            <th>계약번호</th>
+            <th>임차인</th>
+            <th>상태</th>
+            <th>고지서</th>
+            <th>계약서</th>
+            <th style="width:220px;">관리</th>
+          </tr>
+        </thead>
+        <tbody id="fineTableBody">
+          <tr class="empty-row"><td colspan="13">조회 버튼을 눌러 검색하세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 등록/수정 모달 -->
+<div class="modal-backdrop" id="formBackdrop">
+  <div class="modal-box">
+    <h3 id="formTitle">과태료 등록</h3>
+    <p class="modal-sub">차량번호와 위반일시를 입력하면 그날 차량을 이용한 계약(임차인)을 자동으로 찾습니다.</p>
+    <div class="form-grid">
+      <div class="modal-field">
+        <label>차량번호 <span class="req">*</span></label>
+        <input type="text" id="fVehicleNo" list="vehicleList" placeholder="예: 12가3456" autocomplete="off">
+        <datalist id="vehicleList"></datalist>
+      </div>
+      <div class="modal-field">
+        <label>위반일시 <span class="req">*</span></label>
+        <input type="datetime-local" id="fViolationAt">
+      </div>
+      <div class="modal-field full">
+        <label>계약 (임차인)</label>
+        <select id="fContract"></select>
+        <div class="hint" id="contractHint">차량번호와 위반일시를 입력하세요.</div>
+      </div>
+      <div class="modal-field">
+        <label>위반내용</label>
+        <input type="text" id="fViolationType" list="violationTypes" placeholder="예: 속도위반">
+        <datalist id="violationTypes">
+          <option>속도위반</option><option>신호위반</option><option>주정차위반</option>
+          <option>버스전용차로위반</option><option>통행료미납</option>
+        </datalist>
+      </div>
+      <div class="modal-field">
+        <label>부과기관</label>
+        <input type="text" id="fIssuingAgency" placeholder="예: 서울강남경찰서">
+      </div>
+      <div class="modal-field full">
+        <label>위반장소</label>
+        <input type="text" id="fViolationPlace">
+      </div>
+      <div class="modal-field">
+        <label>금액 (원)</label>
+        <input type="text" id="fAmount" inputmode="numeric" oninput="this.value=fmtNum(this.value)">
+      </div>
+      <div class="modal-field">
+        <label>납부기한</label>
+        <input type="date" id="fDueDate">
+      </div>
+      <div class="modal-field" id="statusField" style="display:none;">
+        <label>처리상태</label>
+        <select id="fStatus">
+          <option>접수</option><option>변경요청</option><option>처리완료</option>
+        </select>
+      </div>
+      <div class="modal-field full">
+        <label>비고</label>
+        <textarea id="fRemarks"></textarea>
+      </div>
+      <div class="modal-field full" id="scanField">
+        <label>고지서 스캔 <span style="color:#6b7280;font-weight:400;">(PDF/JPG/JPEG/PNG, 파일당 최대 10MB, 여러 장 가능)</span></label>
+        <input type="file" id="fScanFiles" accept=".pdf,.jpg,.jpeg,.png" multiple>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel-m" onclick="closeFormModal()">취소</button>
+      <button class="btn-ok-m" id="formSaveBtn" onclick="submitForm()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 스캔 모달 -->
+<div class="modal-backdrop" id="scanBackdrop">
+  <div class="list-box">
+    <div class="list-header">
+      <span class="list-title" id="scanTitle">스캔 파일</span>
+      <button class="x-close" onclick="closeScanModal()">✕</button>
+    </div>
+    <div class="list-body">
+      <div class="sec-title">과태료 고지서</div>
+      <div class="upload-row">
+        <input type="file" id="scanUploadFiles" accept=".pdf,.jpg,.jpeg,.png" multiple>
+        <button class="btn-sm btn-view" onclick="uploadFromScanModal()">업로드</button>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:20px;">
+        <table>
+          <thead><tr><th style="width:36px;">#</th><th>파일명</th><th>크기</th><th>업로드일시</th><th style="width:175px;">관리</th></tr></thead>
+          <tbody id="fineScanBody"></tbody>
+        </table>
+      </div>
+      <div class="sec-title">계약서 <span id="contractScanLabel" style="font-weight:400;color:#6b7280;"></span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th style="width:36px;">#</th><th>파일명</th><th>크기</th><th>업로드일시</th><th style="width:110px;">관리</th></tr></thead>
+          <tbody id="contractScanBody"></tbody>
+        </table>
+      </div>
+      <div class="hint">계약서 스캔은 차량관리 &gt; 스캔관리 &gt; 계약서 화면에서 올립니다.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 뷰어 모달 -->
+<div class="viewer-backdrop" id="viewerBackdrop">
+  <div class="viewer-box">
+    <div class="list-header">
+      <span class="list-title" id="viewerTitle">문서 보기</span>
+      <button class="x-close" onclick="closeViewer()">✕</button>
+    </div>
+    <div class="viewer-body" id="viewerBody"></div>
+  </div>
+</div>
+
+<script src="../../assets/js/sidebar.js"></script>
+<script src="../../assets/js/config.js"></script>
+<script>
+  const BASE = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '').replace(/\/+$/,'');
+  function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function fmtSize(b){if(!b)return'-';if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+  function fmtDt(dt){return dt?String(dt).replace('T',' ').substring(0,16):'-';}
+  function fmtNum(v){const n=String(v??'').replace(/[^0-9]/g,'');return n?Number(n).toLocaleString('ko-KR'):'';}
+  async function errMsg(res){const b=await res.json().catch(()=>null);return b?.error||b?.message||('HTTP '+res.status);}
+
+  let _fines = [];
+  let _editId = null;
+  let _scanFineId = null;
+
+  // ── 목록 ───────────────────────────────────────
+  async function doSearch() {
+    const qs = new URLSearchParams();
+    const set = (k, id) => { const v = document.getElementById(id).value.trim(); if (v) qs.set(k, v); };
+    set('startDate','searchStartDate'); set('endDate','searchEndDate');
+    set('vehicleNo','searchVehicleNo'); set('customerName','searchCustomer'); set('status','searchStatus');
+
+    const tbody = document.getElementById('fineTableBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="13">조회 중...</td></tr>';
+    document.getElementById('resultCount').textContent = '';
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines?${qs}`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      _fines = await res.json();
+      document.getElementById('resultCount').textContent = _fines.length + '건';
+      if (!_fines.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="13">조회 결과가 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = _fines.map((f, i) => {
+        const fineBadge = f.fineScanned ? '<span class="badge-yes">스캔완료</span>' : '<span class="badge-no">미스캔</span>';
+        const cBadge = !f.contractNumber ? '<span class="badge-warn">계약없음</span>'
+          : f.contractScanned ? '<span class="badge-yes">스캔완료</span>' : '<span class="badge-no">미스캔</span>';
+        return `<tr>
+          <td>${i+1}</td>
+          <td>${esc(fmtDt(f.violationAt))}</td>
+          <td>${esc(f.vehicleNo)}</td>
+          <td class="l">${esc(f.violationType||'-')}</td>
+          <td class="r">${f.amount!=null ? esc(fmtNum(f.amount)) : '-'}</td>
+          <td class="l">${esc(f.issuingAgency||'-')}</td>
+          <td>${esc(f.dueDate||'-')}</td>
+          <td>${esc(f.contractNumber||'-')}</td>
+          <td>${esc(f.customerName||'-')}</td>
+          <td><span class="st st-${esc(f.status)}">${esc(f.status)}</span></td>
+          <td>${fineBadge}</td>
+          <td>${cBadge}</td>
+          <td>
+            <button class="btn-sm btn-edit" onclick="openFormModal(${f.id})">수정</button>
+            <button class="btn-sm btn-list" onclick="openScanModal(${f.id})">스캔</button>
+            <button class="btn-sm btn-print" onclick="printFine(${f.id})">출력</button>
+            <button class="btn-sm btn-del" onclick="deleteFine(${f.id})">삭제</button>
+          </td>
+        </tr>`;
+      }).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="13" style="color:#ef4444;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  // ── 등록/수정 모달 ─────────────────────────────
+  let _vehiclesLoaded = false;
+  async function loadVehicles() {
+    if (_vehiclesLoaded) return;
+    try {
+      const res = await fetch(`${BASE}/api/vehicle-orders?registerDateStart=&registerDateEnd=`, {credentials:'include'});
+      if (!res.ok) return;
+      const nos = [...new Set((await res.json()).map(v => v.vehicleNo).filter(Boolean))];
+      document.getElementById('vehicleList').innerHTML = nos.map(n => `<option value="${esc(n)}">`).join('');
+      _vehiclesLoaded = true;
+    } catch(e) { /* 자동완성만 안 될 뿐 입력은 가능 */ }
+  }
+
+  function openFormModal(id) {
+    loadVehicles();
+    _editId = id || null;
+    const f = _editId ? _fines.find(x => x.id === _editId) : null;
+    document.getElementById('formTitle').textContent = f ? '과태료 수정' : '과태료 등록';
+    document.getElementById('fVehicleNo').value = f?.vehicleNo || '';
+    document.getElementById('fViolationAt').value = f?.violationAt ? String(f.violationAt).substring(0,16) : '';
+    document.getElementById('fViolationType').value = f?.violationType || '';
+    document.getElementById('fIssuingAgency').value = f?.issuingAgency || '';
+    document.getElementById('fViolationPlace').value = f?.violationPlace || '';
+    document.getElementById('fAmount').value = f?.amount != null ? fmtNum(f.amount) : '';
+    document.getElementById('fDueDate').value = f?.dueDate || '';
+    document.getElementById('fStatus').value = f?.status || '접수';
+    document.getElementById('fRemarks').value = f?.remarks || '';
+    document.getElementById('fScanFiles').value = '';
+    document.getElementById('statusField').style.display = f ? '' : 'none';
+    document.getElementById('scanField').style.display = f ? 'none' : '';
+    document.getElementById('formSaveBtn').disabled = false;
+    document.getElementById('formBackdrop').classList.add('open');
+    // 수정 시에는 저장된 계약(없으면 '')을 유지하고, 신규는 자동 매칭 결과를 고른다.
+    refreshContractOptions(f ? (f.contractNumber || '') : null);
+  }
+  function closeFormModal() { document.getElementById('formBackdrop').classList.remove('open'); }
+
+  let _matchSeq = 0;
+  async function refreshContractOptions(keepContractNo) {
+    const sel  = document.getElementById('fContract');
+    const hint = document.getElementById('contractHint');
+    const vno  = document.getElementById('fVehicleNo').value.trim();
+    const at   = document.getElementById('fViolationAt').value;
+    const seq  = ++_matchSeq;
+
+    if (!vno || !at) {
+      sel.innerHTML = keepContractNo ? `<option value="${esc(keepContractNo)}">${esc(keepContractNo)}</option>` : '<option value="">-</option>';
+      hint.className = 'hint'; hint.textContent = '차량번호와 위반일시를 입력하세요.';
+      return;
+    }
+    hint.className = 'hint'; hint.textContent = '계약 조회 중...';
+    try {
+      const qs = new URLSearchParams({vehicleNo: vno, date: at.substring(0,10)});
+      const res = await fetch(`${BASE}/api/traffic-fines/contract-match?${qs}`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const list = await res.json();
+      if (seq !== _matchSeq) return;   // 더 최근 입력의 조회가 진행 중
+
+      const opts = list.map(m => {
+        const end = m.terminationDate ? `${m.terminationDate} 중도해지` : (m.endDate || '');
+        return {v: m.contractNumber, t: `${m.contractNumber} / ${m.customerName || '-'} (${m.startDate} ~ ${end})`};
+      });
+      if (keepContractNo && !opts.some(o => o.v === keepContractNo)) {
+        opts.unshift({v: keepContractNo, t: `${keepContractNo} (위반일 기준 계약 아님)`});
+      }
+      opts.push({v: '', t: '계약 없음'});
+      sel.innerHTML = opts.map(o => `<option value="${esc(o.v)}">${esc(o.t)}</option>`).join('');
+      sel.value = keepContractNo ?? (list[0]?.contractNumber || '');
+
+      if (!list.length) {
+        hint.className = 'hint warn'; hint.textContent = '위반일에 이 차량을 이용한 계약이 없습니다. 차량번호와 일시를 확인하세요.';
+      } else if (list.length > 1) {
+        hint.className = 'hint warn'; hint.textContent = '위반일에 해당하는 계약이 여러 건입니다(반납·인도일 겹침). 맞는 계약을 선택하세요.';
+      } else {
+        hint.className = 'hint'; hint.textContent = '위반일 기준 계약을 찾았습니다.';
+      }
+    } catch(e) {
+      if (seq !== _matchSeq) return;
+      hint.className = 'hint warn'; hint.textContent = '계약 조회 실패: ' + e.message;
+    }
+  }
+  ['fVehicleNo','fViolationAt'].forEach(id =>
+    document.getElementById(id).addEventListener('change', () => refreshContractOptions(null)));
+
+  function validFiles(files) {
+    for (const file of files) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['pdf','jpg','jpeg','png'].includes(ext)) { alert(`${file.name}: PDF, JPG, JPEG, PNG만 가능합니다.`); return false; }
+      if (file.size > 10*1024*1024) { alert(`${file.name}: 최대 10MB까지 업로드 가능합니다.`); return false; }
+    }
+    return true;
+  }
+
+  async function uploadScans(fine, files) {
+    for (const file of files) {
+      const form = new FormData();
+      form.append('documentType', '과태료');
+      form.append('fineId', fine.id);
+      form.append('vehicleNo', fine.vehicleNo);
+      if (fine.vehicleMgmtNo) form.append('vehicleMgmtNo', fine.vehicleMgmtNo);
+      form.append('file', file);
+      const res = await fetch(`${BASE}/api/documents/upload`, {method:'POST', body:form, credentials:'include'});
+      if (!res.ok) throw new Error(`${file.name}: ${await errMsg(res)}`);
+    }
+  }
+
+  async function submitForm() {
+    const at = document.getElementById('fViolationAt').value;
+    const body = {
+      vehicleNo:      document.getElementById('fVehicleNo').value.trim(),
+      violationAt:    at ? at + ':00' : null,
+      violationType:  document.getElementById('fViolationType').value.trim(),
+      violationPlace: document.getElementById('fViolationPlace').value.trim(),
+      issuingAgency:  document.getElementById('fIssuingAgency').value.trim(),
+      amount:         document.getElementById('fAmount').value ? Number(document.getElementById('fAmount').value.replace(/,/g,'')) : null,
+      dueDate:        document.getElementById('fDueDate').value || null,
+      contractNumber: document.getElementById('fContract').value,   // '' = 계약 없음
+      status:         _editId ? document.getElementById('fStatus').value : null,
+      remarks:        document.getElementById('fRemarks').value.trim()
+    };
+    if (!body.vehicleNo) { alert('차량번호를 입력하세요.'); return; }
+    if (!body.violationAt) { alert('위반일시를 입력하세요.'); return; }
+    const files = _editId ? [] : [...document.getElementById('fScanFiles').files];
+    if (!validFiles(files)) return;
+
+    const btn = document.getElementById('formSaveBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines${_editId ? '/' + _editId : ''}`, {
+        method: _editId ? 'PUT' : 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body), credentials:'include'
+      });
+      if (!res.ok) throw new Error(await errMsg(res));
+      const saved = await res.json();
+      if (files.length) {
+        try { await uploadScans(saved, files); }
+        catch(e) { alert('과태료는 저장됐지만 스캔 업로드에 실패했습니다.\n' + e.message + '\n목록의 [스캔] 버튼으로 다시 올려주세요.'); }
+      }
+      closeFormModal();
+      doSearch();
+    } catch(e) {
+      alert('저장 실패: ' + e.message);
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteFine(id) {
+    if (!confirm('이 과태료와 첨부된 고지서 스캔을 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/${id}`, {method:'DELETE', credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      doSearch();
+    } catch(e) { alert('삭제 실패: ' + e.message); }
+  }
+
+  // ── 스캔 모달 ──────────────────────────────────
+  function openScanModal(id) {
+    _scanFineId = id;
+    const f = _fines.find(x => x.id === id);
+    document.getElementById('scanTitle').textContent = `스캔 파일 - ${f.vehicleNo} / ${fmtDt(f.violationAt)}`;
+    document.getElementById('contractScanLabel').textContent = f.contractNumber ? `(${f.contractNumber} / ${f.customerName || '-'})` : '(연결된 계약 없음)';
+    document.getElementById('scanUploadFiles').value = '';
+    document.getElementById('scanBackdrop').classList.add('open');
+    refreshScanLists();
+  }
+  function closeScanModal() { document.getElementById('scanBackdrop').classList.remove('open'); }
+
+  function docRows(docs, deletable) {
+    const cols = 5;
+    if (!docs.length) return `<tr><td colspan="${cols}" style="text-align:center;color:#9ca3af;padding:16px;">스캔 파일이 없습니다.</td></tr>`;
+    return docs.map((d,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td class="l">${esc(d.fileName||'-')}</td>
+        <td>${fmtSize(d.fileSize)}</td>
+        <td>${fmtDt(d.uploadedAt)}</td>
+        <td>
+          <button class="btn-sm btn-view" data-doc-id="${d.id}" data-file-name="${esc(d.fileName||'')}" onclick="openViewer(this)">보기</button>
+          ${deletable ? `<a href="${BASE}/api/documents/${d.id}/download" class="btn-dl">다운로드</a>
+          <button class="btn-sm btn-del" onclick="deleteScan(${d.id})">삭제</button>` : ''}
+        </td>
+      </tr>`).join('');
+  }
+
+  async function refreshScanLists() {
+    const f = _fines.find(x => x.id === _scanFineId);
+    const fineBody = document.getElementById('fineScanBody');
+    const cBody = document.getElementById('contractScanBody');
+    fineBody.innerHTML = cBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;">불러오는 중...</td></tr>';
+    try {
+      const fRes = await fetch(`${BASE}/api/documents?documentType=과태료&fineId=${_scanFineId}`, {credentials:'include'});
+      if (!fRes.ok) throw new Error(await errMsg(fRes));
+      fineBody.innerHTML = docRows(await fRes.json(), true);
+
+      if (!f.contractNumber) {
+        cBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:16px;">연결된 계약이 없습니다.</td></tr>';
+      } else {
+        const cRes = await fetch(`${BASE}/api/documents?documentType=계약서&contractNumber=${encodeURIComponent(f.contractNumber)}`, {credentials:'include'});
+        if (!cRes.ok) throw new Error(await errMsg(cRes));
+        cBody.innerHTML = docRows(await cRes.json(), false);
+      }
+    } catch(e) {
+      fineBody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;text-align:center;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  async function uploadFromScanModal() {
+    const files = [...document.getElementById('scanUploadFiles').files];
+    if (!files.length) { alert('파일을 선택하세요.'); return; }
+    if (!validFiles(files)) return;
+    try {
+      await uploadScans(_fines.find(x => x.id === _scanFineId), files);
+      document.getElementById('scanUploadFiles').value = '';
+      await refreshScanLists();
+      doSearch();
+    } catch(e) { alert('업로드 실패: ' + e.message); }
+  }
+
+  async function deleteScan(docId) {
+    if (!confirm('이 파일을 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`${BASE}/api/documents/${docId}`, {method:'DELETE', credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      await refreshScanLists();
+      doSearch();
+    } catch(e) { alert('삭제 실패: ' + e.message); }
+  }
+
+  // ── 출력: 고지서 스캔 + 계약서 스캔 합본 PDF ──────
+  async function printFine(id) {
+    const f = _fines.find(x => x.id === id);
+    if (!f.fineScanned) { alert('과태료 고지서 스캔이 없습니다. [스캔] 버튼으로 먼저 올려주세요.'); return; }
+    if (!f.contractNumber) {
+      if (!confirm('연결된 계약이 없어 고지서만 출력됩니다. 계속할까요?')) return;
+    } else if (!f.contractScanned) {
+      if (!confirm('계약서 스캔이 없어 고지서만 출력됩니다. 계속할까요?')) return;
+    }
+    // 팝업 차단을 피하려고 클릭 시점에 창을 먼저 연다.
+    const win = window.open('', '_blank');
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/${id}/print`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const url = URL.createObjectURL(await res.blob());
+      if (win) win.location.href = url; else window.location.href = url;
+    } catch(e) {
+      if (win) win.close();
+      alert('출력 실패: ' + e.message);
+    }
+  }
+
+  // ── 뷰어 ───────────────────────────────────────
+  function openViewer(btn) {
+    const id = btn.dataset.docId;
+    const fileName = btn.dataset.fileName || '문서 보기';
+    const url = `${BASE}/api/documents/${id}/view`;
+    const ext = fileName.split('.').pop().toLowerCase();
+    document.getElementById('viewerTitle').textContent = fileName;
+    document.getElementById('viewerBody').innerHTML = ['jpg','jpeg','png'].includes(ext)
+      ? `<img src="${url}" alt="${esc(fileName)}">`
+      : `<iframe src="${url}" title="${esc(fileName)}"></iframe>`;
+    document.getElementById('viewerBackdrop').classList.add('open');
+  }
+  function closeViewer() {
+    document.getElementById('viewerBackdrop').classList.remove('open');
+    document.getElementById('viewerBody').innerHTML = '';
+  }
+
+  // ── ESC / backdrop click ───────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('viewerBackdrop').classList.contains('open')) { closeViewer(); return; }
+    if (document.getElementById('scanBackdrop').classList.contains('open'))   { closeScanModal(); return; }
+    if (document.getElementById('formBackdrop').classList.contains('open'))   { closeFormModal(); return; }
+  });
+  [['formBackdrop', closeFormModal], ['scanBackdrop', closeScanModal], ['viewerBackdrop', closeViewer]]
+    .forEach(([id, close]) => document.getElementById(id).addEventListener('click', e => {
+      if (e.target === document.getElementById(id)) close();
+    }));
+
+  document.addEventListener('DOMContentLoaded', doSearch);
+</script>
+</body>
+</html>

@@ -38,6 +38,7 @@ public class VehicleDocumentService {
             String vehicleNo,
             String contractNumber,
             Long insuranceId,
+            Long fineId,
             String fileName,
             Long fileSize,
             java.time.LocalDateTime uploadedAt,
@@ -52,10 +53,13 @@ public class VehicleDocumentService {
                                    String vehicleMgmtNo,
                                    String vehicleNo,
                                    String contractNumber,
-                                   Long insuranceId) {
+                                   Long insuranceId,
+                                   Long fineId) {
         List<VehicleDocument> docs;
 
-        if (vehicleMgmtNo != null && !vehicleMgmtNo.isBlank()) {
+        if (fineId != null) {
+            docs = repository.findByFineIdAndDeletedYnOrderByUploadedAtAsc(fineId, "N");
+        } else if (vehicleMgmtNo != null && !vehicleMgmtNo.isBlank()) {
             docs = repository.findByVehicleMgmtNoAndDeletedYnOrderByUploadedAtDesc(vehicleMgmtNo, "N");
         } else if (vehicleNo != null && !vehicleNo.isBlank()) {
             docs = repository.findByVehicleNoAndDeletedYnOrderByUploadedAtDesc(vehicleNo, "N");
@@ -86,6 +90,7 @@ public class VehicleDocumentService {
                                String vehicleNo,
                                String contractNumber,
                                Long insuranceId,
+                               Long fineId,
                                MultipartFile file,
                                String uploadedBy) {
         if (file == null || file.isEmpty()) {
@@ -118,6 +123,7 @@ public class VehicleDocumentService {
                     .vehicleNo(vehicleNo)
                     .contractNumber(contractNumber)
                     .insuranceId(insuranceId)
+                    .fineId(fineId)
                     .fileName(originalFilename != null ? originalFilename : key)
                     .filePath(key)
                     .fileSize(file.getSize())
@@ -276,6 +282,40 @@ public class VehicleDocumentService {
     }
 
     // ──────────────────────────────────────────────
+    // 과태료 출력용 조회
+    // ──────────────────────────────────────────────
+    @Transactional(readOnly = true)
+    public Set<Long> fineIdsWithScan(List<Long> fineIds) {
+        if (fineIds == null || fineIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(repository.findFineIdsWithDocument(fineIds));
+    }
+
+    /** 과태료에 첨부된 스캔 문서 (업로드 순) */
+    @Transactional(readOnly = true)
+    public List<VehicleDocument> fineScans(Long fineId) {
+        return repository.findByFineIdAndDeletedYnOrderByUploadedAtAsc(fineId, "N");
+    }
+
+    /** 계약번호로 스캔된 계약서 문서 (업로드 순) */
+    @Transactional(readOnly = true)
+    public List<VehicleDocument> contractScans(String contractNumber) {
+        if (contractNumber == null || contractNumber.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<VehicleDocument> docs = new ArrayList<>(
+                repository.findByContractNumberAndDeletedYnOrderByUploadedAtDesc(contractNumber, "N"));
+        docs.removeIf(d -> !"계약서".equals(d.getDocumentType()));
+        Collections.reverse(docs);
+        return docs;
+    }
+
+    public byte[] bytesOf(VehicleDocument doc) {
+        return storage.get(doc.getFilePath());
+    }
+
+    // ──────────────────────────────────────────────
     // 내부 헬퍼
     // ──────────────────────────────────────────────
     private DocumentInfo toDocumentInfo(VehicleDocument doc) {
@@ -286,6 +326,7 @@ public class VehicleDocumentService {
                 doc.getVehicleNo(),
                 doc.getContractNumber(),
                 doc.getInsuranceId(),
+                doc.getFineId(),
                 doc.getFileName(),
                 doc.getFileSize(),
                 doc.getUploadedAt(),
@@ -293,7 +334,7 @@ public class VehicleDocumentService {
         );
     }
 
-    private String extractExtension(String filename) {
+    public static String extractExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "";
         }

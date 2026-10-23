@@ -33,6 +33,10 @@ public class VehicleDocument {
     @Column(name = "insurance_id")
     private Long insuranceId;
 
+    /** 과태료 스캔본일 때 traffic_fines.id */
+    @Column(name = "fine_id")
+    private Long fineId;
+
     @Column(name = "file_name", length = 255, nullable = false)
     private String fileName;
 
