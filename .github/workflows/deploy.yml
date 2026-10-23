@@ -1,0 +1,107 @@
+# main 에 push 하면 운영 서버(rentcarerp.com)에 자동 배포한다.
+# 절차는 docs/deploy.md 의 수동 배포와 같다: 백업 → 교체 → 재시작 → 헬스체크, 실패하면 자동 원복.
+# 필요한 GitHub Secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY, EC2_KNOWN_HOSTS
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 배포가 겹치지 않게 한 번에 하나씩. 진행 중인 배포는 끊지 않는다.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build jar
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -q -DskipTests package
+          cp target/erp-0.0.1-SNAPSHOT.jar erp.jar
+          ls -la erp.jar
+
+      - name: Set up SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host prod
+            HostName ${{ secrets.EC2_HOST }}
+            User ${{ secrets.EC2_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 20
+          EOF
+
+      - name: Upload jar
+        run: ssh prod 'cat > /home/ubuntu/app/erp.jar.new' < erp.jar
+
+      - name: Swap jar and restart (auto rollback on failure)
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          ssh prod "SHA=${SHA:0:7} bash -s" <<'REMOTE'
+          set -u
+          cd /home/ubuntu/app
+          STAMP=$(date +%Y%m%d-%H%M%S)
+          BACKUP="erp.jar.bak-auto-$STAMP-before-$SHA"
+
+          # 1) 백업 → 2) 교체 → 3) 재시작
+          cp -p erp.jar "$BACKUP"
+          mv erp.jar.new erp.jar
+          START=$(date -u '+%Y-%m-%d %H:%M:%S')
+          sudo systemctl restart erp
+
+          # 4) 서버 안에서 기동 확인 (최대 3분)
+          ok=0
+          for i in $(seq 1 90); do
+            if sudo journalctl -u erp --since "$START" --no-pager | grep -q 'Started ErpApplication'; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/login.html || true)
+              [ "$code" = "200" ] && ok=1 && break
+            fi
+            sleep 2
+          done
+
+          if [ "$ok" != "1" ]; then
+            echo "::error::새 버전이 정상 기동하지 않아 이전 jar로 원복합니다."
+            sudo journalctl -u erp --since "$START" --no-pager | grep -E 'ERROR|Exception|APPLICATION FAILED' | tail -30
+            cp -p "$BACKUP" erp.jar
+            sudo systemctl restart erp
+            exit 1
+          fi
+          echo "$BACKUP" > .last-deploy-backup
+          echo "기동 확인: $SHA (백업: $BACKUP)"
+
+          # 자동 배포 백업은 최근 5개만 남긴다. (uploads/ 와 수동 백업은 건드리지 않는다)
+          ls -1t erp.jar.bak-auto-* 2>/dev/null | tail -n +6 | xargs -r rm -f
+          REMOTE
+
+      - name: Health check https://rentcarerp.com (rollback on failure)
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://rentcarerp.com/login.html || true)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "::error::외부 헬스체크 실패. 이전 jar로 원복합니다."
+          ssh prod 'cd /home/ubuntu/app && B=$(cat .last-deploy-backup) && cp -p "$B" erp.jar && sudo systemctl restart erp && echo "rolled back to $B"'
+          exit 1
