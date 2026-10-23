@@ -17,13 +17,13 @@ import java.util.Map;
  * <ul>
  *   <li>발주번호(12자리)   = {@code VFM + YYMMDD + 발주순번3} (당일 기준, 다음날 001 리셋)</li>
  *   <li>발주단계 임시번호(15자리) = {@code 발주번호(12) + "000"}</li>
- *   <li>실행 확정번호(15자리) = {@code 발주번호(12) + 실행순번3} (실행마다 001, 002, …)</li>
- *   <li>재렌트 시 차량관리번호 변경 없음</li>
+ *   <li>확정번호(15자리) = {@code 발주번호(12) + 대순번3} (차량등록이 끝날 때마다 001, 002, …)</li>
+ *   <li>할부 실행·재렌트 시 차량관리번호 변경 없음</li>
  * </ul>
  * 예) 2026-08-04 첫 발주 → 발주번호 {@code VFM260804001}
  *     · 임시번호        → {@code VFM260804001000}
- *     · 1대 실행확정    → {@code VFM260804001001}
- *     · 2대 실행확정    → {@code VFM260804001002}
+ *     · 1대 등록완료    → {@code VFM260804001001}
+ *     · 2대 등록완료    → {@code VFM260804001002}
  *
  * <p>동시성: {@link #nextOrderNo(LocalDate)}는 {@code synchronized}로 앱 인스턴스 내에서 직렬화한다.
  */
@@ -56,7 +56,7 @@ public class VehicleNumberGenerator {
         int dbMax = orderRepo.findTopByOrderNoStartingWithOrderByOrderNoDesc(prefix)
                 .map(o -> parseOrderSeq(o.getOrderNo()))
                 .orElse(0);
-        int cached = lastSeqByPrefix.getOrDefault(prefix, 0);
+        int cached = lastSeqByPrefix.getOrDefault(cacheKey(prefix), 0);
         int seq = Math.max(dbMax, cached) + 1;
 
         String candidate = prefix + String.format("%03d", seq);
@@ -68,8 +68,13 @@ public class VehicleNumberGenerator {
             candidate = prefix + String.format("%03d", seq);
         }
 
-        lastSeqByPrefix.put(prefix, seq);
+        lastSeqByPrefix.put(cacheKey(prefix), seq);
         return candidate;
+    }
+
+    /** 인메모리 캐시는 모든 회사가 함께 쓰므로 회사 DB 별로 키를 나눈다(다른 회사 순번에 밀려 번호가 건너뛰지 않게). */
+    private static String cacheKey(String key) {
+        return com.jdend.erp.config.TenantContext.getCurrentDb() + "|" + key;
     }
 
     /** 발주(미실행) 상태 마커: 끝 3자리 000. */
@@ -130,13 +135,13 @@ public class VehicleNumberGenerator {
      */
     public synchronized int nextUnitSeq(String orderNo) {
         int dbMax = orderRepo.findMaxUnitSeqByOrderNo(orderNo);
-        int cached = lastUnitSeqByOrderNo.getOrDefault(orderNo, 0);
+        int cached = lastUnitSeqByOrderNo.getOrDefault(cacheKey(orderNo), 0);
         int next = Math.max(dbMax, cached) + 1;
         if (next > 999) {
             throw new IllegalStateException(
-                    "한 발주에 실행 가능한 차량은 999대까지입니다. 발주번호=" + orderNo);
+                    "한 발주에 확정 가능한 차량은 999대까지입니다. 발주번호=" + orderNo);
         }
-        lastUnitSeqByOrderNo.put(orderNo, next);
+        lastUnitSeqByOrderNo.put(cacheKey(orderNo), next);
         return next;
     }
 

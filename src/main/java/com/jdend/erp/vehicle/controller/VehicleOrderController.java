@@ -106,6 +106,13 @@ public class VehicleOrderController {
     }
 
     // 차량 등록 (행 PK 기반 — …000 공유값 대비, S3 실번호 확정 포함)
+    /** 등록이 끝났는데 임시번호(…000)로 남은 차량을 확정번호로 일괄 정리 (1회성, 반복 실행 안전) */
+    @PostMapping("/confirm-registered-mgmt-nos")
+    public List<java.util.Map<String, Object>> confirmRegisteredMgmtNos(HttpSession session) {
+        permissionService.requireManager(session);
+        return service.confirmRegisteredMgmtNos();
+    }
+
     @PostMapping("/by-id/{id}/register")
     public VehicleOrderResponse registerById(
             @PathVariable Long id,

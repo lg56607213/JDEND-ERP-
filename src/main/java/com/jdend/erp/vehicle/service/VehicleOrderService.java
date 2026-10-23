@@ -11,6 +11,7 @@ import com.jdend.erp.vehicle.repository.*;
 import com.jdend.erp.vehicle.sale.repository.VehicleSaleRepository;
 import com.jdend.erp.vehicle.service.VehicleLoanService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +21,7 @@ import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleOrderService {
@@ -33,6 +35,19 @@ public class VehicleOrderService {
     private final VehicleLoanService vehicleLoanService;
     private final com.jdend.erp.common.storage.FileStorage storage;
     private final VehicleDocumentService vehicleDocumentService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    /** 등록이 끝난 상태. 이 상태가 되면 차량관리번호를 확정한다. */
+    private static final Set<String> REGISTERED_STATUSES = Set.of("등록완료", "실행완료");
+
+    /** 차량 행 id(vehicle_order_id)를 함께 가진 테이블 — 번호 확정 시 id 기준으로 함께 바꾼다. */
+    private static final List<String> MGMT_NO_TABLES_WITH_ORDER_ID = List.of(
+            "vehicle_insurances", "vehicle_inspections", "vehicle_loans",
+            "vehicle_sales", "vehicle_maintenances", "vehicle_dispatches");
+
+    /** 차량 행 id 없이 차량관리번호만 가진 테이블 — 임시번호를 이 차량만 쓰고 있을 때만 바꾼다. */
+    private static final List<String> MGMT_NO_TABLES_WITHOUT_ORDER_ID = List.of(
+            "vehicle_documents", "depreciation_assets");
 
     @Transactional(readOnly = true)
     public List<VehicleSearchRowResponse> searchForPicker(String kw) {
@@ -154,9 +169,11 @@ public class VehicleOrderService {
 
             VehicleOrder saved = orderRepo.save(o);
 
-            // BUG-1+BUG-2 수정: 엑셀 업로드 등 "등록완료" 상태로 직접 생성 시
-            // 차량관리번호는 실행(실행완료) 시점에 확정한다.
-            // 발주~등록 구간에서는 발주단계 임시번호(발주번호+000)를 그대로 유지한다.
+            // 엑셀 업로드 등 "등록완료" 이후 상태로 직접 생성하면 등록이 끝난 차량이므로
+            // 이 자리에서 차량관리번호를 확정한다(발주번호+001, 002, …).
+            if (REGISTERED_STATUSES.contains(saved.getOrderStatus())) {
+                confirmMgmtNo(saved);
+            }
 
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(saved)
@@ -333,10 +350,10 @@ public class VehicleOrderService {
 
         orderRepo.save(o);
 
-        // 실행완료로 넘어가는 순간 차량관리번호를 규칙 실번호로 확정한다.
-        //   발주단계 J260730001000 → 실행 J260730001001, 002, …
-        if (!Objects.equals(oldStatus, "실행완료") && "실행완료".equals(o.getOrderStatus())) {
-            confirmOnExecute(o);
+        // 등록완료(또는 실행완료)가 되는 순간 차량관리번호를 확정한다.
+        //   발주단계 VFM260730001000 → 확정 VFM260730001001, 002, …  (이미 확정된 차량은 그대로)
+        if (REGISTERED_STATUSES.contains(o.getOrderStatus())) {
+            confirmMgmtNo(o);
         }
 
         if (!Objects.equals(oldStatus, o.getOrderStatus())) {
@@ -496,15 +513,17 @@ public class VehicleOrderService {
             throw new RuntimeException("차량번호가 등록되지 않은 차량입니다. 차량등록 완료 후 실행해주세요.");
         }
 
+        // 차입금·개시전표가 확정번호로 만들어지도록 번호부터 확정한다(등록 단계에서 이미 확정됐으면 그대로).
+        confirmMgmtNo(o);
+
         // 차입금 생성 (내부에서 개시전표도 자동 생성됨)
         req.vehicleNo = vehicleNo;
         VehicleLoanListItemResponse loan = vehicleLoanService.create(req);
 
-        // 상태가 아직 실행완료가 아니면 변경 + 차량관리번호 실번호 확정
+        // 상태가 아직 실행완료가 아니면 변경
         if (!"실행완료".equals(o.getOrderStatus())) {
             o.setOrderStatus("실행완료");
             orderRepo.save(o);
-            confirmOnExecute(o);
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
                     .status("실행완료")
@@ -554,16 +573,17 @@ public class VehicleOrderService {
 
         o.setOrderStatus("등록완료");
 
-        // 차량관리번호는 실행 시점에 확정한다. 등록 단계에서는 …000 을 유지.
-
         orderRepo.save(o);
+
+        // 등록이 끝났으므로 차량관리번호를 확정한다.
+        confirmMgmtNo(o);
 
         if (!Objects.equals(oldStatus, "등록완료")) {
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
                     .status("등록완료")
                     .changedAt(LocalDateTime.now())
-                    .note("차량 등록 완료")
+                    .note("차량 등록 완료 (관리번호 " + o.getVehicleMgmtNo() + ")")
                     .build());
         }
     }
@@ -604,16 +624,17 @@ public class VehicleOrderService {
 
         o.setOrderStatus("등록완료");
 
-        // 차량관리번호는 실행 시점에 확정한다. 등록 단계에서는 …000 을 유지.
-
         orderRepo.save(o);
+
+        // 등록이 끝났으므로 차량관리번호를 확정한다.
+        confirmMgmtNo(o);
 
         if (!Objects.equals(oldStatus, "등록완료")) {
             historyRepo.save(VehicleOrderHistory.builder()
                     .vehicleOrder(o)
                     .status("등록완료")
                     .changedAt(LocalDateTime.now())
-                    .note("차량 등록 완료")
+                    .note("차량 등록 완료 (관리번호 " + o.getVehicleMgmtNo() + ")")
                     .build());
         }
 
@@ -621,10 +642,10 @@ public class VehicleOrderService {
     }
 
     /**
-     * 차량관리번호 실번호 확정 (실행 시점).
+     * 차량관리번호 실번호 확정 (등록완료 시점).
      *
-     * <p>차량관리번호(15자리) = 발주번호(12) + 실행순번(3)
-     * <p>실행순번은 같은 발주 안에서 실행하는 순서대로 001부터.
+     * <p>차량관리번호(15자리) = 발주번호(12) + 대순번(3)
+     * <p>대순번은 같은 발주 안에서 확정되는 순서대로 001부터.
      * <p>예) 발주 VFM260804001 을 5대 실행 → VFM260804001001 ~ VFM260804001005
      */
     private void confirmVehicleMgmtNo(VehicleOrder o) {
@@ -685,17 +706,74 @@ public class VehicleOrderService {
     }
 
     /**
-     * 실행 시점에 차량관리번호를 확정하고, 임시번호로 붙어 있던 전표의 번호도 함께 갱신한다.
-     * 이미 확정된 차량이면 아무것도 하지 않는다.
+     * 차량관리번호를 확정하고, 임시번호(…000)로 붙어 있던 기록의 번호도 함께 갱신한다.
+     * 등록이 끝나는 시점(등록완료)에 부르며, 이미 확정된 차량이면 아무것도 하지 않는다.
+     *
+     * <p>N대 발주는 …000 을 함께 쓰므로, 차량 행 id 를 가진 테이블은 id 로 이 차량 것만 바꾸고,
+     * id 가 없는 테이블은 이 차량이 임시번호의 마지막 보유자일 때만 바꾼다.
+     * 전표는 기존 규칙(임시번호 전표 전체를 처음 확정되는 차량으로 이동)을 유지한다.
      */
-    private void confirmOnExecute(VehicleOrder o) {
+    private void confirmMgmtNo(VehicleOrder o) {
         if (!isOrderStageMgmtNo(o)) return;
         String oldMgmtNo = o.getVehicleMgmtNo();
         confirmVehicleMgmtNo(o);
         orderRepo.save(o);
-        if (!Objects.equals(oldMgmtNo, o.getVehicleMgmtNo())) {
-            voucherService.updateVehicleMgmtNo(oldMgmtNo, o.getVehicleMgmtNo());
+        String newMgmtNo = o.getVehicleMgmtNo();
+        if (Objects.equals(oldMgmtNo, newMgmtNo)) return;
+
+        orderRepo.flush();
+        for (String table : MGMT_NO_TABLES_WITH_ORDER_ID) {
+            renameMgmtNo(table, "WHERE vehicle_mgmt_no = ? AND vehicle_order_id = ?", newMgmtNo, oldMgmtNo, o.getId());
         }
+        boolean stillShared = !orderRepo.findByVehicleMgmtNoOrderByIdAsc(oldMgmtNo).isEmpty();
+        if (!stillShared) {
+            for (String table : MGMT_NO_TABLES_WITHOUT_ORDER_ID) {
+                renameMgmtNo(table, "WHERE vehicle_mgmt_no = ?", newMgmtNo, oldMgmtNo);
+            }
+        }
+        voucherService.updateVehicleMgmtNo(oldMgmtNo, newMgmtNo);
+    }
+
+    /** 테이블이 아직 없는 회사 DB(해당 기능 미사용)는 바꿀 행도 없으므로 건너뛴다. */
+    private void renameMgmtNo(String table, String where, Object... args) {
+        try {
+            jdbcTemplate.update("UPDATE " + table + " SET vehicle_mgmt_no = ? " + where, args);
+        } catch (org.springframework.jdbc.BadSqlGrammarException e) {
+            log.warn("[차량관리번호 확정] {} 갱신 생략(테이블 없음?): {}", table, e.getMostSpecificCause().getMessage());
+        }
+    }
+
+    /**
+     * 등록이 끝났는데 아직 임시번호(…000)인 차량을 모두 확정번호로 바꾼다.
+     * 등록 시점 확정 규칙 이전에 등록된 차량을 정리하는 1회성 작업. 여러 번 실행해도 안전하다.
+     *
+     * @return 확정된 차량별 {id, vehicleNo, oldMgmtNo, newMgmtNo}
+     */
+    @Transactional
+    public List<Map<String, Object>> confirmRegisteredMgmtNos() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        List<VehicleOrder> targets = orderRepo.findAll().stream()
+                .filter(o -> REGISTERED_STATUSES.contains(o.getOrderStatus()))
+                .filter(this::isOrderStageMgmtNo)
+                .sorted(Comparator.comparing(VehicleOrder::getId))
+                .toList();
+        for (VehicleOrder o : targets) {
+            String oldMgmtNo = o.getVehicleMgmtNo();
+            confirmMgmtNo(o);
+            historyRepo.save(VehicleOrderHistory.builder()
+                    .vehicleOrder(o)
+                    .status(o.getOrderStatus())
+                    .changedAt(LocalDateTime.now())
+                    .note("차량관리번호 확정 " + oldMgmtNo + " → " + o.getVehicleMgmtNo())
+                    .build());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", o.getId());
+            row.put("vehicleNo", o.getVehicleNo());
+            row.put("oldMgmtNo", oldMgmtNo);
+            row.put("newMgmtNo", o.getVehicleMgmtNo());
+            result.add(row);
+        }
+        return result;
     }
 
     private String saveFile(String mgmtNo, MultipartFile file) {
