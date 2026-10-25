@@ -37,6 +37,12 @@ public class VehicleOrderService {
     private final VehicleDocumentService vehicleDocumentService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
+    /**
+     * 이미 처분해 보유하지 않는 차량(타 시스템 이관 이력 차량 등). 매각 기록(vehicle_sales) 없이도
+     * 차량 상태를 매각으로 보이고 배차 가능 목록에서 뺀다.
+     */
+    public static final String SOLD_STATUS = "매각";
+
     /** 등록이 끝난 상태. 이 상태가 되면 차량관리번호를 확정한다. */
     private static final Set<String> REGISTERED_STATUSES = Set.of("등록완료", "실행완료");
 
@@ -402,7 +408,7 @@ public class VehicleOrderService {
             String mgmtKey = normalize(o.getVehicleMgmtNo());
             String vehicleKey = normalize(o.getVehicleNo());
 
-            if (soldMgmtNos.contains(mgmtKey)) {
+            if (soldMgmtNos.contains(mgmtKey) || SOLD_STATUS.equals(o.getOrderStatus())) {
                 state = "매각";
             } else if (vehicleKey != null && !vehicleKey.isEmpty()
                     && activeContractByVehicleNo.containsKey(vehicleKey)) {

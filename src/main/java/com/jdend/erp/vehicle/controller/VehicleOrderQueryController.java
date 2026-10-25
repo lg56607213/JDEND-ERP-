@@ -73,6 +73,7 @@ public class VehicleOrderQueryController {
     for (VehicleOrder v : candidates) {
       String vno = v.getVehicleNo();
       if (vno == null || vno.isBlank()) continue;
+      if (com.jdend.erp.vehicle.service.VehicleOrderService.SOLD_STATUS.equals(v.getOrderStatus())) continue;
 
       boolean contracted = contractRepo.existsByVehicleNoNormalized(vno);
       if (contracted) continue;

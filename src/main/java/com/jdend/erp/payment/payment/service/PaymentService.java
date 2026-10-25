@@ -104,8 +104,9 @@ public class PaymentService {
     // BUG-10: 수납 등록 후 납기일 이전(포함) 미납 미수금 상태 업데이트
     updateReceivableStatus(saved.getContractNumber(), saved.getPaymentAmount(), paymentDate);
 
-    // 초과금액 → 선수금 자동 등록
-    if (excess > 0 && saved.getContractId() != null) {
+    // 초과금액 → 선수금 자동 등록 (이관용 요청은 끌 수 있다)
+    if (excess > 0 && saved.getContractId() != null
+        && !Boolean.FALSE.equals(req.getRegisterExcessAsPrepaid())) {
       prepaidRentService.registerFromPaymentExcess(
           saved.getContractId(), excess, saved.getPaymentDate(), saved.getMemo(), saved.getId());
     }
