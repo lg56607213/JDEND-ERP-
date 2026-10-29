@@ -101,6 +101,32 @@ public interface VehicleOrderRepository extends JpaRepository<VehicleOrder, Long
     """)
     List<VehicleOrder> searchTop500(@Param("kw") String kw);
 
+    // 홈페이지 단기렌트용: 단기 사용으로 표시된 등록 차량(매각 상태 제외). 매각 테이블 대조는 서비스에서 한다.
+    @Query("""
+        select v
+        from VehicleOrder v
+        where v.shortTermUse = true
+          and v.vehicleNo is not null and trim(v.vehicleNo) <> ''
+          and (v.orderStatus is null or v.orderStatus <> '매각')
+        order by v.id asc
+    """)
+    List<VehicleOrder> findShortTermCandidates();
+
+    // 위와 같되 홈페이지 차종코드(비어 있으면 차종)가 :code 인 차량만, 행 잠금(SELECT ... FOR UPDATE).
+    // 같은 차종 가예약이 동시에 들어와도 한 건씩 차례로 배정되게 한다.
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select v
+        from VehicleOrder v
+        where v.shortTermUse = true
+          and v.vehicleNo is not null and trim(v.vehicleNo) <> ''
+          and (v.orderStatus is null or v.orderStatus <> '매각')
+          and (case when v.webModelCode is null or trim(v.webModelCode) = '' then v.carModel
+                    else v.webModelCode end) = :code
+        order by v.id asc
+    """)
+    List<VehicleOrder> findShortTermCandidatesByCodeForUpdate(@Param("code") String code);
+
     // 정기검사관리 조회용
     // vehicle_orders 테이블에 검사유효기간이 들어있는 차량 조회
     @Query("""

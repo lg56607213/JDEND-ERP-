@@ -53,6 +53,7 @@ function loadSidebar() {
   </ul>
 </li>
               <li><a href="${basePath}pages/vehicle/vehicle_state.html">차량상태</a></li>
+              <li><a href="${basePath}pages/vehicle/web_link.html">홈페이지 연동</a></li>
             </ul>
           </li>
           <li class="has-sub">

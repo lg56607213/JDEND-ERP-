@@ -97,6 +97,14 @@ public class VehicleOrder {
   @Column(name="branch", length=30)
   private String branch;
 
+  // 홈페이지 단기렌트 예약에 내보낼 차량인지 (null = 아니오). 홈페이지 연동 화면에서 설정.
+  @Column(name="short_term_use")
+  private Boolean shortTermUse;
+
+  // 홈페이지 단기 차종코드 (예: AVANTE_CN7). 비어 있으면 차종(carModel)을 그대로 코드로 쓴다.
+  @Column(name="web_model_code", length=40)
+  private String webModelCode;
+
   // ✅ 등록증 파일 저장 정보
   @Column(name="register_file_name", length=255)
   private String registerFileName;

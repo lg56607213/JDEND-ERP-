@@ -39,6 +39,13 @@ codef:
   base-url: https://api.codef.io
   oauth-url: https://oauth.codef.io
 
+# 서버 간 공개 API(/api/public/**) 클라이언트. 키는 운영 서버 환경변수로만 넣는다(비어 있으면 비활성).
+public-api:
+  clients:
+    - name: acerentcar-homepage
+      key: ${PUBLIC_API_KEY_ACERENT:}
+      tenant-login-id: acerent
+
 app:
   # 과태료 고지서 자동 인식(Claude API). 키는 서버 환경변수로만 넣는다.
   ai:

@@ -41,7 +41,8 @@ public class WebConfig implements WebMvcConfigurer {
             "/api/company-applications/**",
             "/api/subscription/kiwoom/**",  // 구독 결제 공개 엔드포인트 (비로그인)
             "/api/contract-sign/**",        // 계약서 전자서명 (고객이 비로그인으로 접근)
-            "/api/loan-apply/**"            // 대출신청 (고객이 비로그인으로 접근)
+            "/api/loan-apply/**",           // 대출신청 (고객이 비로그인으로 접근)
+            "/api/public/**"                // 서버 간 공개 API (홈페이지 Worker, Bearer 키 인증은 TenantFilter)
         );
   }
 }

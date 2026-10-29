@@ -43,6 +43,17 @@ public class TenantDatabaseService {
         registerDataSourceIfMissing(targetDb);
     }
 
+    /**
+     * 이미 있는 회사 DB의 데이터소스만 등록한다 (CREATE DATABASE / 스키마 복제 / 시드 없음).
+     * 서버 간 공개 API(/api/public/**)처럼 로그인 없이 회사 DB에 붙어야 할 때 쓴다.
+     */
+    public void registerExistingTenantDataSource(String targetDb) {
+        if (targetDb == null || !targetDb.matches("^erp_company_[a-z0-9_]+$")) {
+            throw new RuntimeException("회사 DB 이름이 올바르지 않습니다.");
+        }
+        registerDataSourceIfMissing(targetDb);
+    }
+
     private void createDatabaseIfNotExists(String targetDb) {
         jdbcTemplate.execute(
                 "CREATE DATABASE IF NOT EXISTS `" + targetDb + "` " +
@@ -134,7 +145,7 @@ public class TenantDatabaseService {
         );
     }
 
-    private void registerDataSourceIfMissing(String targetDb) {
+    private synchronized void registerDataSourceIfMissing(String targetDb) {
         if (routingDataSource.containsDataSource(targetDb)) {
             return;
         }

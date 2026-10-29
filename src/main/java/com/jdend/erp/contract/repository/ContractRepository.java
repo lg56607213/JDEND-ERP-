@@ -42,6 +42,22 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
   """)
   boolean existsByVehicleNoNormalized(@Param("vehicleNo") String vehicleNo);
 
+  // 홈페이지 단기 가용 조회: 기간 [fromDate, toDate] 와 하루라도 겹치는 진행 중 계약의 차량번호.
+  // 계약은 시작일 00:00 ~ 종료일 23:59 를 점유한다고 본다. 종료 상태 목록은 호출 측에서 넘긴다.
+  @Query("""
+    select distinct c.vehicleNo
+    from Contract c
+    where c.vehicleNo is not null
+      and (c.status is null or c.status not in :terminated)
+      and c.startDate <= :toDate
+      and c.endDate >= :fromDate
+  """)
+  List<String> findActiveVehicleNosOverlapping(
+      @Param("fromDate") LocalDate fromDate,
+      @Param("toDate") LocalDate toDate,
+      @Param("terminated") Collection<String> terminated
+  );
+
   @Query("""
     select c
     from Contract c

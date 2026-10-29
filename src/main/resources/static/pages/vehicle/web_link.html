@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>홈페이지 연동 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/periodic_inspection.css">
+
+  <style>
+    .badge{ display:inline-block; padding:3px 9px; border-radius:4px; font-size:12px; font-weight:600; }
+    .badge-가예약{ background:#fff7e6; color:#92400e; }
+    .badge-확정{ background:#f0fdf4; color:#166534; }
+    .badge-취소{ background:#f1f5f9; color:#475569; }
+    .badge-short{ background:#fef3c7; color:#92400e; }
+    .edit-cell{ display:flex; gap:6px; align-items:center; }
+    .edit-cell input[type=text]{ padding:5px 6px; border:1px solid #ddd; border-radius:6px; width:160px; }
+    .edit-cell input.dirty, .short-check.dirty{ outline:2px solid #1f6feb; }
+    .btn-mini{ padding:5px 10px; border-radius:6px; border:1px solid #1f6feb; background:#1f6feb; color:#fff; cursor:pointer; font-size:12px; }
+    .btn-mini.gray{ border-color:#9ca3af; background:#fff; color:#374151; }
+    .btn-mini.red{ border-color:#b91c1c; background:#b91c1c; }
+    .btn-mini:disabled{ opacity:.4; cursor:default; }
+    .summary{ display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 12px; font-size:13px; color:#475569; }
+    .summary b{ color:#111827; }
+    .check-label{ display:flex; gap:6px; align-items:center; font-size:14px; height:40px; }
+    .card-gap{ margin-top:20px; }
+  </style>
+</head>
+
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>홈페이지 연동</h1>
+      <p>차량등록 &gt; 홈페이지 연동 (단기렌트 예약 홈페이지)</p>
+    </div>
+
+    <!-- a) 단기 차량 설정 -->
+    <div class="erp-card">
+      <div class="card-body">
+        <div class="form-section">
+          <h3 class="section-title">단기 차량 설정</h3>
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="vKeyword">차량번호 / 차종</label>
+              <input type="text" id="vKeyword" placeholder="예: 12가3456, 아반떼">
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <label class="check-label"><input type="checkbox" id="onlyShort"> 단기 사용 차량만</label>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" id="vSearchBtn">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary" id="vSummary"></div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>차량번호</th>
+                <th>차종</th>
+                <th>연식</th>
+                <th>상태</th>
+                <th>단기 사용</th>
+                <th>홈페이지 차종코드</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="vehicleBody">
+              <tr><td colspan="8" style="text-align:center; color:#4b5563;">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">* '단기 사용'에 체크한 등록 차량만 홈페이지 단기렌트 예약 가능 대수에 잡힙니다. 계약 기간·가예약과 겹치는 기간에는 빠집니다.</p>
+        <p class="table-note">* 홈페이지 차종코드는 홈페이지 관리자 화면의 'ERP 차종코드'와 똑같이 적어야 묶입니다. 비워 두면 차종명이 코드로 쓰입니다. (저장은 책임자 이상)</p>
+      </div>
+    </div>
+
+    <!-- b) 홈페이지 가예약 목록 -->
+    <div class="erp-card card-gap">
+      <div class="card-body">
+        <div class="form-section">
+          <h3 class="section-title">홈페이지 가예약 목록</h3>
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="hStatus">상태</label>
+              <select id="hStatus">
+                <option value="">전체</option>
+                <option value="가예약">가예약</option>
+                <option value="확정">확정</option>
+                <option value="취소">취소</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <label class="check-label"><input type="checkbox" id="includePast"> 지난 예약 포함</label>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" id="hSearchBtn">조회</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>예약번호</th>
+                <th>차량번호</th>
+                <th>차종</th>
+                <th>대여 ~ 반납</th>
+                <th>대여 장소</th>
+                <th>고객명</th>
+                <th>연락처</th>
+                <th>상태</th>
+                <th>처리</th>
+              </tr>
+            </thead>
+            <tbody id="holdBody">
+              <tr><td colspan="9" style="text-align:center; color:#4b5563;">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">* 홈페이지에서 예약이 들어오면 그 기간에 같은 차종 1대가 자동으로 '가예약'으로 잡힙니다. 취소하면 그 차량이 다시 홈페이지 가용 대수에 잡힙니다. (처리는 책임자 이상)</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/$/, "");
+
+    function mustOk(res){
+      if(!res.ok){
+        return res.json().catch(()=> ({})).then(b=>{
+          throw new Error((b && (b.message || b.error)) || ("HTTP " + res.status));
+        });
+      }
+      return res;
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll("\"","&quot;").replaceAll("'","&#039;");
+    }
+
+    function fmtDt(s){ return s ? String(s).replace("T", " ") : "-"; }
+
+    // ───────── a) 단기 차량 설정 ─────────
+    let vehicles = [];
+
+    function renderVehicleRow(r, idx){
+      const code = r.webModelCode || "";
+      return `
+        <tr data-id="${r.id}">
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(r.vehicleNo || "-")}</td>
+          <td>${escapeHtml(r.carModel || "-")}${r.operationType ? ` <span class="badge badge-short">${escapeHtml(r.operationType)}</span>` : ""}</td>
+          <td>${escapeHtml(r.modelYear || "-")}</td>
+          <td>${escapeHtml(r.orderStatus || "-")}</td>
+          <td style="text-align:center;">
+            <input type="checkbox" class="short-check" ${r.shortTermUse ? "checked" : ""} data-orig="${r.shortTermUse ? "1" : "0"}">
+          </td>
+          <td>
+            <div class="edit-cell">
+              <input type="text" class="code-input" maxlength="40" value="${escapeHtml(code)}"
+                     data-orig="${escapeHtml(code)}" placeholder="${escapeHtml(r.carModel || "")}">
+            </div>
+          </td>
+          <td><button type="button" class="btn-mini save-vehicle" disabled>저장</button></td>
+        </tr>`;
+    }
+
+    function renderVehicles(){
+      const onlyShort = document.getElementById("onlyShort").checked;
+      const list = onlyShort ? vehicles.filter(v => v.shortTermUse) : vehicles;
+      const shortCnt = vehicles.filter(v => v.shortTermUse).length;
+      document.getElementById("vSummary").innerHTML =
+        `등록 차량 <b>${vehicles.length}</b>대 · 단기 사용 <b style="color:#92400e">${shortCnt}</b>대`;
+      const tbody = document.getElementById("vehicleBody");
+      if(list.length === 0){
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#4b5563;">조건에 맞는 차량이 없습니다.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.map(renderVehicleRow).join("");
+    }
+
+    async function loadVehicles(){
+      const tbody = document.getElementById("vehicleBody");
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#4b5563;">조회중...</td></tr>`;
+      const qs = new URLSearchParams();
+      const kw = document.getElementById("vKeyword").value.trim();
+      if(kw) qs.set("keyword", kw);
+      try{
+        const res = await fetch(`${BASE}/api/web-link/vehicles?${qs.toString()}`, { credentials:"include" });
+        await mustOk(res);
+        const data = await res.json();
+        vehicles = Array.isArray(data) ? data : [];
+        renderVehicles();
+      }catch(e){
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    function markDirty(tr){
+      const chk = tr.querySelector(".short-check");
+      const inp = tr.querySelector(".code-input");
+      const chkChanged = (chk.checked ? "1" : "0") !== chk.dataset.orig;
+      const codeChanged = inp.value.trim() !== (inp.dataset.orig || "");
+      chk.classList.toggle("dirty", chkChanged);
+      inp.classList.toggle("dirty", codeChanged);
+      tr.querySelector(".save-vehicle").disabled = !(chkChanged || codeChanged);
+    }
+
+    async function saveVehicle(tr){
+      const btn = tr.querySelector(".save-vehicle");
+      const chk = tr.querySelector(".short-check");
+      const inp = tr.querySelector(".code-input");
+      btn.disabled = true;
+      btn.textContent = "저장중";
+      try{
+        const res = await fetch(`${BASE}/api/web-link/vehicles/${tr.dataset.id}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ shortTermUse: chk.checked, webModelCode: inp.value.trim() })
+        });
+        await mustOk(res);
+        const r = await res.json();
+        const v = vehicles.find(x => String(x.id) === String(r.id));
+        if(v){ v.shortTermUse = r.shortTermUse; v.webModelCode = r.webModelCode; }
+        chk.dataset.orig = r.shortTermUse ? "1" : "0";
+        inp.value = r.webModelCode || "";
+        inp.dataset.orig = r.webModelCode || "";
+        markDirty(tr);
+        btn.textContent = "저장";
+        const shortCnt = vehicles.filter(x => x.shortTermUse).length;
+        document.getElementById("vSummary").innerHTML =
+          `등록 차량 <b>${vehicles.length}</b>대 · 단기 사용 <b style="color:#92400e">${shortCnt}</b>대`;
+      }catch(e){
+        alert("저장 실패: " + e.message);
+        btn.textContent = "저장";
+        btn.disabled = false;
+      }
+    }
+
+    // ───────── b) 가예약 목록 ─────────
+    function holdActions(h){
+      if(h.status === "가예약"){
+        return `<button type="button" class="btn-mini hold-btn" data-status="확정">확정</button>
+                <button type="button" class="btn-mini red hold-btn" data-status="취소">취소</button>`;
+      }
+      if(h.status === "확정"){
+        return `<button type="button" class="btn-mini red hold-btn" data-status="취소">취소</button>`;
+      }
+      return "-";
+    }
+
+    function renderHoldRow(h){
+      return `
+        <tr data-id="${h.id}">
+          <td>${escapeHtml(h.holdNo)}</td>
+          <td>${escapeHtml(h.vehicleNo || "-")}</td>
+          <td>${escapeHtml(h.carModel || "-")}<br><span style="color:#6b7280; font-size:12px;">${escapeHtml(h.modelCode || "")}</span></td>
+          <td>${escapeHtml(fmtDt(h.pickupAt))}<br>~ ${escapeHtml(fmtDt(h.returnAt))}</td>
+          <td>${escapeHtml(h.location || "-")}</td>
+          <td>${escapeHtml(h.customerName || "-")}</td>
+          <td>${escapeHtml(h.phone || "-")}</td>
+          <td><span class="badge badge-${escapeHtml(h.status)}">${escapeHtml(h.status)}</span></td>
+          <td style="white-space:nowrap;">${holdActions(h)}</td>
+        </tr>`;
+    }
+
+    async function loadHolds(){
+      const tbody = document.getElementById("holdBody");
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#4b5563;">조회중...</td></tr>`;
+      const qs = new URLSearchParams();
+      const st = document.getElementById("hStatus").value;
+      if(st) qs.set("status", st);
+      qs.set("includePast", document.getElementById("includePast").checked);
+      try{
+        const res = await fetch(`${BASE}/api/web-link/holds?${qs.toString()}`, { credentials:"include" });
+        await mustOk(res);
+        let list = await res.json();
+        if(!Array.isArray(list)) list = [];
+        if(list.length === 0){
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#4b5563;">가예약이 없습니다.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = list.map(renderHoldRow).join("");
+      }catch(e){
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    async function changeHold(tr, status){
+      const msg = status === "취소"
+        ? "이 가예약을 취소하시겠습니까? 차량이 다시 홈페이지 가용 대수에 잡힙니다."
+        : "이 가예약을 확정하시겠습니까?";
+      if(!confirm(msg)) return;
+      tr.querySelectorAll(".hold-btn").forEach(b => b.disabled = true);
+      try{
+        const res = await fetch(`${BASE}/api/web-link/holds/${tr.dataset.id}/status`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ status })
+        });
+        await mustOk(res);
+        const h = await res.json();
+        tr.outerHTML = renderHoldRow(h);
+      }catch(e){
+        alert("처리 실패: " + e.message);
+        tr.querySelectorAll(".hold-btn").forEach(b => b.disabled = false);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const vBody = document.getElementById("vehicleBody");
+      vBody.addEventListener("input", (e)=>{
+        if(e.target.classList.contains("code-input")) markDirty(e.target.closest("tr"));
+      });
+      vBody.addEventListener("change", (e)=>{
+        if(e.target.classList.contains("short-check")) markDirty(e.target.closest("tr"));
+      });
+      vBody.addEventListener("click", (e)=>{
+        if(e.target.classList.contains("save-vehicle") && !e.target.disabled) saveVehicle(e.target.closest("tr"));
+      });
+      document.getElementById("vSearchBtn").addEventListener("click", loadVehicles);
+      document.getElementById("onlyShort").addEventListener("change", renderVehicles);
+      document.getElementById("vKeyword").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){ e.preventDefault(); loadVehicles(); }
+      });
+
+      document.getElementById("holdBody").addEventListener("click", (e)=>{
+        if(e.target.classList.contains("hold-btn") && !e.target.disabled){
+          changeHold(e.target.closest("tr"), e.target.dataset.status);
+        }
+      });
+      document.getElementById("hSearchBtn").addEventListener("click", loadHolds);
+
+      loadVehicles();
+      loadHolds();
+    });
+  </script>
+</body>
+</html>
