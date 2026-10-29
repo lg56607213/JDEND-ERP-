@@ -273,6 +273,8 @@ public class VehicleOrderService {
 
     private VehicleOrderResponse applyUpdate(VehicleOrder o, VehicleOrderRequest req) {
         String oldStatus = o.getOrderStatus();
+        String oldOperationType = o.getOperationType();
+        String oldBranch = o.getBranch();
 
         if (req.orderStatus != null && !req.orderStatus.isBlank()) {
             o.setOrderStatus(req.orderStatus);
@@ -378,6 +380,23 @@ public class VehicleOrderService {
                     .status(o.getOrderStatus())
                     .changedAt(LocalDateTime.now())
                     .note("상태 변경")
+                    .build());
+        }
+
+        // 운용구분(장기↔단기)·소속지점 변경도 이력으로 남긴다 — 단기 차량이 장기로 나가는 경우 등
+        List<String> attrChanges = new ArrayList<>();
+        if (!Objects.equals(oldOperationType, o.getOperationType())) {
+            attrChanges.add("운용구분 " + orDash(oldOperationType) + " → " + orDash(o.getOperationType()));
+        }
+        if (!Objects.equals(oldBranch, o.getBranch())) {
+            attrChanges.add("소속지점 " + orDash(oldBranch) + " → " + orDash(o.getBranch()));
+        }
+        if (!attrChanges.isEmpty()) {
+            historyRepo.save(VehicleOrderHistory.builder()
+                    .vehicleOrder(o)
+                    .status(o.getOrderStatus())
+                    .changedAt(LocalDateTime.now())
+                    .note(String.join(", ", attrChanges))
                     .build());
         }
 
@@ -842,5 +861,9 @@ public class VehicleOrderService {
 
     private String emptyToNull(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private static String orDash(String s) {
+        return (s == null || s.isBlank()) ? "미지정" : s;
     }
 }

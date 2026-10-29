@@ -20,6 +20,18 @@
     .vehicle-summary { margin: 0 0 10px; font-size: 13px; color: #334155; }
     .vehicle-summary strong { color: #1e293b; }
     .vehicle-summary .summary-sep { color: #4b5563; margin: 0 6px; }
+    /* 운용구분·소속지점 바로 변경 */
+    .attr-edit { display: flex; gap: 4px; }
+    .attr-edit select { padding: 3px 4px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; color: #1e293b; }
+    .attr-edit select.saving { opacity: .5; }
+    .attr-edit select.saved { border-color: #15803d; }
+    .bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 10px;
+                background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #1e293b; }
+    .bulk-bar select { padding: 4px 6px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px; }
+    .bulk-bar button { padding: 5px 12px; font-size: 13px; border-radius: 4px; border: 1px solid #1e3a8a; background: #1e3a8a; color: #fff; cursor: pointer; }
+    .bulk-bar button:disabled { opacity: .45; cursor: default; }
+    .bulk-bar .bulk-msg { color: #334155; }
+    td.sel-cell, th.sel-cell { width: 32px; text-align: center; }
   </style>
 </head>
 <body>
@@ -88,11 +100,33 @@
         <!-- 보유현황 요약 -->
         <p class="vehicle-summary" id="vehicleSummary" aria-live="polite"></p>
 
+        <!-- 선택 차량 일괄 변경 (단기 차량이 장기로 나가는 경우 등) -->
+        <div class="bulk-bar">
+          <span>선택 <strong id="bulkCount">0</strong>대</span>
+          <label for="bulkOperationType">운용구분</label>
+          <select id="bulkOperationType">
+            <option value="__keep__">변경 안 함</option>
+            <option value="장기">장기</option>
+            <option value="단기">단기</option>
+            <option value="">미지정</option>
+          </select>
+          <label for="bulkBranch">소속지점</label>
+          <select id="bulkBranch">
+            <option value="__keep__">변경 안 함</option>
+            <option value="본점">본점</option>
+            <option value="천안지점">천안지점</option>
+            <option value="">미지정</option>
+          </select>
+          <button type="button" id="bulkApplyBtn" onclick="applyBulk()" disabled>선택 차량에 적용</button>
+          <span class="bulk-msg" id="bulkMsg" aria-live="polite"></span>
+        </div>
+
         <!-- 테이블 -->
         <div class="table-container">
           <table>
             <thead>
               <tr>
+                <th class="sel-cell no-export"><input type="checkbox" id="selectAll" onclick="event.stopPropagation(); toggleAll(this.checked)" aria-label="전체 선택"></th>
                 <th>순번</th>
                 <th>발주상태</th>
                 <th>차량관리번호</th>
@@ -110,11 +144,12 @@
                 <th>운용구분</th>
                 <th>소속지점</th>
                 <th>등록일자</th>
+                <th class="no-export">운용구분·지점 변경</th>
               </tr>
             </thead>
             <tbody id="vehicleTableBody">
               <tr>
-                <td colspan="17" class="no-data">조회하기를 눌러 데이터를 불러오세요.</td>
+                <td colspan="19" class="no-data">조회하기를 눌러 데이터를 불러오세요.</td>
               </tr>
             </tbody>
           </table>
@@ -130,11 +165,8 @@
     const API_BASE = '/api/vehicle-orders';
     let allVehicles = []; // 마지막 조회 결과 (클라이언트 필터 기준)
 
+    // 처음 열면 발주일자 조건 없이 보유 차량 전체를 보여준다(발주일자는 필요할 때만 지정)
     window.addEventListener('DOMContentLoaded', function() {
-      const today = new Date();
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      document.getElementById('searchStartDate').value = firstDay.toISOString().split('T')[0];
-      document.getElementById('searchEndDate').value = today.toISOString().split('T')[0];
       searchVehicle();
     });
 
@@ -154,7 +186,7 @@
         if (!res.ok) {
           allVehicles = [];
           document.getElementById('vehicleSummary').textContent = '';
-          tbody.innerHTML = `<tr><td colspan="17" class="no-data">조회 실패: ${res.status}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="19" class="no-data">조회 실패: ${res.status}</td></tr>`;
           return;
         }
         const data = await res.json();
@@ -164,7 +196,7 @@
         console.error('조회 오류:', error);
         allVehicles = [];
         document.getElementById('vehicleSummary').textContent = '';
-        tbody.innerHTML = `<tr><td colspan="17" class="no-data">조회 중 오류가 발생했습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="19" class="no-data">조회 중 오류가 발생했습니다.</td></tr>`;
       }
     }
 
@@ -233,7 +265,7 @@
     function displayVehicle(data) {
       const tbody = document.getElementById('vehicleTableBody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="17" class="no-data">검색 결과가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="19" class="no-data">검색 결과가 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map((item, index) => {
@@ -241,6 +273,10 @@
         const statusClass = getStatusClass(statusLabel);
         return `
           <tr class="${item.orderStatus === '매각' ? 'row-sold' : ''}" onclick="viewDetail('${item.id}')">
+            <td class="sel-cell no-export" onclick="event.stopPropagation()">
+              <input type="checkbox" class="row-sel" value="${item.id}" ${selectedIds.has(String(item.id)) ? 'checked' : ''}
+                     onchange="onRowSelect(this)" aria-label="선택">
+            </td>
             <td>${index + 1}</td>
             <td><span class="status-badge ${statusClass}">${escHtml(statusLabel)}</span></td>
             <td>${escHtml(item.vehicleMgmtNo ?? '-')}</td>
@@ -258,9 +294,108 @@
             <td>${getOperationBadge(item.operationType)}</td>
             <td>${isBlank(item.branch) ? '-' : escHtml(item.branch)}</td>
             <td>${item.registerDate ?? '-'}</td>
+            <td class="no-export" onclick="event.stopPropagation()">
+              <div class="attr-edit">
+                <select aria-label="운용구분 변경" onchange="saveAttr(${item.id}, 'operationType', this)">
+                  ${attrOptions(['장기', '단기'], item.operationType)}
+                </select>
+                <select aria-label="소속지점 변경" onchange="saveAttr(${item.id}, 'branch', this)">
+                  ${attrOptions(['본점', '천안지점'], item.branch)}
+                </select>
+              </div>
+            </td>
           </tr>
         `;
       }).join('');
+      updateBulkBar();
+    }
+
+    // ── 운용구분·소속지점 바로 변경 / 선택 차량 일괄 변경 ──
+    const selectedIds = new Set();
+
+    function attrOptions(values, current) {
+      const cur = isBlank(current) ? '' : String(current).trim();
+      const list = cur && !values.includes(cur) ? [...values, cur] : values;
+      return `<option value="" ${cur === '' ? 'selected' : ''}>미지정</option>` +
+        list.map(v => `<option value="${escHtml(v)}" ${v === cur ? 'selected' : ''}>${escHtml(v)}</option>`).join('');
+    }
+
+    async function putAttrs(id, body) {
+      const res = await fetch(`${API_BASE}/by-id/${encodeURIComponent(id)}`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || ('HTTP ' + res.status));
+      }
+      return res.json();
+    }
+
+    function replaceVehicle(updated) {
+      const i = allVehicles.findIndex(v => String(v.id) === String(updated.id));
+      if (i >= 0) allVehicles[i] = { ...allVehicles[i], ...updated };
+    }
+
+    async function saveAttr(id, field, sel) {
+      sel.classList.add('saving');
+      sel.disabled = true;
+      try {
+        const updated = await putAttrs(id, { [field]: sel.value });
+        replaceVehicle(updated);
+        renderFiltered();
+      } catch (e) {
+        alert('저장 실패: ' + e.message);
+        renderFiltered();
+      }
+    }
+
+    function onRowSelect(cb) {
+      if (cb.checked) selectedIds.add(cb.value); else selectedIds.delete(cb.value);
+      updateBulkBar();
+    }
+
+    function toggleAll(checked) {
+      document.querySelectorAll('#vehicleTableBody .row-sel').forEach(cb => {
+        cb.checked = checked;
+        if (checked) selectedIds.add(cb.value); else selectedIds.delete(cb.value);
+      });
+      updateBulkBar();
+    }
+
+    function updateBulkBar() {
+      const visible = new Set([...document.querySelectorAll('#vehicleTableBody .row-sel')].map(cb => cb.value));
+      [...selectedIds].forEach(id => { if (!visible.has(id)) selectedIds.delete(id); });
+      document.getElementById('bulkCount').textContent = selectedIds.size;
+      document.getElementById('bulkApplyBtn').disabled = selectedIds.size === 0;
+      const all = document.getElementById('selectAll');
+      if (all) all.checked = visible.size > 0 && selectedIds.size === visible.size;
+    }
+
+    async function applyBulk() {
+      const op = document.getElementById('bulkOperationType').value;
+      const br = document.getElementById('bulkBranch').value;
+      const body = {};
+      if (op !== '__keep__') body.operationType = op;
+      if (br !== '__keep__') body.branch = br;
+      if (!Object.keys(body).length) { alert('바꿀 운용구분 또는 소속지점을 고르세요.'); return; }
+      const ids = [...selectedIds];
+      const label = [op !== '__keep__' ? `운용구분 → ${op || '미지정'}` : '', br !== '__keep__' ? `소속지점 → ${br || '미지정'}` : '']
+        .filter(Boolean).join(', ');
+      if (!confirm(`선택한 ${ids.length}대의 ${label} 으로 바꿀까요?`)) return;
+
+      const btn = document.getElementById('bulkApplyBtn');
+      const msg = document.getElementById('bulkMsg');
+      btn.disabled = true;
+      let ok = 0, fail = 0;
+      for (const id of ids) {
+        msg.textContent = `적용 중… ${ok + fail + 1}/${ids.length}`;
+        try { replaceVehicle(await putAttrs(id, body)); ok++; } catch (e) { fail++; }
+      }
+      msg.textContent = `완료: ${ok}대 변경` + (fail ? `, 실패 ${fail}대` : '');
+      selectedIds.clear();
+      renderFiltered();
     }
 
     function goToRegister() {
