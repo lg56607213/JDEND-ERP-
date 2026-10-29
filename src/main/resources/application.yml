@@ -18,7 +18,7 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
-      max-request-size: 30MB
+      max-request-size: 100MB
   mail:
     host: smtp.gmail.com
     port: 587
@@ -40,6 +40,15 @@ codef:
   oauth-url: https://oauth.codef.io
 
 app:
+  # 과태료 고지서 자동 인식(Claude API). 키는 서버 환경변수로만 넣는다.
+  ai:
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+  # 과태료 변경부과 신청 팩스(팝빌). 연동키는 서버 환경변수, 회사별 발신번호는 화면의 '팩스 발신 설정'.
+  fax:
+    popbill:
+      link-id: ${POPBILL_LINK_ID:}
+      secret-key: ${POPBILL_SECRET_KEY:}
+      test: ${POPBILL_TEST:true}
   contact:
     recipient-email: ${MAIL_USERNAME}
   upload-dir: uploads/accounts

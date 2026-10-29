@@ -15,11 +15,11 @@
     .sfg label{font-size:.8rem;font-weight:700;color:#374151}
     .sfg input,.sfg select{padding:8px 11px;border:1px solid #d1d5db;border-radius:5px;font-size:.9rem;height:36px;box-sizing:border-box;outline:none;background:#fff}
     .sfg input:focus,.sfg select:focus{border-color:#23304e}
-    .date-sep{color:#9ca3af;align-self:flex-end;line-height:36px;font-size:.9rem}
+    .date-sep{color:#4b5563;align-self:flex-end;line-height:36px;font-size:.9rem}
     .table-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:16px 20px}
     .card-header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
     .card-title{font-size:.95rem;font-weight:700;color:#1b253a}
-    .result-count{font-size:.82rem;color:#6b7280}
+    .result-count{font-size:.82rem;color:#4b5563}
     .tbl-wrap{overflow-x:auto}
     table{width:100%;border-collapse:collapse}
     thead tr{border-top:2px solid #23304e;border-bottom:2px solid #e5e7eb}
@@ -28,9 +28,9 @@
     td.l{text-align:left}
     td.r{text-align:right}
     tr:hover td{background:#f9fafb}
-    .empty-row td{text-align:center;color:#9ca3af;padding:32px}
+    .empty-row td{text-align:center;color:#4b5563;padding:32px}
     .badge-yes{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
-    .badge-no{background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
+    .badge-no{background:#f3f4f6;color:#4b5563;border:1px solid #e5e7eb;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
     .badge-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700}
     .st{border-radius:10px;padding:2px 10px;font-size:.78rem;font-weight:700;border:1px solid}
     .st-접수{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
@@ -48,15 +48,15 @@
     .modal-backdrop.open{display:flex}
     .modal-box{background:#fff;border-radius:12px;padding:24px 28px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
     .modal-box h3{margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#1b253a}
-    .modal-sub{color:#6b7280;font-size:.82rem;margin-bottom:16px}
+    .modal-sub{color:#4b5563;font-size:.82rem;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
     .form-grid .full{grid-column:1 / -1}
     .modal-field label{display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:5px}
-    .modal-field label .req{color:#ef4444}
+    .modal-field label .req{color:#b91c1c}
     .modal-field input,.modal-field select,.modal-field textarea{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:.9rem;outline:none;font-family:inherit;background:#fff}
     .modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:#23304e}
     .modal-field textarea{resize:vertical;min-height:56px}
-    .hint{font-size:.78rem;color:#6b7280;margin-top:4px}
+    .hint{font-size:.78rem;color:#4b5563;margin-top:4px}
     .hint.warn{color:#b45309}
     .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
     .btn-cancel-m{padding:9px 18px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-weight:600;cursor:pointer;font-size:.88rem}
@@ -81,6 +81,39 @@
     .viewer-body{flex:1;overflow:auto;padding:16px;display:flex;align-items:center;justify-content:center;background:#f8fafc}
     .viewer-body img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:4px}
     .viewer-body iframe{width:100%;height:70vh;border:none}
+    /* 추가 상태 배지 (과태료 상태 / 업로드 결과 / 팩스 상태) */
+    .st-확인필요{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
+    .st-등록{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+    .st-실패{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+    .st-오류{background:#fce7f3;color:#9d174d;border-color:#fbcfe8}
+    .st-전송중{background:#e0e7ff;color:#3730a3;border-color:#c7d2fe}
+    .st-성공{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+    .btn-secondary{background:#fff;color:#23304e;border:1px solid #23304e}.btn-secondary:hover{background:#f1f5f9}
+    .btn-fax{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.btn-fax:hover{background:#ffedd5}
+    .header-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .wide-box{width:min(1080px,96vw);max-height:90vh}
+    .note{font-size:.84rem;color:#374151;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+    .note.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .note.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .progress-line{display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:700;color:#1b253a;margin:10px 0}
+    .spinner{width:18px;height:18px;border:3px solid #d1d5db;border-top-color:#23304e;border-radius:50%;animation:spin .8s linear infinite;flex:none}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
+    .info-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:14px}
+    .info-grid .k{font-size:.76rem;font-weight:700;color:#4b5563}
+    .info-grid .v{font-size:.9rem;font-weight:700;color:#111827;margin-top:2px;word-break:break-all}
+    @media (max-width:640px){.info-grid{grid-template-columns:1fr 1fr}}
+    .link-btn{color:#1d4ed8;font-weight:700;font-size:.85rem;text-decoration:underline;background:none;border:none;cursor:pointer;padding:0}
+    .link-btn:hover{color:#1e40af}
+    details.table-card{margin-top:14px}
+    details.table-card > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:.95rem;font-weight:700;color:#1b253a}
+    details.table-card > summary::-webkit-details-marker{display:none}
+    details.table-card > summary::before{content:'▸';color:#374151;transition:transform .15s}
+    details.table-card[open] > summary::before{transform:rotate(90deg)}
+    details.table-card[open] > summary{margin-bottom:12px}
+    .sec-tools{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}
+    .msg-cell{white-space:normal;min-width:160px;max-width:320px;text-align:left}
+    .file-list{font-size:.82rem;color:#374151;margin-top:6px;max-height:120px;overflow-y:auto}
   </style>
 </head>
 <body>
@@ -91,7 +124,11 @@
       <h1>과태료</h1>
       <p>차량관리 &gt; 과태료</p>
     </div>
-    <button class="btn btn-primary" onclick="openFormModal()">+ 과태료 등록</button>
+    <div class="header-btns">
+      <button class="btn btn-secondary" onclick="openFaxSettingsModal()">팩스 발신 설정</button>
+      <button class="btn btn-secondary" onclick="openBulkModal()">고지서 일괄 업로드</button>
+      <button class="btn btn-primary" onclick="openFormModal()">+ 과태료 등록</button>
+    </div>
   </div>
 
   <div class="search-card">
@@ -117,6 +154,7 @@
         <select id="searchStatus" style="width:110px;">
           <option value="">전체</option>
           <option>접수</option>
+          <option>확인필요</option>
           <option>변경요청</option>
           <option>처리완료</option>
         </select>
@@ -146,13 +184,220 @@
             <th>상태</th>
             <th>고지서</th>
             <th>계약서</th>
-            <th style="width:220px;">관리</th>
+            <th style="width:270px;">관리</th>
           </tr>
         </thead>
         <tbody id="fineTableBody">
           <tr class="empty-row"><td colspan="13">조회 버튼을 눌러 검색하세요.</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- 업로드 기록 -->
+  <details class="table-card" id="uploadLogSection">
+    <summary>업로드 기록 <span class="result-count" id="uploadLogCount" style="font-weight:400;"></span></summary>
+    <div class="sec-tools">
+      <span class="hint" style="margin:0;flex:1;">고지서 일괄 업로드로 올린 파일의 처리 결과입니다. (최근 300건)</span>
+      <button class="btn-sm btn-edit" onclick="loadUploadLogs()">새로고침</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44px;">#</th>
+            <th>업로드일시</th>
+            <th>업로드한 사람</th>
+            <th>파일명</th>
+            <th>차량번호</th>
+            <th>결과</th>
+            <th>메모</th>
+            <th style="width:90px;">과태료</th>
+          </tr>
+        </thead>
+        <tbody id="uploadLogBody">
+          <tr class="empty-row"><td colspan="8">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- 팩스 발송 기록 -->
+  <details class="table-card" id="faxLogSection">
+    <summary>팩스 발송 기록 <span class="result-count" id="faxLogCount" style="font-weight:400;"></span></summary>
+    <div class="sec-tools">
+      <div class="sfg">
+        <label>요청일</label>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="date" id="faxLogStartDate" style="width:140px;">
+          <span class="date-sep">~</span>
+          <input type="date" id="faxLogEndDate" style="width:140px;">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadFaxLogs()">조회</button>
+      <button class="btn btn-secondary" onclick="exportTableToExcel('faxLogBody', '팩스발송기록')">엑셀 내보내기</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:44px;">#</th>
+            <th>요청일시</th>
+            <th>차량번호</th>
+            <th>임차인</th>
+            <th>받는사람</th>
+            <th>팩스번호</th>
+            <th>상태</th>
+            <th>발송일시</th>
+            <th>결과일시</th>
+            <th>매수</th>
+            <th>메모</th>
+            <th>요청자</th>
+            <th class="no-export" style="width:90px;">과태료</th>
+          </tr>
+        </thead>
+        <tbody id="faxLogBody">
+          <tr class="empty-row"><td colspan="13">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+</div>
+
+<!-- 고지서 일괄 업로드 모달 -->
+<div class="modal-backdrop" id="bulkBackdrop">
+  <div class="list-box wide-box">
+    <div class="list-header">
+      <span class="list-title">고지서 일괄 업로드</span>
+      <button class="x-close" id="bulkXBtn" onclick="closeBulkModal()">✕</button>
+    </div>
+    <div class="list-body">
+      <div class="note">파일 이름을 차량번호로 저장하세요 (예: 109하7531.jpg). 위반일시·금액 등은 고지서 사진에서 자동으로 읽습니다.</div>
+      <div class="upload-row" style="margin-bottom:4px;">
+        <input type="file" id="bulkFiles" multiple accept=".jpg,.jpeg,.png,.pdf" onchange="onBulkFilesChange()">
+        <span class="result-count" id="bulkFileCount"></span>
+      </div>
+      <div id="bulkFileWarn"></div>
+      <div class="progress-line" id="bulkProgress" style="display:none;" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span><span id="bulkProgressText"></span>
+      </div>
+      <div id="bulkResultWrap" style="display:none;margin-top:12px;">
+        <div class="card-header-row" style="margin-bottom:8px;">
+          <span class="sec-title" style="margin:0;">처리 결과</span>
+          <span class="result-count" id="bulkSummary"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px;">#</th>
+                <th>파일명</th>
+                <th>차량번호</th>
+                <th>위반일시</th>
+                <th>금액</th>
+                <th>부과기관</th>
+                <th>계약번호/임차인</th>
+                <th>결과</th>
+                <th>메모</th>
+              </tr>
+            </thead>
+            <tbody id="bulkResultBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancel-m" id="bulkCloseBtn" onclick="closeBulkModal()">닫기</button>
+        <button class="btn-ok-m" id="bulkUploadBtn" onclick="submitBulkUpload()">업로드</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 팩스 모달 -->
+<div class="modal-backdrop" id="faxBackdrop">
+  <div class="list-box wide-box">
+    <div class="list-header">
+      <span class="list-title">팩스 보내기</span>
+      <button class="x-close" onclick="closeFaxModal()">✕</button>
+    </div>
+    <div class="list-body">
+      <div class="info-grid">
+        <div><div class="k">차량번호</div><div class="v" id="faxInfoVehicle">-</div></div>
+        <div><div class="k">위반일시</div><div class="v" id="faxInfoAt">-</div></div>
+        <div><div class="k">계약번호</div><div class="v" id="faxInfoContract">-</div></div>
+        <div><div class="k">임차인</div><div class="v" id="faxInfoCustomer">-</div></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <a id="faxPreviewLink" class="link-btn" href="#" target="_blank" rel="noopener">보낼 문서 미리보기</a>
+        <span class="hint" style="margin-left:6px;">고지서 + 계약서 + 고객정보 PDF</span>
+      </div>
+      <div class="form-grid">
+        <div class="modal-field">
+          <label for="faxReceiverName">받는사람 <span class="req">*</span></label>
+          <input type="text" id="faxReceiverName" placeholder="예: 서울강남경찰서 교통과">
+        </div>
+        <div class="modal-field">
+          <label for="faxReceiverFax">받는사람 팩스번호 <span class="req">*</span></label>
+          <input type="text" id="faxReceiverFax" inputmode="tel" placeholder="예: 02-1234-5678">
+        </div>
+      </div>
+      <div class="modal-btns" style="margin-top:14px;">
+        <button class="btn-ok-m" id="faxSendBtn" onclick="sendFax()">팩스 보내기</button>
+      </div>
+      <div class="card-header-row" style="margin:18px 0 8px;">
+        <span class="sec-title" style="margin:0;">이 과태료의 팩스 기록</span>
+        <button class="btn-sm btn-edit" onclick="loadFineFaxes()">상태 새로고침</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th>요청일시</th>
+              <th>받는사람</th>
+              <th>팩스번호</th>
+              <th>상태</th>
+              <th>발송일시</th>
+              <th>결과일시</th>
+              <th>매수</th>
+              <th>메모</th>
+              <th>요청자</th>
+            </tr>
+          </thead>
+          <tbody id="fineFaxBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 팩스 발신 설정 모달 -->
+<div class="modal-backdrop" id="faxSettingsBackdrop">
+  <div class="modal-box" style="width:min(520px,96vw);">
+    <h3>팩스 발신 설정</h3>
+    <p class="modal-sub">과태료 팩스를 보낼 때 사용하는 발신 정보입니다.</p>
+    <div class="note warn" id="faxSettingsWarn" style="display:none;">팩스 서비스 연동키가 서버에 아직 설정되지 않았습니다. 관리자에게 문의하세요.</div>
+    <div class="form-grid">
+      <div class="modal-field">
+        <label for="fsCorpNum">사업자번호 <span class="req">*</span></label>
+        <input type="text" id="fsCorpNum" inputmode="numeric" placeholder="숫자 10자리">
+      </div>
+      <div class="modal-field">
+        <label for="fsSenderNum">발신 팩스번호 <span class="req">*</span></label>
+        <input type="text" id="fsSenderNum" inputmode="tel" placeholder="예: 02-1234-5678">
+      </div>
+      <div class="modal-field">
+        <label for="fsSenderName">발신자명</label>
+        <input type="text" id="fsSenderName">
+      </div>
+      <div class="modal-field">
+        <label for="fsPopbillUserId">팝빌 아이디</label>
+        <input type="text" id="fsPopbillUserId" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel-m" onclick="closeFaxSettingsModal()">취소</button>
+      <button class="btn-ok-m" id="faxSettingsSaveBtn" onclick="saveFaxSettings()">저장</button>
     </div>
   </div>
 </div>
@@ -204,7 +449,7 @@
       <div class="modal-field" id="statusField" style="display:none;">
         <label>처리상태</label>
         <select id="fStatus">
-          <option>접수</option><option>변경요청</option><option>처리완료</option>
+          <option>접수</option><option>확인필요</option><option>변경요청</option><option>처리완료</option>
         </select>
       </div>
       <div class="modal-field full">
@@ -212,7 +457,7 @@
         <textarea id="fRemarks"></textarea>
       </div>
       <div class="modal-field full" id="scanField">
-        <label>고지서 스캔 <span style="color:#6b7280;font-weight:400;">(PDF/JPG/JPEG/PNG, 파일당 최대 10MB, 여러 장 가능)</span></label>
+        <label>고지서 스캔 <span style="color:#4b5563;font-weight:400;">(PDF/JPG/JPEG/PNG, 파일당 최대 10MB, 여러 장 가능)</span></label>
         <input type="file" id="fScanFiles" accept=".pdf,.jpg,.jpeg,.png" multiple>
       </div>
     </div>
@@ -242,7 +487,7 @@
           <tbody id="fineScanBody"></tbody>
         </table>
       </div>
-      <div class="sec-title">계약서 <span id="contractScanLabel" style="font-weight:400;color:#6b7280;"></span></div>
+      <div class="sec-title">계약서 <span id="contractScanLabel" style="font-weight:400;color:#4b5563;"></span></div>
       <div class="tbl-wrap">
         <table>
           <thead><tr><th style="width:36px;">#</th><th>파일명</th><th>크기</th><th>업로드일시</th><th style="width:110px;">관리</th></tr></thead>
@@ -267,6 +512,7 @@
 
 <script src="../../assets/js/sidebar.js"></script>
 <script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/excel-export.js"></script>
 <script>
   const BASE = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '').replace(/\/+$/,'');
   function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -319,12 +565,13 @@
             <button class="btn-sm btn-edit" onclick="openFormModal(${f.id})">수정</button>
             <button class="btn-sm btn-list" onclick="openScanModal(${f.id})">스캔</button>
             <button class="btn-sm btn-print" onclick="printFine(${f.id})">출력</button>
+            <button class="btn-sm btn-fax" onclick="openFaxModal(${f.id})">팩스</button>
             <button class="btn-sm btn-del" onclick="deleteFine(${f.id})">삭제</button>
           </td>
         </tr>`;
       }).join('');
     } catch(e) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="13" style="color:#ef4444;">오류: ${esc(e.message)}</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="13" style="color:#b91c1c;">오류: ${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -498,7 +745,7 @@
 
   function docRows(docs, deletable) {
     const cols = 5;
-    if (!docs.length) return `<tr><td colspan="${cols}" style="text-align:center;color:#9ca3af;padding:16px;">스캔 파일이 없습니다.</td></tr>`;
+    if (!docs.length) return `<tr><td colspan="${cols}" style="text-align:center;color:#4b5563;padding:16px;">스캔 파일이 없습니다.</td></tr>`;
     return docs.map((d,i) => `
       <tr>
         <td>${i+1}</td>
@@ -524,14 +771,14 @@
       fineBody.innerHTML = docRows(await fRes.json(), true);
 
       if (!f.contractNumber) {
-        cBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:16px;">연결된 계약이 없습니다.</td></tr>';
+        cBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#4b5563;padding:16px;">연결된 계약이 없습니다.</td></tr>';
       } else {
         const cRes = await fetch(`${BASE}/api/documents?documentType=계약서&contractNumber=${encodeURIComponent(f.contractNumber)}`, {credentials:'include'});
         if (!cRes.ok) throw new Error(await errMsg(cRes));
         cBody.innerHTML = docRows(await cRes.json(), false);
       }
     } catch(e) {
-      fineBody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;text-align:center;">오류: ${esc(e.message)}</td></tr>`;
+      fineBody.innerHTML = `<tr><td colspan="5" style="color:#b91c1c;text-align:center;">오류: ${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -596,14 +843,373 @@
     document.getElementById('viewerBody').innerHTML = '';
   }
 
+  // ── 공통 ───────────────────────────────────────
+  function stBadge(s) { return s ? `<span class="st st-${esc(s)}">${esc(s)}</span>` : '-'; }
+  function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function fineLinkBtn(fineId, vehicleNo) {
+    if (fineId == null || fineId === '') return '-';
+    return `<button class="link-btn" data-fine-id="${esc(fineId)}" data-vehicle-no="${esc(vehicleNo||'')}" onclick="openFineFromBtn(this)">과태료 보기</button>`;
+  }
+  // 현재 목록에 없으면 차량번호로 다시 조회한 뒤 수정 모달을 연다.
+  async function openFineFromBtn(btn) {
+    const id = Number(btn.dataset.fineId);
+    const vno = btn.dataset.vehicleNo || '';
+    if (!_fines.some(x => x.id === id)) {
+      ['searchStartDate','searchEndDate','searchCustomer','searchStatus'].forEach(k => document.getElementById(k).value = '');
+      document.getElementById('searchVehicleNo').value = vno;
+      await doSearch();
+    }
+    if (!_fines.some(x => x.id === id)) { alert('해당 과태료를 찾을 수 없습니다. 삭제되었을 수 있습니다.'); return; }
+    openFormModal(id);
+  }
+
+  // ── 고지서 일괄 업로드 ─────────────────────────
+  const PLATE_RE = /^\d{2,3}[가-힣]\d{4}/;
+  // 한 번에 보내는 묶음: 웹서버 업로드 한도에 걸리지 않게 파일 5장 · 약 9MB 이하로 나눈다
+  const BULK_CHUNK = 5;
+  const BULK_CHUNK_BYTES = 9 * 1024 * 1024;
+  let _bulkUploading = false;
+  let _bulkUploaded = false;
+
+  function openBulkModal() {
+    document.getElementById('bulkFiles').value = '';
+    document.getElementById('bulkFileCount').textContent = '';
+    document.getElementById('bulkFileWarn').innerHTML = '';
+    document.getElementById('bulkProgress').style.display = 'none';
+    document.getElementById('bulkResultWrap').style.display = 'none';
+    document.getElementById('bulkResultBody').innerHTML = '';
+    document.getElementById('bulkSummary').textContent = '';
+    document.getElementById('bulkUploadBtn').disabled = false;
+    _bulkUploaded = false;
+    document.getElementById('bulkBackdrop').classList.add('open');
+  }
+  function closeBulkModal() {
+    if (_bulkUploading) { alert('고지서를 읽는 중입니다. 끝날 때까지 기다려 주세요.'); return; }
+    document.getElementById('bulkBackdrop').classList.remove('open');
+    if (_bulkUploaded) {
+      doSearch();
+      if (document.getElementById('uploadLogSection').open) loadUploadLogs();
+    }
+  }
+
+  function onBulkFilesChange() {
+    const files = [...document.getElementById('bulkFiles').files];
+    const warnEl = document.getElementById('bulkFileWarn');
+    document.getElementById('bulkFileCount').textContent = files.length ? `${files.length}개 선택` : '';
+    const bad = files.filter(f => !PLATE_RE.test(f.name.replace(/\s+/g, '')));
+    warnEl.innerHTML = bad.length
+      ? `<div class="note warn" style="margin-top:8px;">파일 이름이 차량번호로 시작하지 않는 파일이 ${bad.length}개 있습니다. 업로드는 가능하지만 차량을 찾지 못할 수 있습니다.
+           <div class="file-list">${bad.map(f => esc(f.name)).join('<br>')}</div></div>`
+      : '';
+  }
+
+  function bulkRow(r, i) {
+    const cust = (r.contractNumber || r.customerName) ? `${esc(r.contractNumber||'-')} / ${esc(r.customerName||'-')}` : '-';
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="l">${esc(r.fileName||'-')}</td>
+      <td>${esc(r.vehicleNo||'-')}</td>
+      <td>${esc(fmtDt(r.violationAt))}</td>
+      <td class="r">${r.amount!=null ? esc(fmtNum(r.amount)) : '-'}</td>
+      <td class="l">${esc(r.issuingAgency||'-')}</td>
+      <td>${cust}</td>
+      <td>${stBadge(r.status)}</td>
+      <td class="msg-cell">${esc(r.message||'')}</td>
+    </tr>`;
+  }
+
+  function renderBulkResults(results) {
+    document.getElementById('bulkResultWrap').style.display = '';
+    document.getElementById('bulkResultBody').innerHTML = results.length
+      ? results.map(bulkRow).join('')
+      : '<tr class="empty-row"><td colspan="9">결과가 없습니다.</td></tr>';
+    const cnt = s => results.filter(r => r.status === s).length;
+    document.getElementById('bulkSummary').textContent =
+      `등록 ${cnt('등록')}건 · 확인필요 ${cnt('확인필요')}건 · 실패 ${cnt('실패')}건`;
+  }
+
+  async function submitBulkUpload() {
+    const files = [...document.getElementById('bulkFiles').files];
+    if (!files.length) { alert('파일을 선택하세요.'); return; }
+    if (!validFiles(files)) return;
+
+    const btn = document.getElementById('bulkUploadBtn');
+    const prog = document.getElementById('bulkProgress');
+    const progText = document.getElementById('bulkProgressText');
+    btn.disabled = true;
+    document.getElementById('bulkCloseBtn').disabled = true;
+    _bulkUploading = true;
+    prog.style.display = '';
+    const results = [];
+    const chunks = [];
+    let cur = [], curBytes = 0;
+    files.forEach(f => {
+      if (cur.length && (cur.length >= BULK_CHUNK || curBytes + f.size > BULK_CHUNK_BYTES)) {
+        chunks.push(cur); cur = []; curBytes = 0;
+      }
+      cur.push(f); curBytes += f.size;
+    });
+    if (cur.length) chunks.push(cur);
+
+    try {
+      for (let c = 0; c < chunks.length; c++) {
+        const chunk = chunks[c];
+        progText.textContent = `고지서를 읽는 중입니다… (${files.length}장)` +
+          (chunks.length > 1 ? ` · ${c+1}/${chunks.length}번째 묶음 (${chunk.length}장)` : '');
+        const form = new FormData();
+        chunk.forEach(f => form.append('files', f));
+        try {
+          const res = await fetch(`${BASE}/api/traffic-fines/bulk-upload`, {method:'POST', body:form, credentials:'include'});
+          if (!res.ok) throw new Error(await errMsg(res));
+          const body = await res.json();
+          results.push(...(body?.results || []));
+          _bulkUploaded = true;
+        } catch(e) {
+          // 이 묶음 전체를 실패로 표시하고 다음 묶음은 계속 보낸다.
+          chunk.forEach(f => results.push({fileName: f.name, status: '실패', message: '업로드 실패: ' + e.message}));
+        }
+        renderBulkResults(results);
+      }
+      document.getElementById('bulkFiles').value = '';
+      document.getElementById('bulkFileCount').textContent = '';
+      document.getElementById('bulkFileWarn').innerHTML = '';
+    } finally {
+      _bulkUploading = false;
+      prog.style.display = 'none';
+      btn.disabled = false;
+      document.getElementById('bulkCloseBtn').disabled = false;
+    }
+  }
+
+  // ── 업로드 기록 ────────────────────────────────
+  let _uploadLogsLoaded = false;
+  async function loadUploadLogs() {
+    _uploadLogsLoaded = true;
+    const tbody = document.getElementById('uploadLogBody');
+    const cntEl = document.getElementById('uploadLogCount');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">불러오는 중...</td></tr>';
+    cntEl.textContent = '';
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/uploads?limit=300`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const list = await res.json();
+      cntEl.textContent = list.length + '건';
+      tbody.innerHTML = list.length ? list.map((u, i) => `<tr>
+          <td>${i+1}</td>
+          <td>${esc(fmtDt(u.uploadedAt))}</td>
+          <td>${esc(u.uploadedBy||'-')}</td>
+          <td class="l">${esc(u.fileName||'-')}</td>
+          <td>${esc(u.vehicleNo||'-')}</td>
+          <td>${stBadge(u.status)}</td>
+          <td class="msg-cell">${esc(u.message||'')}</td>
+          <td>${fineLinkBtn(u.fineId, u.vehicleNo)}</td>
+        </tr>`).join('')
+        : '<tr class="empty-row"><td colspan="8">업로드 기록이 없습니다.</td></tr>';
+    } catch(e) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8" style="color:#b91c1c;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+  document.getElementById('uploadLogSection').addEventListener('toggle', e => {
+    if (e.target.open && !_uploadLogsLoaded) loadUploadLogs();
+  });
+
+  // ── 팩스 (과태료별) ────────────────────────────
+  let _faxFineId = null;
+
+  function openFaxModal(id) {
+    const f = _fines.find(x => x.id === id);
+    if (!f) return;
+    _faxFineId = id;
+    document.getElementById('faxInfoVehicle').textContent = f.vehicleNo || '-';
+    document.getElementById('faxInfoAt').textContent = fmtDt(f.violationAt);
+    document.getElementById('faxInfoContract').textContent = f.contractNumber || '-';
+    document.getElementById('faxInfoCustomer').textContent = f.customerName || '-';
+    document.getElementById('faxPreviewLink').href = `${BASE}/api/traffic-fines/${id}/fax-preview`;
+    document.getElementById('faxReceiverName').value = f.issuingAgency || '';
+    document.getElementById('faxReceiverFax').value = '';
+    document.getElementById('faxSendBtn').disabled = false;
+    document.getElementById('faxBackdrop').classList.add('open');
+    loadFineFaxes(true);
+  }
+  function closeFaxModal() { document.getElementById('faxBackdrop').classList.remove('open'); _faxFineId = null; }
+
+  function faxCells(x) {
+    return `<td>${esc(x.receiverName||'-')}</td>
+      <td>${esc(x.receiverFax||'-')}</td>
+      <td>${stBadge(x.state)}</td>
+      <td>${esc(fmtDt(x.sentAt))}</td>
+      <td>${esc(fmtDt(x.resultAt))}</td>
+      <td>${x.pageCount!=null ? esc(x.pageCount) : '-'}</td>
+      <td class="msg-cell">${esc(x.resultMessage||'')}</td>
+      <td>${esc(x.requestedBy||'-')}</td>`;
+  }
+  const byRequestedDesc = (a, b) => String(b.requestedAt||'').localeCompare(String(a.requestedAt||''));
+
+  async function loadFineFaxes(prefill) {
+    const id = _faxFineId;
+    if (id == null) return;
+    const tbody = document.getElementById('fineFaxBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">불러오는 중...</td></tr>';
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/${id}/faxes`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const list = (await res.json()).sort(byRequestedDesc);
+      if (id !== _faxFineId) return;
+      tbody.innerHTML = list.length
+        ? list.map((x, i) => `<tr><td>${i+1}</td><td>${esc(fmtDt(x.requestedAt))}</td>${faxCells(x)}</tr>`).join('')
+        : '<tr class="empty-row"><td colspan="10">팩스 기록이 없습니다.</td></tr>';
+      // 처음 열 때 최근에 보낸 받는사람/번호를 채워 둔다.
+      if (prefill === true && list.length && !document.getElementById('faxReceiverFax').value) {
+        document.getElementById('faxReceiverName').value = list[0].receiverName || document.getElementById('faxReceiverName').value;
+        document.getElementById('faxReceiverFax').value = list[0].receiverFax || '';
+      }
+    } catch(e) {
+      if (id !== _faxFineId) return;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="10" style="color:#b91c1c;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  async function sendFax() {
+    const id = _faxFineId;
+    const receiverName = document.getElementById('faxReceiverName').value.trim();
+    const receiverFax = document.getElementById('faxReceiverFax').value.trim().replace(/\s+/g, '');
+    if (!receiverName) { alert('받는사람을 입력하세요.'); return; }
+    if (!receiverFax) { alert('받는사람 팩스번호를 입력하세요.'); return; }
+    const digits = receiverFax.replace(/-/g, '');
+    if (!/^[0-9-]+$/.test(receiverFax) || digits.length < 9 || digits.length > 12) {
+      alert('팩스번호는 숫자와 하이픈(-)만 입력하세요. (숫자 9~12자리)'); return;
+    }
+    if (!confirm(`${receiverName} (${receiverFax})에게 팩스를 보내시겠습니까?\n보낼 문서: 고지서 + 계약서 + 고객정보`)) return;
+
+    const btn = document.getElementById('faxSendBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/${id}/fax`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({receiverName, receiverFax}), credentials:'include'
+      });
+      if (!res.ok) throw new Error(await errMsg(res));
+      const log = await res.json().catch(() => null);
+      alert('팩스 발송을 요청했습니다.' + (log?.state ? ` (상태: ${log.state})` : ''));
+      await loadFineFaxes();
+      doSearch();
+      if (document.getElementById('faxLogSection').open) loadFaxLogs();
+    } catch(e) {
+      alert('팩스 발송 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── 팩스 발송 기록 (전체) ──────────────────────
+  let _faxLogsLoaded = false;
+  (function initFaxLogDates() {
+    const end = new Date(), start = new Date();
+    start.setDate(start.getDate() - 30);
+    document.getElementById('faxLogStartDate').value = ymd(start);
+    document.getElementById('faxLogEndDate').value = ymd(end);
+  })();
+
+  async function loadFaxLogs() {
+    _faxLogsLoaded = true;
+    const tbody = document.getElementById('faxLogBody');
+    const cntEl = document.getElementById('faxLogCount');
+    const qs = new URLSearchParams();
+    const s = document.getElementById('faxLogStartDate').value, e2 = document.getElementById('faxLogEndDate').value;
+    if (s) qs.set('startDate', s);
+    if (e2) qs.set('endDate', e2);
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="13">불러오는 중...</td></tr>';
+    cntEl.textContent = '';
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/faxes?${qs}`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const list = (await res.json()).sort(byRequestedDesc);
+      cntEl.textContent = list.length + '건';
+      tbody.innerHTML = list.length ? list.map((x, i) => `<tr>
+          <td>${i+1}</td>
+          <td>${esc(fmtDt(x.requestedAt))}</td>
+          <td>${esc(x.vehicleNo||'-')}</td>
+          <td>${esc(x.customerName||'-')}</td>
+          ${faxCells(x)}
+          <td class="no-export">${fineLinkBtn(x.fineId, x.vehicleNo)}</td>
+        </tr>`).join('')
+        : '<tr class="empty-row"><td colspan="13">팩스 발송 기록이 없습니다.</td></tr>';
+    } catch(e) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="13" style="color:#b91c1c;">오류: ${esc(e.message)}</td></tr>`;
+    }
+  }
+  document.getElementById('faxLogSection').addEventListener('toggle', e => {
+    if (e.target.open && !_faxLogsLoaded) loadFaxLogs();
+  });
+
+  // ── 팩스 발신 설정 ─────────────────────────────
+  async function openFaxSettingsModal() {
+    const ids = ['fsCorpNum','fsSenderNum','fsSenderName','fsPopbillUserId'];
+    ids.forEach(k => document.getElementById(k).value = '');
+    document.getElementById('faxSettingsWarn').style.display = 'none';
+    const btn = document.getElementById('faxSettingsSaveBtn');
+    btn.disabled = true;
+    document.getElementById('faxSettingsBackdrop').classList.add('open');
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/fax-settings`, {credentials:'include'});
+      if (!res.ok) throw new Error(await errMsg(res));
+      const s = await res.json() || {};
+      document.getElementById('fsCorpNum').value = s.corpNum || '';
+      document.getElementById('fsSenderNum').value = s.senderNum || '';
+      document.getElementById('fsSenderName').value = s.senderName || '';
+      document.getElementById('fsPopbillUserId').value = s.popbillUserId || '';
+      document.getElementById('faxSettingsWarn').style.display = s.serviceConfigured === false ? '' : 'none';
+      btn.disabled = false;
+    } catch(e) {
+      alert('설정 조회 실패: ' + e.message);
+      closeFaxSettingsModal();
+    }
+  }
+  function closeFaxSettingsModal() { document.getElementById('faxSettingsBackdrop').classList.remove('open'); }
+
+  async function saveFaxSettings() {
+    const corpNum = document.getElementById('fsCorpNum').value.replace(/[\s-]/g, '');
+    const senderNum = document.getElementById('fsSenderNum').value.trim().replace(/\s+/g, '');
+    const body = {
+      corpNum, senderNum,
+      senderName: document.getElementById('fsSenderName').value.trim(),
+      popbillUserId: document.getElementById('fsPopbillUserId').value.trim()
+    };
+    if (!/^\d{10}$/.test(corpNum)) { alert('사업자번호는 숫자 10자리로 입력하세요.'); return; }
+    if (!senderNum) { alert('발신 팩스번호를 입력하세요.'); return; }
+    const sd = senderNum.replace(/-/g, '');
+    if (!/^[0-9-]+$/.test(senderNum) || sd.length < 9 || sd.length > 12) {
+      alert('발신 팩스번호는 숫자와 하이픈(-)만 입력하세요. (숫자 9~12자리)'); return;
+    }
+    const btn = document.getElementById('faxSettingsSaveBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${BASE}/api/traffic-fines/fax-settings`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body), credentials:'include'
+      });
+      if (!res.ok) throw new Error(await errMsg(res));
+      alert('팩스 발신 설정을 저장했습니다.');
+      closeFaxSettingsModal();
+    } catch(e) {
+      alert('저장 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ── ESC / backdrop click ───────────────────────
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('viewerBackdrop').classList.contains('open')) { closeViewer(); return; }
+    if (document.getElementById('faxSettingsBackdrop').classList.contains('open')) { closeFaxSettingsModal(); return; }
+    if (document.getElementById('faxBackdrop').classList.contains('open'))    { closeFaxModal(); return; }
+    if (document.getElementById('bulkBackdrop').classList.contains('open'))   { closeBulkModal(); return; }
     if (document.getElementById('scanBackdrop').classList.contains('open'))   { closeScanModal(); return; }
     if (document.getElementById('formBackdrop').classList.contains('open'))   { closeFormModal(); return; }
   });
-  [['formBackdrop', closeFormModal], ['scanBackdrop', closeScanModal], ['viewerBackdrop', closeViewer]]
+  [['formBackdrop', closeFormModal], ['scanBackdrop', closeScanModal], ['viewerBackdrop', closeViewer],
+   ['bulkBackdrop', closeBulkModal], ['faxBackdrop', closeFaxModal], ['faxSettingsBackdrop', closeFaxSettingsModal]]
     .forEach(([id, close]) => document.getElementById(id).addEventListener('click', e => {
       if (e.target === document.getElementById(id)) close();
     }));

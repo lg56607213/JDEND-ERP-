@@ -89,6 +89,20 @@
             <version>1.0.10</version>
         </dependency>
 
+        <!-- 과태료 고지서 자동 인식 (Claude API) -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>2.34.0</version>
+        </dependency>
+
+        <!-- 팩스 발송 (팝빌) -->
+        <dependency>
+            <groupId>kr.co.linkhub</groupId>
+            <artifactId>popbill-sdk</artifactId>
+            <version>1.71.4</version>
+        </dependency>
+
         <!-- 서명 링크 QR 코드 생성 -->
         <dependency>
             <groupId>com.google.zxing</groupId>

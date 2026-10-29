@@ -24,7 +24,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class TrafficFineService {
 
-  private static final Set<String> STATUSES = Set.of("접수", "변경요청", "처리완료");
+  /** 확인필요: 고지서 자동 인식에서 차량번호·위반일시·계약 연결 중 하나라도 확실하지 않을 때 */
+  private static final Set<String> STATUSES = Set.of("접수", "확인필요", "변경요청", "처리완료");
 
   private final TrafficFineRepository fineRepo;
   private final VehicleDocumentService documentService;
