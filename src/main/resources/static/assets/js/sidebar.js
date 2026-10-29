@@ -100,6 +100,7 @@ function loadSidebar() {
                 <ul>
                   <li><a href="${basePath}pages/vehicle/periodic_inspection.html">검사현황</a></li>
                   <li><a href="${basePath}pages/vehicle/inspection_register.html">검사등록</a></li>
+                  <li><a href="${basePath}pages/vehicle/vehicle_age.html">차령관리</a></li>
                 </ul>
               </li>
               <li class="has-sub">

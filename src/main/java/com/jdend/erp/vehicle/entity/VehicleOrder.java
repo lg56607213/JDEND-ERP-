@@ -85,6 +85,10 @@ public class VehicleOrder {
   @Column(name="first_reg_date")
   private LocalDate firstRegDate;
 
+  // 차령만료일 — 차량 1대당 하나. 차령관리 화면(/api/vehicle-ages)에서 관리한다.
+  @Column(name="vehicle_age_expiry_date")
+  private LocalDate vehicleAgeExpiryDate;
+
   // ✅ 등록증 파일 저장 정보
   @Column(name="register_file_name", length=255)
   private String registerFileName;

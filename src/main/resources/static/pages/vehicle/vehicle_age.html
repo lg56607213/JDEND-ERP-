@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차령관리 | JDEND ERP</title>
+  <link rel="stylesheet" href="../../assets/css/sidebar.css">
+  <link rel="stylesheet" href="../../assets/css/pages.css">
+  <link rel="stylesheet" href="../../assets/css/vehicle/periodic_inspection.css">
+
+  <style>
+    .badge{ display:inline-block; padding:3px 9px; border-radius:4px; font-size:12px; font-weight:600; }
+    .badge-만료{ background:#ffe6e6; color:#b91c1c; }
+    .badge-만료임박{ background:#fff7e6; color:#92400e; }
+    .badge-미등록{ background:#f1f5f9; color:#475569; }
+    .badge-정상{ background:#f0fdf4; color:#166534; }
+    .edit-cell{ display:flex; gap:6px; align-items:center; }
+    .edit-cell input[type=date]{ padding:5px 6px; border:1px solid #ddd; border-radius:6px; }
+    .edit-cell input.dirty{ border-color:#1f6feb; background:#eef4ff; }
+    .btn-mini{ padding:5px 10px; border-radius:6px; border:1px solid #1f6feb; background:#1f6feb; color:#fff; cursor:pointer; font-size:12px; }
+    .btn-mini:disabled{ opacity:.4; cursor:default; }
+    .summary{ display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 12px; font-size:13px; color:#475569; }
+    .summary b{ color:#111827; }
+    .check-label{ display:flex; gap:6px; align-items:center; font-size:14px; height:40px; }
+  </style>
+</head>
+
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>차령관리</h1>
+      <p>차량등록 &gt; 검사관리 &gt; 차령관리</p>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-body">
+
+        <div class="form-section">
+          <h3 class="section-title">조회 조건</h3>
+          <div class="search-grid">
+            <div class="form-group">
+              <label for="keyword">차량번호 / 차량관리번호 / 차종</label>
+              <input type="text" id="keyword" placeholder="예: 109하7531">
+            </div>
+
+            <div class="form-group">
+              <label for="statusFilter">상태</label>
+              <select id="statusFilter">
+                <option value="">전체</option>
+                <option value="만료">만료</option>
+                <option value="만료임박">만료임박 (90일 이내)</option>
+                <option value="정상">정상</option>
+                <option value="미등록">미등록</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="expiryFrom">차령만료일 From</label>
+              <input type="date" id="expiryFrom">
+            </div>
+
+            <div class="form-group">
+              <label for="expiryTo">차령만료일 To</label>
+              <input type="date" id="expiryTo">
+            </div>
+
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <label class="check-label"><input type="checkbox" id="includeSold"> 매각 차량 포함</label>
+            </div>
+
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-search" id="searchBtn">조회</button>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-excel" onclick="exportTableToExcel('ageTableBody', '차령관리')">엑셀 내보내기</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary" id="summary"></div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>차량관리번호</th>
+                <th>차량번호</th>
+                <th>차종</th>
+                <th>최초등록일</th>
+                <th>차령만료일</th>
+                <th>D-Day</th>
+                <th>상태</th>
+                <th class="no-export">차령만료일 수정</th>
+              </tr>
+            </thead>
+            <tbody id="ageTableBody">
+              <tr><td colspan="9" style="text-align:center; color:#4b5563;">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="table-note">* 차량 1대당 차령만료일 하나를 관리합니다. 날짜를 바꾸고 [저장]을 누르면 바로 반영됩니다. (책임자 이상)</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/sidebar.js"></script>
+  <script src="../../assets/js/config.js"></script>
+
+  <script>
+    const BASE = (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "").replace(/\/$/, "");
+
+    function mustOk(res){
+      if(!res.ok){
+        return res.json().catch(()=> ({})).then(b=>{
+          throw new Error((b && (b.message || b.error)) || ("HTTP " + res.status));
+        });
+      }
+      return res;
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll("\"","&quot;").replaceAll("'","&#039;");
+    }
+
+    function ddayText(d){
+      if(d == null) return "-";
+      return d < 0 ? `D+${Math.abs(d)}` : `D-${d}`;
+    }
+
+    function renderRow(r, idx){
+      const exp = r.vehicleAgeExpiryDate || "";
+      return `
+        <tr data-id="${r.id}">
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(r.vehicleMgmtNo || "-")}</td>
+          <td>${escapeHtml(r.vehicleNo || "-")}</td>
+          <td>${escapeHtml(r.carModel || "-")}${r.orderStatus === "매각" ? ' <span class="badge badge-미등록">매각</span>' : ''}</td>
+          <td>${escapeHtml(r.firstRegDate || "-")}</td>
+          <td class="exp-text">${escapeHtml(exp || "-")}</td>
+          <td class="dday-text">${ddayText(r.dday)}</td>
+          <td class="status-text"><span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></td>
+          <td class="no-export">
+            <div class="edit-cell">
+              <input type="date" value="${escapeHtml(exp)}" data-orig="${escapeHtml(exp)}">
+              <button type="button" class="btn-mini" disabled>저장</button>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function renderSummary(list){
+      const c = { "만료":0, "만료임박":0, "정상":0, "미등록":0 };
+      list.forEach(r => { c[r.status] = (c[r.status] || 0) + 1; });
+      document.getElementById("summary").innerHTML =
+        `전체 <b>${list.length}</b>대 · 만료 <b style="color:#b91c1c">${c["만료"]}</b> · 만료임박 <b style="color:#92400e">${c["만료임박"]}</b>` +
+        ` · 정상 <b>${c["정상"]}</b> · 미등록 <b>${c["미등록"]}</b>`;
+    }
+
+    async function search(){
+      const qs = new URLSearchParams();
+      const kw = document.getElementById("keyword").value.trim();
+      const st = document.getElementById("statusFilter").value;
+      const from = document.getElementById("expiryFrom").value;
+      const to = document.getElementById("expiryTo").value;
+      if(kw) qs.set("keyword", kw);
+      if(st) qs.set("status", st);
+      if(from) qs.set("expiryFrom", from);
+      if(to) qs.set("expiryTo", to);
+      qs.set("includeSold", document.getElementById("includeSold").checked);
+
+      const tbody = document.getElementById("ageTableBody");
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#4b5563;">조회중...</td></tr>`;
+      try{
+        const res = await fetch(`${BASE}/api/vehicle-ages?${qs.toString()}`, { credentials:"include" });
+        await mustOk(res);
+        let list = await res.json();
+        if(!Array.isArray(list)) list = [];
+        renderSummary(list);
+        if(list.length === 0){
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#4b5563;">조건에 맞는 차량이 없습니다.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = list.map(renderRow).join("");
+      }catch(e){
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#d00;">오류: ${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    async function saveRow(tr){
+      const input = tr.querySelector("input[type=date]");
+      const btn = tr.querySelector(".btn-mini");
+      const value = input.value || null;
+      btn.disabled = true;
+      btn.textContent = "저장중";
+      try{
+        const res = await fetch(`${BASE}/api/vehicle-ages/${tr.dataset.id}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ vehicleAgeExpiryDate: value })
+        });
+        await mustOk(res);
+        const r = await res.json();
+        tr.querySelector(".exp-text").textContent = r.vehicleAgeExpiryDate || "-";
+        tr.querySelector(".dday-text").textContent = ddayText(r.dday);
+        tr.querySelector(".status-text").innerHTML = `<span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span>`;
+        input.dataset.orig = r.vehicleAgeExpiryDate || "";
+        input.classList.remove("dirty");
+        btn.textContent = "저장";
+      }catch(e){
+        alert("저장 실패: " + e.message);
+        btn.textContent = "저장";
+        btn.disabled = false;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const tbody = document.getElementById("ageTableBody");
+
+      tbody.addEventListener("input", (e)=>{
+        if(e.target.type !== "date") return;
+        const changed = (e.target.value || "") !== (e.target.dataset.orig || "");
+        e.target.classList.toggle("dirty", changed);
+        e.target.closest("tr").querySelector(".btn-mini").disabled = !changed;
+      });
+      tbody.addEventListener("click", (e)=>{
+        if(e.target.classList.contains("btn-mini") && !e.target.disabled){
+          saveRow(e.target.closest("tr"));
+        }
+      });
+
+      document.getElementById("searchBtn").addEventListener("click", search);
+      document.getElementById("keyword").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){ e.preventDefault(); search(); }
+      });
+      search();
+    });
+  </script>
+  <script src="../../assets/js/excel-export.js"></script>
+</body>
+</html>
