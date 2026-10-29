@@ -145,15 +145,6 @@ function loadSidebar() {
             </ul>
           </li>
           <li class="has-sub">
-            <span class="menu-label">금융</span>
-            <ul>
-              <li><a href="${basePath}pages/loan/loan_application.html">차량 증차 자금신청</a></li>
-              <li id="loanAdminMenuItem" style="display:none;">
-                <a href="${basePath}pages/loan/loan_application_list.html">대출신청 관리</a>
-              </li>
-            </ul>
-          </li>
-          <li class="has-sub">
             <span class="menu-label">수납관리</span>
             <ul>
               <li class="has-sub">
@@ -273,6 +264,15 @@ function loadSidebar() {
               </li>
               <li id="subscriptionMenuItem" style="display:none;">
                 <a href="${basePath}pages/admin/subscription_list.html">구독관리</a>
+              </li>
+            </ul>
+          </li>
+          <li class="has-sub">
+            <span class="menu-label">금융</span>
+            <ul>
+              <li><a href="${basePath}pages/loan/loan_application.html">차량 증차 자금신청</a></li>
+              <li id="loanAdminMenuItem" style="display:none;">
+                <a href="${basePath}pages/loan/loan_application_list.html">대출신청 관리</a>
               </li>
             </ul>
           </li>
