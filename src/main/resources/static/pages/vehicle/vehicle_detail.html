@@ -7,6 +7,13 @@
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <link rel="stylesheet" href="../../assets/css/pages.css">
   <link rel="stylesheet" href="../../assets/css/vehicle/vehicle_detail.css">
+  <style>
+    /* 운용구분 배지 / 매각 상태 */
+    .op-badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .op-long { background-color: #dbeafe; color: #1e40af; }
+    .op-short { background-color: #fef3c7; color: #92400e; }
+    .status-badge.status-sold { background-color: #e5e7eb; color: #374151; }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -43,6 +50,14 @@
             <div class="detail-item">
               <label>차대번호</label>
               <div class="detail-value" id="chassisNo">-</div>
+            </div>
+            <div class="detail-item">
+              <label>운용구분</label>
+              <div class="detail-value" id="operationType">-</div>
+            </div>
+            <div class="detail-item">
+              <label>소속지점</label>
+              <div class="detail-value" id="branch">-</div>
             </div>
           </div>
         </div>
@@ -176,6 +191,7 @@
                   <option value="출고완료">출고완료</option>
                   <option value="등록완료">등록완료</option>
                   <option value="실행완료">실행완료</option>
+                  <option value="매각">매각</option>
                 </select>
               </div>
               <div class="form-group">
@@ -185,6 +201,22 @@
               <div class="form-group">
                 <label for="editChassisNo">차대번호</label>
                 <input type="text" id="editChassisNo" name="chassisNo">
+              </div>
+              <div class="form-group">
+                <label for="editOperationType">운용구분</label>
+                <select id="editOperationType" name="operationType">
+                  <option value="">선택 안함</option>
+                  <option value="장기">장기</option>
+                  <option value="단기">단기</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="editBranch">소속지점</label>
+                <select id="editBranch" name="branch">
+                  <option value="">선택 안함</option>
+                  <option value="본점">본점</option>
+                  <option value="천안지점">천안지점</option>
+                </select>
               </div>
             </div>
           </div>
@@ -312,6 +344,7 @@
       case '출고완료': return 'status-released';
       case '등록완료': return 'status-registered';
       case '실행완료': return 'status-executed';
+      case '매각': return 'status-sold';
       default: return '';
     }
   }
@@ -357,6 +390,16 @@
       (value === null || value === undefined || value === '') ? '-' : value;
   }
 
+  // select에 없는 값(자유 입력 지점 등)도 보존되도록 옵션 추가 후 선택
+  function setSelectValue(id, value) {
+    const sel = document.getElementById(id);
+    const v = (value === null || value === undefined) ? '' : String(value);
+    if (v && !Array.from(sel.options).some(o => o.value === v)) {
+      sel.add(new Option(v, v));
+    }
+    sel.value = v;
+  }
+
   function setDetailValue(fieldKey, domId, value, status, isAmount=false) {
     if (shouldMaskFieldByStatus(status, fieldKey)) {
       document.getElementById(domId).textContent = '-';
@@ -387,6 +430,17 @@
 
     setDetailValue('vehicleNo','vehicleNo', currentData.vehicleNo, status);
     setDetailValue('chassisNo','chassisNo', currentData.chassisNo, status);
+
+    // 운용구분(배지) / 소속지점
+    const opType = currentData.operationType;
+    const opEl = document.getElementById('operationType');
+    if (opType === null || opType === undefined || String(opType).trim() === '') {
+      opEl.textContent = '-';
+    } else {
+      const opCls = opType === '장기' ? 'op-long' : (opType === '단기' ? 'op-short' : '');
+      opEl.innerHTML = `<span class="op-badge ${opCls}">${escHtml(opType)}</span>`;
+    }
+    setText('branch', currentData.branch);
 
     setDetailValue('carModel','carModel', currentData.carModel, status);
     setDetailValue('optionName','optionName', currentData.optionName, status);
@@ -440,6 +494,8 @@
 
     document.getElementById('editVehicleNo').value = currentData.vehicleNo ?? '';
     document.getElementById('editChassisNo').value = currentData.chassisNo ?? '';
+    setSelectValue('editOperationType', currentData.operationType);
+    setSelectValue('editBranch', currentData.branch);
 
     // ✅ input 이라서 그대로 value 세팅하면 됨
     document.getElementById('editCarModel').value = currentData.carModel ?? '';
@@ -485,6 +541,10 @@
 
       vehicleNo: document.getElementById('editVehicleNo').value || null,
       chassisNo: document.getElementById('editChassisNo').value || null,
+
+      // 운용구분/소속지점: 선택 안함 = "" (서버에서 값 해제)
+      operationType: document.getElementById('editOperationType').value,
+      branch: document.getElementById('editBranch').value,
 
       // ✅ input이니까 그대로 value로 전송
       carModel: document.getElementById('editCarModel').value,

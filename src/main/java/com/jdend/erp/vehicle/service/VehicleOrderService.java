@@ -158,6 +158,8 @@ public class VehicleOrderService {
                     .fuelType(emptyToNull(req.fuelType))
                     .displacement(req.displacement)
                     .firstRegDate(req.firstRegDate)
+                    .operationType(emptyToNull(req.operationType))
+                    .branch(emptyToNull(req.branch))
                     .inspectionStart(req.inspectionStart)
                     .inspectionEnd(req.inspectionEnd)
                     .vehiclePrice(nvl(req.vehiclePrice))
@@ -298,6 +300,14 @@ public class VehicleOrderService {
 
         if (req.displacement != null) {
             o.setDisplacement(req.displacement);
+        }
+
+        if (req.operationType != null) {
+            o.setOperationType(emptyToNull(req.operationType));
+        }
+
+        if (req.branch != null) {
+            o.setBranch(emptyToNull(req.branch));
         }
 
         if (req.firstRegDate != null) {
@@ -808,6 +818,8 @@ public class VehicleOrderService {
                 .fuelType(o.getFuelType())
                 .displacement(o.getDisplacement())
                 .firstRegDate(o.getFirstRegDate())
+                .operationType(o.getOperationType())
+                .branch(o.getBranch())
                 .inspectionStart(o.getInspectionStart())
                 .inspectionEnd(o.getInspectionEnd())
                 .vehiclePrice(o.getVehiclePrice())

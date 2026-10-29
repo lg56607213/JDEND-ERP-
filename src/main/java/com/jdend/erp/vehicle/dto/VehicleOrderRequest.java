@@ -26,6 +26,8 @@ public class VehicleOrderRequest {
   public String fuelType;           // 유종
   public Integer displacement;      // 배기량
   public LocalDate firstRegDate;    // 최초등록일
+  public String operationType;      // 운용구분 장기/단기 ("" 이면 지움)
+  public String branch;             // 소속지점 ("" 이면 지움)
   public LocalDate inspectionStart; // 검사유효기간(시작)
   public LocalDate inspectionEnd;   // 검사유효기간(종료)
 

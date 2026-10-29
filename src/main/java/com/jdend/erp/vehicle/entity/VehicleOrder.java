@@ -89,6 +89,14 @@ public class VehicleOrder {
   @Column(name="vehicle_age_expiry_date")
   private LocalDate vehicleAgeExpiryDate;
 
+  // 운용구분: 장기 / 단기 (차량을 어느 용도로 굴리는지 — 계약구분과 별개)
+  @Column(name="operation_type", length=10)
+  private String operationType;
+
+  // 소속지점: 본점 / 천안지점 등
+  @Column(name="branch", length=30)
+  private String branch;
+
   // ✅ 등록증 파일 저장 정보
   @Column(name="register_file_name", length=255)
   private String registerFileName;

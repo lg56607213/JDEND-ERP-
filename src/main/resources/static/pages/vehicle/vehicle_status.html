@@ -7,6 +7,20 @@
   <link rel="stylesheet" href="../../assets/css/sidebar.css">
   <link rel="stylesheet" href="../../assets/css/pages.css">
   <link rel="stylesheet" href="../../assets/css/vehicle/vehicle_status.css">
+  <style>
+    /* 운용구분 배지 / 매각 상태 / 보유현황 요약 */
+    .op-badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .op-long { background-color: #dbeafe; color: #1e40af; }
+    .op-short { background-color: #fef3c7; color: #92400e; }
+    .status-sold { background-color: #e5e7eb; color: #374151; }
+    tr.row-sold td { color: #4b5563; background-color: #f9fafb; }
+    .checkbox-group { flex-direction: row; align-items: center; gap: 6px; padding-bottom: 10px; }
+    .checkbox-group input { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+    .checkbox-group label { cursor: pointer; }
+    .vehicle-summary { margin: 0 0 10px; font-size: 13px; color: #334155; }
+    .vehicle-summary strong { color: #1e293b; }
+    .vehicle-summary .summary-sep { color: #4b5563; margin: 0 6px; }
+  </style>
 </head>
 <body>
   <div id="sidebar-container"></div>
@@ -38,7 +52,30 @@
                 <option value="출고완료">출고완료</option>
                 <option value="등록완료">등록완료</option>
                 <option value="실행완료">실행완료</option>
+                <option value="매각">매각</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="searchOperationType">운용구분</label>
+              <select id="searchOperationType" onchange="renderFiltered()">
+                <option value="">전체</option>
+                <option value="장기">장기</option>
+                <option value="단기">단기</option>
+                <option value="__none__">미지정</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="searchBranch">소속지점</label>
+              <select id="searchBranch" onchange="renderFiltered()">
+                <option value="">전체</option>
+                <option value="본점">본점</option>
+                <option value="천안지점">천안지점</option>
+                <option value="__none__">미지정</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="includeSold" onchange="renderFiltered()">
+              <label for="includeSold">매각 차량 포함</label>
             </div>
             <div class="button-group">
               <button type="button" class="btn-search" onclick="searchVehicle()">조회하기</button>
@@ -47,6 +84,9 @@
             </div>
           </div>
         </div>
+
+        <!-- 보유현황 요약 -->
+        <p class="vehicle-summary" id="vehicleSummary" aria-live="polite"></p>
 
         <!-- 테이블 -->
         <div class="table-container">
@@ -67,12 +107,14 @@
                 <th>출고가</th>
                 <th>총 선급가액</th>
                 <th>차량번호</th>
+                <th>운용구분</th>
+                <th>소속지점</th>
                 <th>등록일자</th>
               </tr>
             </thead>
             <tbody id="vehicleTableBody">
               <tr>
-                <td colspan="15" class="no-data">조회하기를 눌러 데이터를 불러오세요.</td>
+                <td colspan="17" class="no-data">조회하기를 눌러 데이터를 불러오세요.</td>
               </tr>
             </tbody>
           </table>
@@ -86,6 +128,7 @@
   <script src="../../assets/js/html-escape.js"></script>
   <script>
     const API_BASE = '/api/vehicle-orders';
+    let allVehicles = []; // 마지막 조회 결과 (클라이언트 필터 기준)
 
     window.addEventListener('DOMContentLoaded', function() {
       const today = new Date();
@@ -109,14 +152,19 @@
 
         const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) {
-          tbody.innerHTML = `<tr><td colspan="15" class="no-data">조회 실패: ${res.status}</td></tr>`;
+          allVehicles = [];
+          document.getElementById('vehicleSummary').textContent = '';
+          tbody.innerHTML = `<tr><td colspan="17" class="no-data">조회 실패: ${res.status}</td></tr>`;
           return;
         }
         const data = await res.json();
-        displayVehicle(Array.isArray(data) ? data : []);
+        allVehicles = Array.isArray(data) ? data : [];
+        renderFiltered();
       } catch (error) {
         console.error('조회 오류:', error);
-        tbody.innerHTML = `<tr><td colspan="15" class="no-data">조회 중 오류가 발생했습니다.</td></tr>`;
+        allVehicles = [];
+        document.getElementById('vehicleSummary').textContent = '';
+        tbody.innerHTML = `<tr><td colspan="17" class="no-data">조회 중 오류가 발생했습니다.</td></tr>`;
       }
     }
 
@@ -127,8 +175,53 @@
         case '출고완료': return 'status-released';
         case '등록완료': return 'status-registered';
         case '실행완료': return 'status-executed';
+        case '매각': return 'status-sold';
         default: return '';
       }
+    }
+
+    function isBlank(v) {
+      return v === null || v === undefined || String(v).trim() === '';
+    }
+
+    // 운용구분/소속지점 필터 매칭 ('' = 전체, '__none__' = 미지정)
+    function matchFilter(value, filter) {
+      if (!filter) return true;
+      if (filter === '__none__') return isBlank(value);
+      return !isBlank(value) && String(value).trim() === filter;
+    }
+
+    function getOperationBadge(type) {
+      if (isBlank(type)) return '-';
+      const cls = type === '장기' ? 'op-long' : (type === '단기' ? 'op-short' : '');
+      return `<span class="op-badge ${cls}">${escHtml(type)}</span>`;
+    }
+
+    // 클라이언트 필터 적용 후 렌더링 (엑셀 내보내기는 tbody 기준이라 보이는 행만 출력됨)
+    function renderFiltered() {
+      const opFilter = document.getElementById('searchOperationType').value;
+      const branchFilter = document.getElementById('searchBranch').value;
+      const includeSold = document.getElementById('includeSold').checked;
+
+      const byAttr = allVehicles.filter(v =>
+        matchFilter(v.operationType, opFilter) && matchFilter(v.branch, branchFilter));
+      const soldCount = byAttr.filter(v => v.orderStatus === '매각').length;
+      const ownedCount = byAttr.length - soldCount;
+      const visible = includeSold ? byAttr : byAttr.filter(v => v.orderStatus !== '매각');
+
+      let longCnt = 0, shortCnt = 0, noneCnt = 0;
+      visible.forEach(v => {
+        if (v.operationType === '장기') longCnt++;
+        else if (v.operationType === '단기') shortCnt++;
+        else noneCnt++;
+      });
+
+      document.getElementById('vehicleSummary').innerHTML =
+        `보유 <strong>${ownedCount}</strong>대 · 매각 <strong>${soldCount}</strong>대(${includeSold ? '표시' : '숨김'})` +
+        `<span class="summary-sep">|</span>` +
+        `장기 <strong>${longCnt}</strong> · 단기 <strong>${shortCnt}</strong> · 미지정 <strong>${noneCnt}</strong>`;
+
+      displayVehicle(visible);
     }
 
     function fmt(n) {
@@ -140,14 +233,14 @@
     function displayVehicle(data) {
       const tbody = document.getElementById('vehicleTableBody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="15" class="no-data">검색 결과가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="17" class="no-data">검색 결과가 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map((item, index) => {
         const statusLabel = item.orderStatus ?? '-';
         const statusClass = getStatusClass(statusLabel);
         return `
-          <tr onclick="viewDetail('${item.id}')">
+          <tr class="${item.orderStatus === '매각' ? 'row-sold' : ''}" onclick="viewDetail('${item.id}')">
             <td>${index + 1}</td>
             <td><span class="status-badge ${statusClass}">${escHtml(statusLabel)}</span></td>
             <td>${escHtml(item.vehicleMgmtNo ?? '-')}</td>
@@ -162,6 +255,8 @@
             <td class="amount-cell">${item.releasePrice ? fmt(item.releasePrice) : '-'}</td>
             <td class="amount-cell">${item.totalAdvancePrice ? fmt(item.totalAdvancePrice) : '-'}</td>
             <td>${escHtml(item.vehicleNo ?? '-')}</td>
+            <td>${getOperationBadge(item.operationType)}</td>
+            <td>${isBlank(item.branch) ? '-' : escHtml(item.branch)}</td>
             <td>${item.registerDate ?? '-'}</td>
           </tr>
         `;

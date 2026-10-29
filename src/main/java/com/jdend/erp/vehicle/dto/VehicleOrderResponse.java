@@ -22,6 +22,8 @@ public class VehicleOrderResponse {
   public String fuelType;
   public Integer displacement;
   public LocalDate firstRegDate;
+  public String operationType;   // 운용구분 장기/단기
+  public String branch;          // 소속지점
   public LocalDate inspectionStart;
   public LocalDate inspectionEnd;
 
