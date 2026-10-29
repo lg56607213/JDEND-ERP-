@@ -300,6 +300,25 @@ public class VehicleLoanService {
         loanRepo.saveAll(list);
     }
 
+    /**
+     * 전표 없이 기록된 상환 기록(타 시스템·엑셀 이관분)만 지운다. 전표가 만들어진 상환은 건드리지 않는다.
+     * 최근상환일은 남은 기록 기준으로 되돌리고, 잔여원금은 바꾸지 않는다(필요하면 PATCH 로 맞춘다).
+     *
+     * @return 지운 건수
+     */
+    @Transactional
+    public int deleteImportedRepayments(Long loanId) {
+        VehicleLoan loan = loanRepo.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("차입금 없음 id=" + loanId));
+        List<VehicleLoanVoucher> rows = voucherRepo.findByLoan_IdAndVoucherCreatedFalse(loanId);
+        voucherRepo.deleteAll(rows);
+        voucherRepo.flush();
+        List<VehicleLoanVoucher> remaining = voucherRepo.findByLoan_IdOrderByVoucherDateAscIdAsc(loanId);
+        loan.setLastPaymentDate(remaining.isEmpty() ? null : remaining.get(remaining.size() - 1).getVoucherDate());
+        loanRepo.save(loan);
+        return rows.size();
+    }
+
     @Transactional
     public void createVouchers(VehicleLoanVoucherCreateRequest req) {
         if (req == null || req.loanIds == null || req.loanIds.isEmpty()) {

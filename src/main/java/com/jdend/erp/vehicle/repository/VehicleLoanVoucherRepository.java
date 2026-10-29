@@ -10,4 +10,7 @@ public interface VehicleLoanVoucherRepository extends JpaRepository<VehicleLoanV
     List<VehicleLoanVoucher> findTop6ByLoan_IdOrderByVoucherDateDescIdDesc(Long loanId);
 
     List<VehicleLoanVoucher> findByLoan_IdOrderByVoucherDateAscIdAsc(Long loanId);
+
+    /** 전표 없이 기록된 상환(이관 데이터) */
+    List<VehicleLoanVoucher> findByLoan_IdAndVoucherCreatedFalse(Long loanId);
 }

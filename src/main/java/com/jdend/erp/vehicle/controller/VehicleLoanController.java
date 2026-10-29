@@ -1,11 +1,14 @@
 package com.jdend.erp.vehicle.controller;
 
+import com.jdend.erp.auth.service.PermissionService;
 import com.jdend.erp.vehicle.dto.*;
 import com.jdend.erp.vehicle.service.VehicleLoanService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -13,6 +16,7 @@ import java.util.List;
 public class VehicleLoanController {
 
     private final VehicleLoanService service;
+    private final PermissionService permissionService;
 
     @GetMapping
     public List<VehicleLoanListItemResponse> list(
@@ -61,5 +65,12 @@ public class VehicleLoanController {
     @PostMapping("/vouchers")
     public void createVouchers(@RequestBody VehicleLoanVoucherCreateRequest req) {
         service.createVouchers(req);
+    }
+
+    // 전표 없이 기록된 상환(이관분)만 지운다 — 이관 데이터를 다시 넣을 때 사용 (책임자 이상)
+    @DeleteMapping("/{id}/imported-repayments")
+    public Map<String, Integer> deleteImportedRepayments(@PathVariable Long id, HttpSession session) {
+        permissionService.requireManager(session);
+        return Map.of("deleted", service.deleteImportedRepayments(id));
     }
 }
